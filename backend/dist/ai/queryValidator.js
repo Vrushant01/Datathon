@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateQuery = void 0;
 const schemaCache_1 = require("./schemaCache");
 const FORBIDDEN_OPERATORS = [
-    '$insert', '$update', '$delete', '$drop', '$out', '$merge', '$replace', '$bulkWrite',
-    '$rename', '$set', '$unset', '$push', '$pull', '$addToSet', '$pop',
+    '$insert', '$update', '$delete', '$drop', '$out', '$merge', '$bulkWrite',
+    '$pull', '$pop',
     '$accumulator', '$function' // Also block custom code execution
 ];
 const validateQuery = async (collectionName, query) => {
