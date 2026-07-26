@@ -103,18 +103,21 @@ export const AdminGISMap: React.FC = () => {
 
   // Handle Location State (Auto-navigate to Red Zone)
   useEffect(() => {
-    if (location.state?.autoOpenHotspot && location.state?.prefillHotspotLocation && mapRef.current) {
+    if (location.state?.autoOpenHotspot && location.state?.prefillHotspotLocation) {
       setShowFIRs(true);
-      // Let activeHotspots compute on next render, but we can instantly pan
-      const [lat, lng] = location.state.prefillHotspotLocation.split(',').map(Number);
-      
-      // Delay selecting the hotspot until activeHotspots has evaluated
       setTimeout(() => {
         setSelectedHotspot(location.state.prefillHotspotLocation);
-        mapRef.current?.flyTo([lat, lng], 14, { duration: 1.5 });
       }, 500);
     }
-  }, [location.state, mapRef]);
+  }, [location.state]);
+
+  // Handle zooming to selected hotspot
+  useEffect(() => {
+    if (selectedHotspot !== 'ALL' && mapRef.current) {
+      const [lat, lng] = selectedHotspot.split(',').map(Number);
+      mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+    }
+  }, [selectedHotspot]);
 
   // Map Initialization
   useEffect(() => {
@@ -191,10 +194,10 @@ export const AdminGISMap: React.FC = () => {
                }).addTo(mapRef.current);
            }
        }
-    } else if (selectedDistrict === 'ALL') {
+    } else if (selectedDistrict === 'ALL' && selectedHotspot === 'ALL') {
         mapRef.current.flyTo([15.3173, 75.7139], 7, { duration: 1.5 });
     }
-  }, [selectedDistrict, selectedStation, stations]);
+  }, [selectedDistrict, selectedStation, stations, selectedHotspot]);
 
   // Main Render Logic
   useEffect(() => {
@@ -235,8 +238,10 @@ export const AdminGISMap: React.FC = () => {
     // -----------------------------------------
     if (showFIRs) {
       // Draw Hotspots
+      let customAIHotspotFound = false;
       activeHotspots.forEach(h => {
         if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
+        customAIHotspotFound = true;
         L.circle([h.lat, h.lng], {
           radius: 2000,
           color: '#ef4444',
@@ -246,6 +251,19 @@ export const AdminGISMap: React.FC = () => {
         }).addTo(hotspotsGroupRef.current!)
           .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>🚨 Red Zone Alert</b><br/>${h.count} cases of ${h.crimeName}</div>`);
       });
+
+      // Draw custom AI alert hotspot if it wasn't natively clustered
+      if (selectedHotspot !== 'ALL' && !customAIHotspotFound) {
+        const [hLat, hLng] = selectedHotspot.split(',').map(Number);
+        L.circle([hLat, hLng], {
+          radius: 2000,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 0.2,
+          weight: 1
+        }).addTo(hotspotsGroupRef.current!)
+          .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>🚨 AI Identified Risk Zone</b><br/>Immediate intervention recommended</div>`);
+      }
 
       // Draw Markers
       const markersToAdd: L.Marker[] = [];
@@ -257,9 +275,9 @@ export const AdminGISMap: React.FC = () => {
           const selectedH = activeHotspots.find(h => h.lat === hLat && h.lng === hLng);
           if (selectedH) {
             if (c.CrimeMajorHeadID !== selectedH.crimeMajorHeadID) return;
-            const dist = L.latLng(c.latitude, c.longitude).distanceTo(L.latLng(hLat, hLng));
-            if (dist > 2000) return;
           }
+          const dist = L.latLng(c.latitude, c.longitude).distanceTo(L.latLng(hLat, hLng));
+          if (dist > 2000) return;
         }
 
         const station = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || 'Unknown PS';
@@ -412,6 +430,9 @@ export const AdminGISMap: React.FC = () => {
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
             >
               <option value="ALL">All Active Hotspots ({activeHotspots.length})</option>
+              {selectedHotspot !== 'ALL' && !activeHotspots.find(h => `${h.lat},${h.lng}` === selectedHotspot) && (
+                <option value={selectedHotspot}>🚨 AI Identified Risk Zone</option>
+              )}
               {activeHotspots.map((h, i) => (
                 <option key={i} value={`${h.lat},${h.lng}`}>
                   {h.crimeName} ({h.count} Cases)

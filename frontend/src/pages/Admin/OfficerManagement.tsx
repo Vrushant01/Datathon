@@ -40,18 +40,25 @@ export const OfficerManagement: React.FC = () => {
   const [physicallyChallenged, setPhysicallyChallenged] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Auto-open form from AI Intelligence Center
+  // Assign Officer Modal State
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignOfficerId, setAssignOfficerId] = useState<number | ''>('');
+  const [assignInstructions, setAssignInstructions] = useState('');
+  const [assignStationId, setAssignStationId] = useState<number | ''>('');
+
+  // Auto-filter from AI Intelligence Center (instead of opening new officer form)
   useEffect(() => {
-    if (location.state?.autoOpenForm) {
-      setModalOpen(true);
+    if (location.state?.autoOpenAssign) {
+      setAssignModalOpen(true);
       if (location.state?.prefillStationName) {
-        // Try to find the exact station, or if not found, use the first one matching the name partly
         const lowerName = location.state.prefillStationName.toLowerCase();
         const station = units.find(u => lowerName.includes(u.UnitName.toLowerCase()) || u.UnitName.toLowerCase().includes(lowerName));
         if (station) {
-          setUnitId(station.UnitID);
-          setDistrictId(station.DistrictID);
+          setAssignStationId(station.UnitID);
         }
+      }
+      if (location.state?.prefillProblem) {
+        setAssignInstructions(`Context: ${location.state.prefillProblem}\n\nPlease take immediate action.`);
       }
     }
   }, [location.state, units]);
@@ -59,6 +66,26 @@ export const OfficerManagement: React.FC = () => {
   const showNotification = (type: 'success' | 'error', text: string) => {
     setNotification({ type, text });
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleAssignSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignOfficerId || !assignStationId) {
+      showNotification('error', 'Please select an officer and a station.');
+      return;
+    }
+    
+    // Add notification to mockDb
+    mockDb.createNotification(
+      'New Assignment',
+      `You have been reassigned/assigned new duties. Instructions: ${assignInstructions}`,
+      Number(assignOfficerId)
+    );
+    
+    showNotification('success', 'Assignment sent successfully.');
+    setAssignModalOpen(false);
+    setAssignInstructions('');
+    setAssignOfficerId('');
   };
 
   const handleOpenAdd = () => {
@@ -357,7 +384,7 @@ export const OfficerManagement: React.FC = () => {
 
       {/* Edit / Create Form Modal dialog */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 overflow-y-auto backdrop-blur-sm">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 overflow-y-auto backdrop-blur-sm !mt-0">
           <div className="bg-white rounded-xl shadow-2xl border max-w-xl w-full relative overflow-hidden my-8">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-ksp-navy"></div>
             
@@ -515,6 +542,78 @@ export const OfficerManagement: React.FC = () => {
                 </button>
               </div>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Modal */}
+      {assignModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 !mt-0">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="bg-ksp-navy text-white px-5 py-4 flex justify-between items-center">
+              <div>
+                <h3 className="font-extrabold uppercase tracking-widest text-sm m-0">Assign Officer</h3>
+                <p className="text-[10px] text-slate-300 font-bold tracking-wider mt-0.5">Send Deployment Orders</p>
+              </div>
+              <button onClick={() => setAssignModalOpen(false)} className="hover:bg-white/10 p-1.5 rounded transition">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAssignSubmit} className="p-5 space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Target Station / Unit</label>
+                <select 
+                  value={assignStationId}
+                  onChange={(e) => setAssignStationId(Number(e.target.value))}
+                  className="w-full p-2 bg-slate-50 border rounded text-xs font-semibold text-slate-700"
+                >
+                  <option value="">-- Select Target Area --</option>
+                  {units.map(u => <option key={u.UnitID} value={u.UnitID}>{u.UnitName}</option>)}
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Select Existing Officer</label>
+                <select 
+                  value={assignOfficerId}
+                  onChange={(e) => setAssignOfficerId(Number(e.target.value))}
+                  className="w-full p-2 bg-slate-50 border rounded text-xs font-semibold text-slate-700"
+                >
+                  <option value="">-- Select Officer --</option>
+                  {employees.filter(e => assignStationId ? e.UnitID === assignStationId || e.DistrictID === units.find(u=>u.UnitID === assignStationId)?.DistrictID : true).map(emp => (
+                    <option key={emp.EmployeeID} value={emp.EmployeeID}>{emp.FirstName} - {emp.KGID}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">Shows officers currently in the selected district.</p>
+              </div>
+              
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Assignment Instructions</label>
+                <textarea 
+                  value={assignInstructions}
+                  onChange={(e) => setAssignInstructions(e.target.value)}
+                  className="w-full p-2 bg-slate-50 border rounded text-xs font-semibold text-slate-700 h-24"
+                  placeholder="Provide details about the reassignment or workload distribution..."
+                />
+              </div>
+              
+              <div className="border-t pt-4 flex justify-end gap-2 mt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setAssignModalOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded text-xs border"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="bg-ksp-navy hover:bg-ksp-navy-light text-white font-bold px-5 py-2 rounded text-xs shadow"
+                >
+                  Send Assignment Orders
+                </button>
+              </div>
             </form>
           </div>
         </div>

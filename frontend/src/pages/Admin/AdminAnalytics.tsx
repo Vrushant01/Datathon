@@ -88,7 +88,7 @@ export const AdminAnalytics: React.FC = () => {
 
   // Summary Stats
   const totalCases = filteredCases.length;
-  const solvedCases = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3).length;
+  const solvedCases = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
   const activeCases = totalCases - solvedCases;
   const solvedRate = totalCases > 0 ? ((solvedCases / totalCases) * 100).toFixed(1) : '0.0';
 
@@ -453,7 +453,7 @@ export const AdminAnalytics: React.FC = () => {
 
       {/* Action Confirmation Modal */}
       {showConfirmModal && selectedAnomaly && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 !mt-0">
           <div className="bg-white rounded-xl shadow-2xl border w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-800">
             <div className="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
               <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">

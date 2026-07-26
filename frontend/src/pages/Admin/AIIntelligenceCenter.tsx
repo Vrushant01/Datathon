@@ -208,7 +208,7 @@ export const AIIntelligenceCenter: React.FC = () => {
                               onClick={() => {
                                 if (action.includes('Officer')) {
                                   navigate('/admin-portal/officers', {
-                                    state: { autoOpenForm: true, prefillStationName: alert.policeStation }
+                                    state: { autoOpenAssign: true, prefillStationName: alert.policeStation, prefillProblem: alert.reason }
                                   });
                                 }
                                 else if (action.includes('Notify')) {
@@ -216,7 +216,14 @@ export const AIIntelligenceCenter: React.FC = () => {
                                     state: { autoOpenNotify: true, prefillStation: alert.policeStation, prefillProblem: alert.reason }
                                   });
                                 }
-                                else if (action.includes('GIS') || action.includes('Map') || action.includes('Night Patrol')) navigate('/admin-portal/gis');
+                                else if (action.includes('GIS') || action.includes('Map') || action.includes('Hotspot')) {
+                                  navigate('/admin-portal/gis', {
+                                    state: { 
+                                      autoOpenHotspot: true, 
+                                      prefillHotspotLocation: alert.latitude && alert.longitude ? `${alert.latitude},${alert.longitude}` : undefined 
+                                    }
+                                  });
+                                }
                                 else if (action.includes('Network')) navigate('/admin-portal/network');
                                 else navigate('/admin-portal/firs');
                               }}
