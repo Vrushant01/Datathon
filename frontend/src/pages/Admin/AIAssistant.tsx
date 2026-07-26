@@ -220,7 +220,7 @@ export const AIAssistant: React.FC = () => {
                                                        config.type === 'PieChart' ? PieChart :
                                                        BarChart;
                                                        
-                                  const DataComponent = config.type === 'LineChart' ? Line :
+                                  const DataComponent: any = config.type === 'LineChart' ? Line :
                                                       config.type === 'PieChart' ? Pie :
                                                       Bar;
 
