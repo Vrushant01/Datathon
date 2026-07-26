@@ -691,9 +691,10 @@ export const syncFromMongo = async (): Promise<void> => {
   try {
     console.log('[MongoDB Sync] Pulling live data from REST API...');
     
+    const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
     const fetchTable = async (route: string) => {
       try {
-        const res = await fetch(`http://localhost:5000/api/${route}`);
+        const res = await fetch(`${API_BASE_URL}/api/${route}`);
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return await res.json();
       } catch (e: any) {
@@ -1097,12 +1098,14 @@ export const mockDb = {
 
     saveDbState(state);
 
-    // Persist change to MongoDB Backend
-    fetch(`http://localhost:5000/api/cases/${caseId}/reassign`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ officerId: targetOfficerId })
-    }).catch(err => console.error('Failed to update Mongo DB', err));
+    // Persist change to MongoDB  const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+    try {
+      fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ officerId: targetOfficerId })
+      }).catch(err => console.error('Failed to update Mongo DB', err));
+    } catch (error) { console.error(error); }
 
     return true;
   },
