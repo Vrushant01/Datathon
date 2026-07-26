@@ -44,9 +44,11 @@ export const AIAssistant: React.FC = () => {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/chatbot/analytics');
+      const res = await fetch(`${API_BASE_URL}/api/chatbot/analytics`);
       const data = await res.json();
       setAnalyticsData(data);
     } catch (err) {
@@ -72,7 +74,7 @@ export const AIAssistant: React.FC = () => {
     setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true }]);
 
     try {
-      const response = await fetch('http://localhost:5000/api/chatbot/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/chatbot/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -11,7 +11,7 @@ exports.AI_CONFIG = {
     MONGODB_DATABASE: process.env.MONGODB_DATABASE || 'ksp_analytics',
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '',
     LLM_PROVIDER: process.env.LLM_PROVIDER || 'gemini',
-    LLM_MODEL: process.env.LLM_MODEL || 'gemini-2.5-flash',
+    LLM_MODEL: process.env.LLM_MODEL || 'gemini-3.5-flash-lite',
     EMBEDDING_MODEL: process.env.EMBEDDING_MODEL || 'text-embedding-004',
     CHAT_HISTORY_LIMIT: parseInt(process.env.CHAT_HISTORY_LIMIT || '10', 10),
     MAX_CONTEXT_DOCUMENTS: parseInt(process.env.MAX_CONTEXT_DOCUMENTS || '8', 10),
