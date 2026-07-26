@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-ksp-navy/10;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400;
+}
+
+/* Leaflet Map styles override for high-quality dashboard dark grid */
+.leaflet-container {
+  font-family: inherit;
+  border-radius: 0.75rem;
+}
+
+.map-card-popup .leaflet-popup-content-wrapper {
+  @apply bg-slate-900 text-white rounded-lg p-1 shadow-xl border border-ksp-gold/20;
+}
+.map-card-popup .leaflet-popup-tip {
+  @apply bg-slate-900;
+}
+
+/* Glassmorphism effects */
+.glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.glass-dark {
+  background: rgba(11, 34, 64, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+/* Hide Google Translate top bar and prevent body from pushing down */
+.goog-te-banner-frame.skiptranslate,
+iframe.VIpgJd-ZVi9od-xl07Ob-OEVmcd,
+iframe.goog-te-banner-frame {
+  display: none !important;
+}
+body {
+  top: 0px !important;
+}
+
+/* Stitch Specific Styles for Criminal Network */
+@keyframes pulse-emerald {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.animate-pulse-emerald {
+    animation: pulse-emerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.grid-pattern {
+    background-image: radial-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+/* React Flow Dark Theme Controls */
+.dark .react-flow__controls-button {
+  background-color: #1b1b1d;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  fill: #bec6e0;
+}
+.dark .react-flow__controls-button:hover {
+  background-color: #2a2a2b;
+}
+.dark .react-flow__controls-button svg {
+  fill: #bec6e0;
+}
+
+
+
+/* Custom Marker Clustering Styles */
+.cluster-small {
+  background-color: rgba(37, 99, 235, 0.9); /* Blue-600 */
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.cluster-medium {
+  background-color: rgba(245, 158, 11, 0.9); /* Amber-500 */
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+.cluster-large {
+  background-color: rgba(239, 68, 68, 0.9); /* Red-500 */
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+

@@ -1,0 +1,1413 @@
+[
+    {
+        "table_name": "State",
+        "columns": [
+            {
+                "column_name": "StateID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "StateName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "NationalityID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "District",
+        "columns": [
+            {
+                "column_name": "DistrictID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "DistrictName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "StateID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "UnitType",
+        "columns": [
+            {
+                "column_name": "UnitTypeID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "UnitTypeName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "CityDistState",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Hierarchy",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Unit",
+        "columns": [
+            {
+                "column_name": "UnitID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "UnitName",
+                "data_type": "varchar",
+                "max_length": 150,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "TypeID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ParentUnit",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "NationalityID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "StateID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "DistrictID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Rank",
+        "columns": [
+            {
+                "column_name": "RankID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "RankName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "Hierarchy",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Designation",
+        "columns": [
+            {
+                "column_name": "DesignationID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "DesignationName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "SortOrder",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "CasteMaster",
+        "columns": [
+            {
+                "column_name": "caste_master_id",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "caste_master_name",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "ReligionMaster",
+        "columns": [
+            {
+                "column_name": "ReligionID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "ReligionName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "OccupationMaster",
+        "columns": [
+            {
+                "column_name": "OccupationID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "OccupationName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "CaseCategory",
+        "columns": [
+            {
+                "column_name": "CaseCategoryID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "LookupValue",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "GravityOffence",
+        "columns": [
+            {
+                "column_name": "GravityOffenceID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "LookupValue",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "CaseStatusMaster",
+        "columns": [
+            {
+                "column_name": "CaseStatusID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseStatusName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Court",
+        "columns": [
+            {
+                "column_name": "CourtID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CourtName",
+                "data_type": "varchar",
+                "max_length": 200,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "DistrictID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "StateID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Employee",
+        "columns": [
+            {
+                "column_name": "EmployeeID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "DistrictID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "UnitID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "RankID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "DesignationID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "KGID",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "FirstName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "EmployeeDOB",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "GenderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "BloodGroupID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "PhysicallyChallenged",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "AppointmentDate",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "email",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": true
+            }
+        ]
+    },
+    {
+        "table_name": "CrimeHead",
+        "columns": [
+            {
+                "column_name": "CrimeHeadID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CrimeGroupName",
+                "data_type": "varchar",
+                "max_length": 150,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "CrimeSubHead",
+        "columns": [
+            {
+                "column_name": "CrimeSubHeadID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CrimeHeadID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CrimeHeadName",
+                "data_type": "varchar",
+                "max_length": 150,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "SeqID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Act",
+        "columns": [
+            {
+                "column_name": "ActCode",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "ActDescription",
+                "data_type": "varchar",
+                "max_length": 2000,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "ShortName",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Section",
+        "columns": [
+            {
+                "column_name": "ActCode",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "SectionCode",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "SectionDescription",
+                "data_type": "varchar",
+                "max_length": 2000,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "Active",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "CrimeHeadActSection",
+        "columns": [
+            {
+                "column_name": "CrimeHeadID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ActCode",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "SectionCode",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "CaseMaster",
+        "columns": [
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CrimeNo",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseNo",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "CrimeRegisteredDate",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "PolicePersonID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "PoliceStationID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CaseCategoryID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "GravityOffenceID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CrimeMajorHeadID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CrimeMinorHeadID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CaseStatusID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CourtID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "IncidentFromDate",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "IncidentToDate",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "InfoReceivedPSDate",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "latitude",
+                "data_type": "double",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "longitude",
+                "data_type": "double",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "BriefFacts",
+                "data_type": "varchar",
+                "max_length": 2000,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "ComplainantDetails",
+        "columns": [
+            {
+                "column_name": "ComplainantID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ComplainantName",
+                "data_type": "varchar",
+                "max_length": 150,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "AgeYear",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "OccupationID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ReligionID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CasteID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "GenderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Victim",
+        "columns": [
+            {
+                "column_name": "VictimMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "VictimName",
+                "data_type": "varchar",
+                "max_length": 150,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "AgeYear",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "GenderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "VictimPolice",
+                "data_type": "varchar",
+                "max_length": 1,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Accused",
+        "columns": [
+            {
+                "column_name": "AccusedMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "AccusedName",
+                "data_type": "varchar",
+                "max_length": 150,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "AgeYear",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "GenderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "PersonID",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "ActSectionAssociation",
+        "columns": [
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ActID",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "SectionID",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ActOrderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "SectionOrderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "ArrestSurrender",
+        "columns": [
+            {
+                "column_name": "ArrestSurrenderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ArrestSurrenderTypeID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "2=Surrender",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ArrestSurrenderStateId",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "ArrestSurrenderDistrictId",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "PoliceStationID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "IOID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "CourtID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "AccusedMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "IsAccused",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "IsComplainantAccused",
+                "data_type": "boolean",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "inv_arrestsurrenderaccused",
+        "columns": [
+            {
+                "column_name": "ArrestSurrenderID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "AccusedMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "Inv_OccuranceTime",
+        "columns": [
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "OccuranceTimeDetails",
+                "data_type": "varchar",
+                "max_length": 2000,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "ChargesheetDetails",
+        "columns": [
+            {
+                "column_name": "CSID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "csdate",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "cstype",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "B=False",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "C=Undetected",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "case_entities",
+        "columns": [
+            {
+                "column_name": "EntityID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "type",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "value",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "user_profiles",
+        "columns": [
+            {
+                "column_name": "id",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "email",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "role",
+                "data_type": "varchar",
+                "max_length": 50,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "employee_id",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "created_at",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "NOW())",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "evidence_files",
+        "columns": [
+            {
+                "column_name": "EvidenceID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "file_path",
+                "data_type": "varchar",
+                "max_length": 500,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "file_type",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "uploaded_by",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "uploaded_at",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "NOW())",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "audit_logs",
+        "columns": [
+            {
+                "column_name": "LogID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "user_id",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "action",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "table_name",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "record_id",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "timestamp",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "NOW())",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "details",
+                "data_type": "varchar",
+                "max_length": 2000,
+                "is_mandatory": false,
+                "is_unique": false
+            }
+        ]
+    },
+    {
+        "table_name": "timeline_notes",
+        "columns": [
+            {
+                "column_name": "NoteID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": true,
+                "is_unique": true
+            },
+            {
+                "column_name": "CaseMasterID",
+                "data_type": "bigint",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "event_type",
+                "data_type": "varchar",
+                "max_length": 100,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "'FIR",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "'Evidence",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "'Note",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "'Status",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            },
+            {
+                "column_name": "description",
+                "data_type": "varchar",
+                "max_length": 2000,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "created_by",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "created_at",
+                "data_type": "datetime",
+                "max_length": null,
+                "is_mandatory": false,
+                "is_unique": false
+            },
+            {
+                "column_name": "NOW())",
+                "data_type": "varchar",
+                "max_length": 255,
+                "is_mandatory": true,
+                "is_unique": false
+            }
+        ]
+    }
+]
