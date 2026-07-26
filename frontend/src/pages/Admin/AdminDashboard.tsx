@@ -20,20 +20,31 @@ export const AdminDashboard: React.FC = () => {
 
   // Metrics computation
   const totalFIR = cases.length;
-  const underInvestigation = cases.filter(c => c.CaseStatusID === 1).length;
   const solved = cases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+  const underInvestigation = totalFIR - solved;
   const activeOfficersCount = officers.filter(o => o.status === 'Active').length;
   const totalStations = units.filter(u => u.TypeID === 1).length;
 
-  // Chart 1: Monthly Trends (Based on mock dates)
-  const monthlyData = [
-    { name: 'Jan', Cases: 0 },
-    { name: 'Feb', Cases: 0 },
-    { name: 'Mar', Cases: 1 },
-    { name: 'Apr', Cases: 1 },
-    { name: 'May', Cases: 1 },
-    { name: 'Jun', Cases: 1 }
-  ];
+  // Chart 1: Monthly Trends (Dynamically calculated from CrimeRegisteredDate)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthCounts = new Array(12).fill(0);
+  
+  cases.forEach(c => {
+    if (c.CrimeRegisteredDate) {
+      const date = new Date(c.CrimeRegisteredDate);
+      const m = date.getMonth();
+      if (m >= 0 && m < 12) {
+        monthCounts[m]++;
+      }
+    }
+  });
+
+  // Limit to first 6 months if we want to preserve the previous look, or show all 12.
+  // The python script generated dates for 2026, let's just show Jan-Dec.
+  const monthlyData = monthNames.map((name, index) => ({
+    name,
+    Cases: monthCounts[index]
+  }));
 
   // Chart 2: Crime Categories (Based on CrimeHead)
   const crimeHeads = mockDb.getCrimeHeads();

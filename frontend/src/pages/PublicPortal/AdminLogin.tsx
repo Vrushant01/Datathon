@@ -72,8 +72,8 @@ export const AdminLogin: React.FC = () => {
         </div>
 
         {/* Informative message box */}
-        <div className="bg-slate-50 border border-slate-200 text-[11px] text-slate-500 p-3 rounded-lg mb-6 leading-relaxed">
-          🔒 Entering this portal requires administrative clearance. Demo credentials: email **"admin@ksp.gov.in"** or **"admin"** & passcode **"admin123"**.
+        <div className="bg-slate-50 border border-slate-200 text-[12px] text-slate-600 p-3 rounded-lg mb-6 leading-relaxed select-text text-center">
+          🔒 <strong>Username:</strong> admin@ksp.gov.in &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Password:</strong> admin123
         </div>
 
         {error && (

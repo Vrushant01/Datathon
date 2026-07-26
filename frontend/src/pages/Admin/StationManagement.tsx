@@ -209,7 +209,7 @@ export const StationManagement: React.FC = () => {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm !mt-0">
           <div className="bg-white rounded-xl shadow-2xl border max-w-md w-full overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-ksp-navy"></div>
             <div className="px-6 py-4 border-b flex justify-between items-center bg-white mt-1.5">
@@ -292,7 +292,7 @@ export const StationManagement: React.FC = () => {
 
       {/* Notify Police Station Modal */}
       {notifyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 !mt-0">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-ksp-navy p-4 flex justify-between items-center text-white">
               <h2 className="font-bold flex items-center gap-2"><Building size={18} className="text-ksp-gold" /> Notify Police Station</h2>

@@ -411,7 +411,7 @@ export const FIRManagement: React.FC = () => {
 
       {/* Transfer Officer Modal */}
       {transferModalOpen && selectedCase && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm !mt-0">
           <div className="bg-white rounded-xl shadow-2xl border max-w-sm w-full relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-ksp-gold"></div>
             
@@ -463,7 +463,7 @@ export const FIRManagement: React.FC = () => {
 
       {/* Register FIR Wizard Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 overflow-y-auto backdrop-blur-sm">
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 overflow-y-auto backdrop-blur-sm !mt-0">
           <div className="bg-white rounded-xl shadow-2xl border max-w-2xl w-full relative overflow-hidden my-8">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-ksp-navy"></div>
             

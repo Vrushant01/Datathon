@@ -73,8 +73,9 @@ export const OfficerLogin: React.FC = () => {
         </div>
 
         {/* Informative message box */}
-        <div className="bg-slate-50 border border-slate-200 text-[11px] text-slate-500 p-3 rounded-lg mb-6 leading-relaxed">
-          🔒 Enter your active **Employee ID** or **KGID** as registered in HRMS. Use your authorized password (Demo password is **"password"**).
+        <div className="bg-slate-50 border border-slate-200 text-[12px] text-slate-600 p-3 rounded-lg mb-6 leading-relaxed select-text text-center">
+          <div>🔒 <strong>Officer ID:</strong> 9001 &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Password:</strong> password</div>
+          <div className="text-[10px] text-slate-400 mt-1 italic">Note: This is a demo for a single officer. You can view all others in the Admin Panel.</div>
         </div>
 
         {error && (
