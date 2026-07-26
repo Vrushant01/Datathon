@@ -70,7 +70,7 @@ export const AnalyticsLogin: React.FC = () => {
 
         {/* Informative message box */}
         <div className="bg-slate-50 border border-slate-200 text-[12px] text-slate-600 p-3 rounded-lg mb-6 leading-relaxed select-text text-center">
-          <div>🔒 <strong>Station ID:</strong> 2001 &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Password:</strong> password</div>
+          <div>🔒 <strong>Station ID:</strong> 2001 &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Password:</strong> analytics123</div>
           <div className="text-[10px] text-slate-400 mt-1 italic">Note: This is a demo for a single police station. You can view all others in the Admin Panel.</div>
         </div>
 
