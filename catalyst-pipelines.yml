@@ -29,7 +29,7 @@
         - npm install -g zcatalyst-cli@beta
         - >-
           catalyst deploy appsail --name backend
-          --build-path "/catalyst/backend"
+          --build-path "."
           --stack node20
           --command "npm start"
           --token "$CATALYST_TOKEN"
