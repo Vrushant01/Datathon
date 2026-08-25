@@ -197,3 +197,12 @@ body {
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
 
+/* Custom small map hover tooltip */
+.custom-hover-tooltip .maplibregl-popup-content {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.custom-hover-tooltip .maplibregl-popup-close-button {
+  display: none;
+}
+

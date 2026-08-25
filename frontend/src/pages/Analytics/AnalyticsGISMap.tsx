@@ -1,23 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { mockDb } from '../../utils/mockDb';
-import L from 'leaflet';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { useAuth } from '../../context/AuthContext';
 import { MapPin, Filter } from 'lucide-react';
-
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { createCirclePolygon } from '../../utils/geoUtils';
 
 export const AnalyticsGISMap: React.FC = () => {
   const { user } = useAuth();
   const unitId = user?.unitId;
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Layer[]>([]);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  
+  const markersRef = useRef<maplibregl.Marker[]>([]);
 
   const crimeHeads = mockDb.getCrimeHeads();
   const gravityOffences = mockDb.getGravityOffences();
@@ -28,28 +23,7 @@ export const AnalyticsGISMap: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<number | 'ALL'>('ALL');
   const [selectedGravity, setSelectedGravity] = useState<number | 'ALL'>('ALL');
   const [selectedHotspot, setSelectedHotspot] = useState<string>('ALL');
-
-  useEffect(() => {
-    if (!unitId) return;
-
-    if (mapContainerRef.current && !mapRef.current) {
-      // Karnataka state approximate bounds
-      const karnatakaBounds = L.latLngBounds(
-        L.latLng(11.0, 73.5),
-        L.latLng(19.0, 79.0)
-      );
-
-      mapRef.current = L.map(mapContainerRef.current, {
-        maxBounds: karnatakaBounds,
-        maxBoundsViscosity: 1.0,
-        minZoom: 6,
-      }).setView([12.9716, 77.5946], 12);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(mapRef.current);
-    }
-  }, [unitId]);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
 
   const filteredCases = React.useMemo(() => {
     return mockDb.getCases().filter(c => {
@@ -61,42 +35,269 @@ export const AnalyticsGISMap: React.FC = () => {
     });
   }, [unitId, selectedCrimeHead, selectedStatus, selectedGravity]);
 
-  const activeHotspots = React.useMemo(() => {
-    const hotspots: {lat: number, lng: number, count: number, crimeName: string, crimeMajorHeadID: number}[] = [];
-    const HOTSPOT_RADIUS_METERS = 2000;
-    const DENSITY_THRESHOLD = 3;
-
-    filteredCases.forEach(c => {
-      if (typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude)) {
-        const currentLatLng = L.latLng(c.latitude, c.longitude);
-        let nearbyCount = 0;
-        
-        filteredCases.forEach(otherC => {
-          if (typeof otherC.latitude === 'number' && typeof otherC.longitude === 'number' && !isNaN(otherC.latitude) && !isNaN(otherC.longitude)) {
-            if (otherC.CrimeMajorHeadID === c.CrimeMajorHeadID) {
-              if (currentLatLng.distanceTo(L.latLng(otherC.latitude, otherC.longitude)) <= HOTSPOT_RADIUS_METERS) {
-                nearbyCount++;
-              }
-            }
-          }
-        });
-
-        if (nearbyCount >= DENSITY_THRESHOLD) {
-          const alreadyDrawn = hotspots.some(h => 
-            L.latLng(h.lat, h.lng).distanceTo(currentLatLng) < (HOTSPOT_RADIUS_METERS * 0.8)
-          );
-          if (!alreadyDrawn) {
-            const crimeName = crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Unknown Crime';
-            hotspots.push({lat: c.latitude, lng: c.longitude, count: nearbyCount, crimeName, crimeMajorHeadID: c.CrimeMajorHeadID});
-          }
-        }
-      }
-    });
-    return hotspots;
-  }, [filteredCases, crimeHeads]);
+  const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
+  const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!unitId || !mapRef.current) return;
+    if (!unitId) return;
+    const controller = new AbortController();
+    
+    const fetchHotspots = async () => {
+      setIsHotspotsLoading(true);
+      try {
+        const query = new URLSearchParams();
+        query.append('station', unitId.toString());
+        if (selectedCrimeHead !== 'ALL') query.append('crimeHead', selectedCrimeHead.toString());
+        if (selectedStatus !== 'ALL') query.append('status', selectedStatus.toString());
+        if (selectedGravity !== 'ALL') query.append('gravity', selectedGravity.toString());
+
+        const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+        const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
+          signal: controller.signal
+        });
+        
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setActiveHotspots(data.hotspots.map((h: any) => ({
+             clusterId: h.clusterId,
+             lat: h.center.lat,
+             lng: h.center.lng,
+             count: h.incidentCount,
+             crimeName: Object.keys(h.crimeCategories || {}).sort((a,b) => (h.crimeCategories[b] - h.crimeCategories[a]))[0] || 'Multiple Crimes',
+             radiusKm: h.radiusKm,
+             riskScore: h.riskScore,
+             riskLevel: h.riskLevel,
+             trend: h.trend,
+             growthRate: h.growthRate,
+             forecast7DayLevel: h.forecast7DayLevel
+          })));
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch hotspots:", err);
+        }
+      } finally {
+        setIsHotspotsLoading(false);
+      }
+    };
+
+    fetchHotspots();
+    return () => controller.abort();
+  }, [unitId, selectedCrimeHead, selectedStatus, selectedGravity]);
+
+  useEffect(() => {
+    if (!unitId || !mapContainerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: 'https://tiles.openfreemap.org/styles/liberty',
+      center: [77.5946, 12.9716],
+      zoom: 12,
+      maxBounds: [[68.0, 6.0], [98.0, 36.0]], // India bounds
+      doubleClickZoom: false
+    });
+    
+    mapRef.current = map;
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    map.on('load', () => {
+        const resizeObserver = new ResizeObserver(() => {
+            if (mapRef.current) mapRef.current.resize();
+        });
+        if (mapContainerRef.current) resizeObserver.observe(mapContainerRef.current);
+        map.addSource('hotspots', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+        });
+
+        map.addSource('fir-cases', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 50
+        });
+
+        let insertBeforeId: string | undefined;
+        const layers = map.getStyle().layers;
+        if (layers) {
+            for (const layer of layers) {
+                if (
+                    layer.id.includes('waterway') || 
+                    layer.id.includes('water') || 
+                    layer.id.includes('road') || 
+                    layer.id.includes('tunnel') || 
+                    layer.id.includes('bridge')
+                ) {
+                    insertBeforeId = layer.id;
+                    break;
+                }
+            }
+        }
+
+        map.addLayer({
+            id: 'hotspots-fill',
+            type: 'fill',
+            source: 'hotspots',
+            paint: {
+                'fill-color': '#ef4444',
+                'fill-opacity': 0.2
+            }
+        });
+        
+        map.addLayer({
+            id: 'hotspots-line',
+            type: 'line',
+            source: 'hotspots',
+            paint: {
+                'line-color': '#ef4444',
+                'line-width': 1
+            }
+        });
+
+        // Clustering Layers
+        map.addLayer({
+            id: 'clusters',
+            type: 'circle',
+            source: 'fir-cases',
+            filter: ['has', 'point_count'],
+            paint: {
+                'circle-color': [
+                    'step',
+                    ['get', 'point_count'],
+                    '#2563eb', // Blue for 1-9
+                    10,
+                    '#f59e0b', // Amber for 10-49
+                    50,
+                    '#ef4444'  // Red for 50+
+                ],
+                'circle-radius': [
+                    'step',
+                    ['get', 'point_count'],
+                     15, 10, 20, 50, 25
+                ],
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff'
+            }
+        });
+
+        map.addLayer({
+            id: 'cluster-count',
+            type: 'symbol',
+            source: 'fir-cases',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': '{point_count_abbreviated}',
+                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                'text-size': 12
+            },
+            paint: {
+                'text-color': '#ffffff'
+            }
+        });
+
+        map.addLayer({
+            id: 'unclustered-point',
+            type: 'circle',
+            source: 'fir-cases',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-color': '#3b82f6',
+                'circle-radius': 6,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff'
+            }
+        });
+
+        map.on('click', 'hotspots-fill', (e) => {
+           if (e.features && e.features.length > 0) {
+               const props = e.features[0].properties;
+               new maplibregl.Popup()
+                   .setLngLat(e.lngLat)
+                   .setHTML(props?.popupHtml || '')
+                   .addTo(map);
+           }
+        });
+        
+        // Clusters logic
+        map.on('click', 'clusters', (e) => {
+            const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+            if (!features.length) return;
+            const clusterId = features[0].properties.cluster_id;
+            const source = map.getSource('fir-cases') as maplibregl.GeoJSONSource;
+            
+            source.getClusterExpansionZoom(clusterId).then((zoom) => {
+                map.easeTo({
+                    center: (features[0].geometry as any).coordinates,
+                    zoom: zoom
+                });
+            });
+        });
+
+        map.on('mouseenter', 'clusters', () => map.getCanvas().style.cursor = 'pointer');
+        map.on('mouseleave', 'clusters', () => map.getCanvas().style.cursor = '');
+
+        const firPopup = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 15,
+            maxWidth: '250px'
+        });
+
+        map.on('mouseenter', 'unclustered-point', (e) => {
+            map.getCanvas().style.cursor = 'pointer';
+            if (!e.features || !e.features.length) return;
+            const coordinates = (e.features[0].geometry as any).coordinates.slice();
+            const properties = e.features[0].properties;
+
+            firPopup.setLngLat(coordinates)
+                .setHTML(`
+                    <div style="font-family: sans-serif; font-size: 11px; padding: 2px;">
+                      <strong style="color: #0b2240; border-bottom: 1px solid #ddd; display:block; padding-bottom:3px; margin-bottom:3px;">FIR No: ${properties.crimeNo}</strong>
+                      <b>Category:</b> ${properties.majorHeadName}<br/>
+                      <b>Status:</b> ${properties.statusName}<br/>
+                      <p style="margin: 4px 0 0 0; color: #555; font-style: italic;">"${properties.briefFacts}"</p>
+                    </div>
+                `)
+                .addTo(map);
+        });
+
+        map.on('mouseleave', 'unclustered-point', () => {
+            map.getCanvas().style.cursor = '';
+            firPopup.remove();
+        });
+
+        // Prevent click on FIR from opening the Hotspot popup
+        map.on('click', 'unclustered-point', (e) => {
+            e.originalEvent.stopPropagation();
+        });
+        
+        // Prevent click on clusters from opening Hotspot popup
+        map.on('click', 'clusters', (e) => {
+            e.originalEvent.stopPropagation();
+            const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+            map.easeTo({ center: (features[0].geometry as any).coordinates, zoom: map.getZoom() + 2 });
+        });
+
+        map.on('error', (e) => {
+            console.error("MapLibre Error:", e);
+        });
+
+        setMapLoaded(true);
+    });
+
+    return () => {
+       if (mapRef.current) {
+           mapRef.current.remove();
+           mapRef.current = null;
+       }
+    };
+  }, [unitId]);
+
+  useEffect(() => {
+    if (!unitId || !mapRef.current || !mapLoaded) return;
 
     // Clear old markers
     markersRef.current.forEach(m => m.remove());
@@ -109,53 +310,96 @@ export const AnalyticsGISMap: React.FC = () => {
 
     // Draw Station Marker
     if (station && station.latitude && station.longitude) {
-      const stMarker = L.marker([station.latitude, station.longitude])
-      .addTo(mapRef.current!)
-      .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>${station.UnitName}</b><br/>Command Center</div>`);
+      const el = document.createElement('div');
+      el.className = 'custom-station-pin';
+      el.innerHTML = `<div style="background-color: #facc15; width: 20px; height: 20px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`;
+      
+      const popup = new maplibregl.Popup({ offset: 25 })
+        .setHTML(`<div style="font-family: sans-serif; font-size: 11px;"><b>${station.UnitName}</b><br/>Command Center</div>`);
+
+      const stMarker = new maplibregl.Marker({ element: el })
+          .setLngLat([station.longitude, station.latitude])
+          .setPopup(popup)
+          .addTo(mapRef.current);
       markersRef.current.push(stMarker);
     }
 
+    const hotspotFeatures: any[] = [];
     activeHotspots.forEach(h => {
       if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
 
-      const hotspot = L.circle([h.lat, h.lng], {
-        radius: 2000,
-        color: '#ef4444',
-        fillColor: '#ef4444',
-        fillOpacity: 0.2,
-        weight: 1
-      }).addTo(mapRef.current!)
-        .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>🚨 Red Zone Alert</b><br/>${h.count} cases of ${h.crimeName}</div>`);
-      markersRef.current.push(hotspot);
+      const poly = createCirclePolygon([h.lng, h.lat], h.radiusKm * 1000);
+      poly.properties = {
+          popupHtml: `<div style="font-family: sans-serif; font-size: 11px;">
+            <b>🚨 ${h.riskLevel} HOTSPOT</b><br/>
+            Risk Score: ${h.riskScore} / 100<br/>
+            ${h.count} incidents<br/>
+            Primary Crime: ${h.crimeName}<br/>
+            Trend: ${h.trend === 'INCREASING' ? '↑' : (h.trend === 'DECREASING' ? '↓' : '→')} ${h.growthRate}%<br/>
+            7-Day Outlook: ${h.forecast7DayLevel}<br/>
+            Spatial Radius: ${h.radiusKm} km
+          </div>`
+      };
+      hotspotFeatures.push(poly);
     });
+    
+    const source = mapRef.current.getSource('hotspots') as maplibregl.GeoJSONSource;
+    if (source) {
+        source.setData({ type: 'FeatureCollection', features: hotspotFeatures });
+    }
+
+    const firFeatures: any[] = [];
 
     filteredCases.forEach(c => {
       if (typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude)) {
         if (selectedHotspot !== 'ALL') {
           const [hLat, hLng] = selectedHotspot.split(',').map(Number);
           const selectedH = activeHotspots.find(h => h.lat === hLat && h.lng === hLng);
+          const dist = Math.sqrt(Math.pow(c.latitude - hLat, 2) + Math.pow(c.longitude - hLng, 2)) * 111000;
           if (selectedH) {
-            if (c.CrimeMajorHeadID !== selectedH.crimeMajorHeadID) return;
-            const dist = L.latLng(c.latitude, c.longitude).distanceTo(L.latLng(hLat, hLng));
+            if (dist > (selectedH.radiusKm * 1000)) return;
+          } else {
             if (dist > 2000) return;
           }
         }
 
-        // Case Marker
-        const marker = L.marker([c.latitude, c.longitude])
-        .addTo(mapRef.current!)
-        .bindPopup(`
-          <div style="font-family: sans-serif; font-size: 11px; max-width: 150px;">
-            <b>FIR: ${c.CrimeNo}</b><br/>
-            <span style="color: #64748b;">${c.BriefFacts.substring(0, 50)}...</span>
-          </div>
-        `);
-        markersRef.current.push(marker);
+        const statusName = mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName;
+        const majorHeadName = crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Penal Code';
+
+        firFeatures.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
+            properties: {
+                crimeNo: c.CrimeNo,
+                majorHeadName: majorHeadName,
+                statusName: statusName,
+                briefFacts: c.BriefFacts.substring(0, 80) + '...'
+            }
+        });
       }
     });
 
-    mapRef.current.setView([centerLat, centerLng], 12);
-  }, [unitId, filteredCases, activeHotspots, selectedHotspot]);
+    const firSource = mapRef.current.getSource('fir-cases') as maplibregl.GeoJSONSource;
+    if (firSource) {
+        firSource.setData({ type: 'FeatureCollection', features: firFeatures });
+    }
+
+    if (selectedHotspot !== 'ALL') {
+         const [hLat, hLng] = selectedHotspot.split(',').map(Number);
+         mapRef.current.flyTo({ center: [hLng, hLat], zoom: 14, speed: 0.2, curve: 1 });
+    } else {
+         mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 2500 });
+    }
+  }, [unitId, filteredCases, activeHotspots, selectedHotspot, mapLoaded]);
+
+  // Handle Resize
+  useEffect(() => {
+     const handleResize = () => {
+         if (mapRef.current) mapRef.current.resize();
+     };
+     window.addEventListener('resize', handleResize);
+     return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!unitId) return <div className="p-8 text-center text-red-500">No Station Assigned to this Profile</div>;
 
@@ -231,10 +475,6 @@ export const AnalyticsGISMap: React.FC = () => {
               onChange={(e) => {
                 const val = e.target.value;
                 setSelectedHotspot(val);
-                if (val !== 'ALL' && mapRef.current) {
-                  const [lat, lng] = val.split(',').map(Number);
-                  mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
-                }
               }}
               disabled={activeHotspots.length === 0}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
@@ -247,13 +487,18 @@ export const AnalyticsGISMap: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {isHotspotsLoading && (
+            <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs flex items-center gap-2 font-bold animate-pulse">
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              Recalculating Intelligence...
+            </div>
+          )}
         </div>
 
         {/* Map Container */}
-        <div className="lg:col-span-3 bg-slate-300 rounded-xl overflow-hidden border shadow-sm relative min-h-[500px]">
-          <div ref={mapContainerRef} className="absolute inset-0 z-0" />
-          
-
+        <div className="lg:col-span-3 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[500px] relative">
+          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full focus:outline-none outline-none" style={{ outline: 'none' }} />
         </div>
 
       </div>

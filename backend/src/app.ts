@@ -8,6 +8,8 @@ import {
 } from './models';
 import aiRoutes from './routes/aiRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
+import hotspotRoutes from './routes/hotspotRoutes';
+import { invalidateHotspotCache } from './controllers/hotspotController';
 
 dotenv.config();
 
@@ -19,7 +21,16 @@ app.use(express.json());
 
 // Emergency live connection verification
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString(), platform: 'KSP-AI-Analytics' });
+  try {
+    const dbState = mongoose.connection.readyState;
+    if (dbState === 1) {
+      res.json({ success: true, status: 'online', database: 'connected' });
+    } else {
+      res.status(503).json({ success: false, status: 'online', database: 'disconnected' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
+  }
 });
 
 // REST ENDPOINTS FOR MONGO DB MIGRATION
@@ -65,9 +76,52 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
     const caseId = Number(req.params.caseId);
     const { officerId } = req.body;
     await CaseMaster.updateOne({ CaseMasterID: caseId }, { $set: { PolicePersonID: officerId } });
+    invalidateHotspotCache();
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to reassign case' });
+  }
+});
+
+// Basic CRUD for Cases to trigger invalidation
+app.post('/api/cases', async (req, res) => {
+  try {
+    const newCase = new CaseMaster(req.body);
+    await newCase.save();
+    invalidateHotspotCache();
+    res.status(201).json(newCase);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create case' });
+  }
+});
+
+app.put('/api/cases/:id', async (req, res) => {
+  try {
+    const updated = await CaseMaster.findOneAndUpdate({ CaseMasterID: Number(req.params.id) }, req.body, { new: true });
+    invalidateHotspotCache();
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update case' });
+  }
+});
+
+app.patch('/api/cases/:id', async (req, res) => {
+  try {
+    const updated = await CaseMaster.findOneAndUpdate({ CaseMasterID: Number(req.params.id) }, { $set: req.body }, { new: true });
+    invalidateHotspotCache();
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update case' });
+  }
+});
+
+app.delete('/api/cases/:id', async (req, res) => {
+  try {
+    await CaseMaster.deleteOne({ CaseMasterID: Number(req.params.id) });
+    invalidateHotspotCache();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete case' });
   }
 });
 
@@ -130,6 +184,7 @@ app.get('/api/network/:caseId', async (req, res) => {
 
 app.use('/api/ai', aiRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/hotspots', hotspotRoutes);
 
 // AI Intelligence Module Mock Endpoint
 // Runs predictive analytics, repeat offender pattern extraction and risk calculations

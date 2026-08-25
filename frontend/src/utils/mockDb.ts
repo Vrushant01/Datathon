@@ -552,13 +552,13 @@ const getFemaleName = (i: number) => `${FIRST_NAMES_FEMALE[i % FIRST_NAMES_FEMAL
 const getName = (i: number, genderId: number) => genderId === 1 ? getMaleName(i) : getFemaleName(i);
 const getFact = (i: number) => CRIME_FACTS[i % CRIME_FACTS.length];
 
-const STORAGE_KEY = 'ksp_crime_platform_db_v19';
+const STORAGE_KEY = 'ksp_crime_platform_db_v20';
 
 const defaultState: DbState = {
   states: STATES,
-  districts: SEED_DISTRICTS,
+  districts: [],
   unitTypes: UNIT_TYPES,
-  units: SEED_UNITS,
+  units: [],
   ranks: RANKS,
   designations: DESIGNATIONS,
   castes: CASTES,
@@ -573,52 +573,11 @@ const defaultState: DbState = {
   acts: ACTS,
   sections: SECTIONS,
   crimeHeadActSections: CRIME_HEAD_ACT_SECTIONS,
-  employees: SEED_EMPLOYEES,
-  cases: SEED_CASES.map((c, i) => i < 4 ? c : { ...c, BriefFacts: getFact(i) }),
-  complainants: [
-    ...COMPLAINANTS,
-    ...SEED_CASES.slice(4).map((c, i) => {
-      const genderId = (i % 2) + 1;
-      return {
-        ComplainantID: 60005 + i,
-        CaseMasterID: c.CaseMasterID,
-        ComplainantName: getName(i + 100, genderId),
-        AgeYear: 25 + (i % 30),
-        OccupationID: (i % 7) + 1,
-        ReligionID: (i % 6) + 1,
-        CasteID: (i % 7) + 1,
-        GenderID: genderId
-      };
-    })
-  ],
-  victims: [
-    ...VICTIMS,
-    ...SEED_CASES.slice(4).map((c, i) => {
-      const genderId = ((i + 7) % 2) + 1;
-      return {
-        VictimMasterID: 70005 + i,
-        CaseMasterID: c.CaseMasterID,
-        VictimName: getName(i + 31, genderId),
-        AgeYear: 18 + ((i + 13) % 50),
-        GenderID: genderId,
-        VictimPolice: '0'
-      };
-    })
-  ],
-  accused: [
-    ...ACCUSED,
-    ...SEED_CASES.slice(4).map((c, i) => {
-      const genderId = ((i + 4) % 2) + 1;
-      return {
-        AccusedMasterID: 80008 + i,
-        CaseMasterID: c.CaseMasterID,
-        AccusedName: getName(i + 47, genderId),
-        AgeYear: 18 + ((i + 29) % 40),
-        GenderID: genderId,
-        PersonID: 'A1'
-      };
-    })
-  ],
+  employees: [],
+  cases: [],
+  complainants: [],
+  victims: [],
+  accused: [],
   actSections: ACT_SECTIONS,
   arrestSurrenders: ARREST_SURRENDERS,
   chargesheets: CHARGESHEETS,
@@ -631,8 +590,26 @@ const defaultState: DbState = {
 };
 
 
-export let dbConnectionStatus: 'connected' | 'error' | 'local' = 'local';
+export type ConnectionStatus = 'connecting' | 'connected' | 'error' | 'local';
+export let dbConnectionStatus: ConnectionStatus = 'connecting';
 export let dbConnectionError: string | null = null;
+export let dbDataLoaded: boolean = false;
+
+type DbStatusListener = (status: ConnectionStatus) => void;
+const dbListeners: DbStatusListener[] = [];
+export const subscribeToDbStatus = (listener: DbStatusListener) => {
+  dbListeners.push(listener);
+  return () => {
+    const idx = dbListeners.indexOf(listener);
+    if (idx > -1) dbListeners.splice(idx, 1);
+  };
+};
+const setDbStatus = (status: ConnectionStatus, error: string | null = null, dataLoaded: boolean = dbDataLoaded) => {
+  dbConnectionStatus = status;
+  dbConnectionError = error;
+  dbDataLoaded = dataLoaded;
+  dbListeners.forEach(l => l(status));
+};
 
 const ALL_CAMEL_KEYS = [
   'StateID', 'StateName', 'NationalityID', 'Active',
@@ -687,18 +664,82 @@ const cleanPayload = (table: string, record: any) => {
 
 
 
-export const syncFromMongo = async (): Promise<void> => {
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    console.log('[MongoDB Sync] Pulling live data from REST API...');
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+};
+
+let isSyncing = false;
+let pollingInterval: any = null;
+
+export const syncFromMongo = async (): Promise<void> => {
+  if (isSyncing) return;
+  isSyncing = true;
+  
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+
+  try {
+    console.log('[DB] startup');
+    setDbStatus('connecting', null, false);
     
     const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+    
+    // 1. Health check with retries
+    console.log(`[DB] health check started URL: ${API_BASE_URL}/api/health`);
+    let isHealthy = false;
+    const backoff = [1000, 2000, 4000, 8000];
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        const healthRes = await fetchWithTimeout(`${API_BASE_URL}/api/health`, {}, 10000);
+        if (healthRes.ok) {
+          const healthData = await healthRes.json();
+          console.log(`[DB] health check response:`, healthData);
+          if (healthData.success && healthData.database === 'connected') {
+            isHealthy = true;
+            break;
+          }
+        } else {
+          console.log(`[DB] health check response NOT OK: ${healthRes.status}`);
+        }
+      } catch (e: any) {
+        console.warn(`[DB] health check failed attempt ${attempt}:`, e.message);
+      }
+      if (attempt < 5) {
+        console.log(`[DB] retry #${attempt + 1}...`);
+        await wait(backoff[attempt - 1] || 8000);
+      }
+    }
+
+    if (!isHealthy) {
+      throw new Error('Unable to verify database connection after 5 attempts.');
+    }
+
+    // Health check succeeded - mark as LIVE immediately
+    console.log('[DB] LIVE');
+    setDbStatus('connected', null, false);
+
+    // 2. Fetch data (no longer blocks the connection status)
+    console.log('[Dashboard] stats request started');
     const fetchTable = async (route: string) => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/${route}`);
+        const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 10000);
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return await res.json();
       } catch (e: any) {
-        console.warn(`[MongoDB Sync Warning] Failed to fetch ${route}:`, e.message || e);
+        console.warn(`[Dashboard] stats failed to fetch ${route}:`, e.message || e);
         return null;
       }
     };
@@ -721,11 +762,13 @@ export const syncFromMongo = async (): Promise<void> => {
       fetchTable('customedges')
     ]);
 
+    console.log('[Dashboard] stats response: Data loaded successfully');
+
     const state = loadDbState();
 
+    // Update in-memory state
     if (districts && districts.length > 0) state.districts = districts;
     if (units && units.length > 0) state.units = units;
-    
     if (employees && employees.length > 0) {
       state.employees = employees.map((emp: any) => {
         const existing = state.employees.find(e => e.EmployeeID === emp.EmployeeID);
@@ -736,20 +779,29 @@ export const syncFromMongo = async (): Promise<void> => {
         };
       });
     }
-
     if (cases && cases.length > 0) state.cases = cases;
     if (victims && victims.length > 0) state.victims = victims;
     if (accused && accused.length > 0) state.accused = accused;
     if (customEdges && customEdges.length > 0) state.customEdges = customEdges;
 
     saveDbState(state);
-    dbConnectionStatus = 'connected';
-    dbConnectionError = null;
+    
+    // Notify that data is fully loaded
+    setDbStatus('connected', null, true);
     console.log('[MongoDB Sync] Complete. Local cache synchronized.');
   } catch (err: any) {
-    dbConnectionStatus = 'error';
-    dbConnectionError = err.message || err;
+    setDbStatus('error', err.message || err, false);
     console.error('[MongoDB Sync Error] Failed to pull live data:', err.message || err);
+    
+    // Start background recovery polling every 30s
+    if (!pollingInterval) {
+      pollingInterval = setInterval(() => {
+        console.log('[MongoDB Sync] Background polling for recovery...');
+        syncFromMongo();
+      }, 30000);
+    }
+  } finally {
+    isSyncing = false;
   }
 };
 
