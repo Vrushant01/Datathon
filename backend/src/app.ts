@@ -42,8 +42,16 @@ dotenv.config();
 
 const app = express();
 
-app.get("/", (_req, res) => {
-  res.status(200).send("Backend is Connected 🚀");
+app.get("/", (req, res) => {
+  res.status(200).send("BACKEND DEPLOYMENT TEST - VERSION 2");
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Backend is Connected 🚀",
+    version: "2"
+  });
 });
 
 // your existing middleware/routes...
@@ -67,13 +75,6 @@ app.get('/api/health', (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
   }
-});
-
-
-
-
-app.get("/", (_req, res) => {
-  res.status(200).send("Backend is Connected 🚀");
 });
 
 // REST ENDPOINTS FOR MONGO DB MIGRATION
