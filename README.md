@@ -6,7 +6,7 @@ This is a production-ready, full-stack crime intelligence platform built for the
 
 The project is structured as a monorepo:
 * `/frontend`: React 19 + TypeScript + Vite + Tailwind CSS + Leaflet GIS + Recharts.
-* `/backend`: Node.js + Express.js + PDFKit report generators + AI risk engines.
+* `/backend`: Node.js + Express.js + PDFKit report generators + AI risk engines.vxgdggd
 * `/supabase`: SQL database migration files and role permissions.
 
 ## Database Schema (Supabase)
