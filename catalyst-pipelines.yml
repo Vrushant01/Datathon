@@ -25,13 +25,11 @@ jobs:
     cwd: /catalyst
     steps:
       - >-
-        cd backend && npm ci && npm run build &&
-        mv .gitignore .gitignore.bak &&
         npm install -g zcatalyst-cli@beta &&
         catalyst deploy appsail --name backend
         --build-path "backend"
         --stack node20
-        --command "node dist/app.js"
+        --command "npm install && npm run build && node dist/app.js"
         --token "$CATALYST_TOKEN"
         --verbose
 
