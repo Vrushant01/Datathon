@@ -6,6 +6,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+// ── Startup dependency diagnostic ────────────────────────────────────────────
+// Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
+// module paths are (or are not) resolvable on the production container.
+// Does NOT log any secrets or env values.
+(function runDepDiagnostic() {
+    const modules = ['@swc/helpers', 'fontkit', 'pdfkit'];
+    for (const mod of modules) {
+        try {
+            const resolved = require.resolve(mod);
+            console.log(`[diag] ${mod} => ${resolved}`);
+        }
+        catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.error(`[diag] MISSING ${mod}: ${msg}`);
+        }
+    }
+})();
+// ─────────────────────────────────────────────────────────────────────────────
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const models_1 = require("./models");
