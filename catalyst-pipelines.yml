@@ -30,7 +30,7 @@ jobs:
         catalyst deploy appsail --name backend
         --build-path "backend"
         --stack node20
-        --command "npm start"
+        --command "node dist/app.js"
         --token "$CATALYST_TOKEN"
         --verbose
 
