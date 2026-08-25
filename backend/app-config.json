@@ -2,5 +2,5 @@
   "name": "backend",
   "stack": "NodeJS 20",
   "build_path": "./",
-  "command": "npm ci --omit=dev && node dist/app.js"
+  "command": "npm start"
 }
