@@ -53,7 +53,14 @@ jobs:
       - ls -lh dist/app.js
 
       - npm install -g zcatalyst-cli@beta
-      - catalyst deploy --token "$CATALYST_TOKEN" --verbose
+      - >-
+        catalyst deploy appsail
+        --name backend
+        --build-path "/catalyst/backend"
+        --stack "NodeJS 20"
+        --command "node dist/app.js"
+        --token "$CATALYST_TOKEN"
+        --verbose
 
 stages:
 
