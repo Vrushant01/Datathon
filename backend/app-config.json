@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "stack": "NodeJS 20",
+  "stack": "Node 20",
   "build_path": "./",
   "command": "npm start"
 }
