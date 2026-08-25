@@ -1,46 +1,46 @@
-version: 1
+  version: 1
 
-runners:
-  high:
-    config-id: 3
+  runners:
+    high:
+      config-id: 3
 
-pipeline-when:
-  equal:
-    - << event.ref >>
-    - refs/heads/main
+  pipeline-when:
+    equal:
+      - << event.ref >>
+      - refs/heads/main
 
-jobs: 
+  jobs: 
 
-  backend-build:
-    cwd: /catalyst/backend
-    steps:
-      - npm ci
-      - npm run build
+    backend-build:
+      cwd: /catalyst/backend
+      steps:
+        - npm ci
+        - npm run build
 
-  backend-deploy:
-    when:
-      equal:
-        - << status.build.backend-build >>
-        - success
-    cwd: /catalyst/backend
-    steps:
-      - npm ci
-      - npm run build
-      - npm install -g zcatalyst-cli@beta
-      - >-
-        catalyst deploy appsail --name backend
-        --build-path "/catalyst/backend"
-        --stack "Node 20"
-        --command "npm start"
-        --token "$CATALYST_TOKEN"
-        --verbose
+    backend-deploy:
+      when:
+        equal:
+          - << status.build.backend-build >>
+          - success
+      cwd: /catalyst/backend
+      steps:
+        - npm ci
+        - npm run build
+        - npm install -g zcatalyst-cli@beta
+        - >-
+          catalyst deploy appsail --name backend
+          --build-path "/catalyst/backend"
+          --stack "node20"
+          --command "npm start"
+          --token "$CATALYST_TOKEN"
+          --verbose
 
-stages:
+  stages:
 
-  - name: build
-    jobs:
-      - backend-build
+    - name: build
+      jobs:
+        - backend-build
 
-  - name: deploy
-    jobs:
-      - backend-deploy
+    - name: deploy
+      jobs:
+        - backend-deploy
