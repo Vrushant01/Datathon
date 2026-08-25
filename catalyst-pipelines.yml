@@ -30,7 +30,7 @@ jobs:
         --name backend
         --build-path "backend"
         --stack node20
-        --command "sh start.sh"
+        --command "npm start"
         --token "$CATALYST_TOKEN"
         --verbose
 
