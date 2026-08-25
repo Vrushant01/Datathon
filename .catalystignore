@@ -1,0 +1,14 @@
+node_modules/
+src/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+.git/
+appsail-test/
+frontend/
+scripts/
+*.csv
+*.xlsx
+*.py
