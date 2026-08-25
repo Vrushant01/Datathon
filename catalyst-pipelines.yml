@@ -10,12 +10,12 @@ pipeline-when:
     - refs/heads/main
 
 jobs:
+
   backend-build:
     cwd: /catalyst/backend
     steps:
       - npm ci
       - npm run build
-      - npm ls @swc/helpers --depth=0
 
   backend-deploy:
     when:
@@ -29,11 +29,12 @@ jobs:
         catalyst deploy appsail --name backend
         --build-path "/catalyst/backend"
         --stack "NodeJS 20"
-        --command "npm start" 
-        --token << env.CATALYST_TOKEN >>
+        --command "npm start"
+        --token << CATALYST_TOKEN >>
         --verbose
 
 stages:
+
   - name: build
     jobs:
       - backend-build
