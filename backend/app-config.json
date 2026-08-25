@@ -2,5 +2,5 @@
   "name": "backend",
   "stack": "node20",
   "build_path": "./",
-  "command": "node dist/app.js"
+  "command": "npm install && npm run build && node dist/app.js"
 }
