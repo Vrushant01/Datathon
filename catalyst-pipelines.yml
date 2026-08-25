@@ -22,21 +22,38 @@ jobs:
       - npm --version
       - npm ci
       - npm run build
+      - test -f dist/app.js
 
   backend-deploy:
     when:
       equal:
         - << status.build.backend-build >>
         - success
+
     cwd: /catalyst/backend
+
     steps:
       - apt-get update
       - apt-get install -y curl
       - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
       - apt-get install -y nodejs
+
       - node --version
       - npm --version
+
+      # IMPORTANT: this job has its own workspace,
+      # so build the deployable application here too.
+      - npm ci
+      - npm run build
+
+      # HARD PROOF that the file exists in the SAME job
+      # that performs the AppSail upload.
+      - test -f package.json
+      - test -f dist/app.js
+      - ls -lh dist/app.js
+
       - npm install -g zcatalyst-cli@beta
+
       - >-
         catalyst deploy appsail
         --name backend
