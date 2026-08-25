@@ -26,6 +26,7 @@ jobs:
     steps:
       - >-
         cd backend && npm ci && npm run build &&
+        git add -f dist node_modules &&
         npm install -g zcatalyst-cli@beta &&
         catalyst deploy appsail --name backend
         --build-path "backend"
