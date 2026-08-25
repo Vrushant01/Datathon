@@ -1,5 +1,6 @@
-import React from 'react';
-import { mockDb } from '../../utils/mockDb';
+import React, { useMemo } from 'react';
+import { mockDb, syncFromMongo } from '../../utils/mockDb';
+import { useDbConnection } from '../../hooks/useDbConnection';
 import { 
   FileText, CheckCircle, Clock, AlertTriangle, Shield, MapPin, 
   TrendingUp, Users, Brain, ShieldAlert, Activity
@@ -10,15 +11,18 @@ import {
 } from 'recharts';
 
 export const AdminDashboard: React.FC = () => {
-  const cases = mockDb.getCases();
-  const officers = mockDb.getEmployees();
-  const units = mockDb.getUnits();
-
-
-
-
-
   // Metrics computation
+  const { status: dbConnectionStatus, dataLoaded } = useDbConnection();
+  const isConnecting = dbConnectionStatus === 'connecting' || (dbConnectionStatus === 'connected' && !dataLoaded);
+
+  // Re-read from mockDb every time dataLoaded changes.
+  // Without useMemo keyed on dataLoaded, the data variables captured at initial render
+  // remain stale empty arrays — they never see the records that arrive after syncFromMongo completes.
+  const cases = useMemo(() => mockDb.getCases(), [dataLoaded]);
+  const officers = useMemo(() => mockDb.getEmployees(), [dataLoaded]);
+  const units = useMemo(() => mockDb.getUnits(), [dataLoaded]);
+  const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), [dataLoaded]);
+
   const totalFIR = cases.length;
   const solved = cases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
   const underInvestigation = totalFIR - solved;
@@ -47,7 +51,6 @@ export const AdminDashboard: React.FC = () => {
   }));
 
   // Chart 2: Crime Categories (Based on CrimeHead)
-  const crimeHeads = mockDb.getCrimeHeads();
   const categoryCounts = crimeHeads.map(ch => {
     return {
       name: ch.CrimeGroupName,
@@ -68,8 +71,24 @@ export const AdminDashboard: React.FC = () => {
           <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Operations Control</h2>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
         </div>
-        <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-          <Activity size={14} className="animate-pulse" /> Live Feed Connected
+        <div className="flex items-center gap-3">
+          {dbConnectionStatus === 'error' && (
+            <button 
+              onClick={() => syncFromMongo()} 
+              className="text-xs bg-ksp-navy hover:bg-ksp-navy-light text-white px-3 py-1 rounded shadow-sm font-bold transition"
+            >
+              Retry Connection
+            </button>
+          )}
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+            dbConnectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+            dbConnectionStatus === 'connecting' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+            'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            <Activity size={14} className={dbConnectionStatus !== 'error' ? 'animate-pulse' : ''} /> 
+            {dbConnectionStatus === 'connected' ? 'Live Feed Connected' : 
+             dbConnectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+          </div>
         </div>
       </div>
 
@@ -82,7 +101,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Total FIRs</div>
-            <div className="text-xl font-extrabold text-ksp-navy">{totalFIR}</div>
+            <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalFIR}</div>
           </div>
         </div>
 
@@ -92,7 +111,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Pending Cases</div>
-            <div className="text-xl font-extrabold text-amber-600">{underInvestigation}</div>
+            <div className="text-xl font-extrabold text-amber-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : underInvestigation}</div>
           </div>
         </div>
 
@@ -102,7 +121,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Solved / Closed</div>
-            <div className="text-xl font-extrabold text-emerald-600">{solved}</div>
+            <div className="text-xl font-extrabold text-emerald-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : solved}</div>
           </div>
         </div>
 
@@ -112,7 +131,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Active Officers</div>
-            <div className="text-xl font-extrabold text-slate-800">{activeOfficersCount}</div>
+            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : activeOfficersCount}</div>
           </div>
         </div>
 
@@ -122,7 +141,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Police Stations</div>
-            <div className="text-xl font-extrabold text-slate-800">{totalStations}</div>
+            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalStations}</div>
           </div>
         </div>
 
@@ -175,12 +194,12 @@ export const AdminDashboard: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <span className="text-slate-400">No category data</span>
+              <span className="text-slate-400">{isConnecting ? 'Loading...' : 'No category data'}</span>
             )}
             
             {/* Center Summary Label */}
             <div className="absolute text-center">
-              <div className="text-xl font-extrabold text-ksp-navy">{totalFIR}</div>
+              <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? '...' : totalFIR}</div>
               <div className="text-[9px] uppercase tracking-wider font-bold text-slate-400">Cases</div>
             </div>
           </div>

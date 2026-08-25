@@ -11,6 +11,8 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const models_1 = require("./models");
 const aiRoutes_1 = __importDefault(require("./routes/aiRoutes"));
 const chatbotRoutes_1 = __importDefault(require("./routes/chatbotRoutes"));
+const hotspotRoutes_1 = __importDefault(require("./routes/hotspotRoutes"));
+const hotspotController_1 = require("./controllers/hotspotController");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
@@ -18,7 +20,18 @@ app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 // Emergency live connection verification
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'healthy', timestamp: new Date().toISOString(), platform: 'KSP-AI-Analytics' });
+    try {
+        const dbState = mongoose_1.default.connection.readyState;
+        if (dbState === 1) {
+            res.json({ success: true, status: 'online', database: 'connected' });
+        }
+        else {
+            res.status(503).json({ success: false, status: 'online', database: 'disconnected' });
+        }
+    }
+    catch (error) {
+        res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
+    }
 });
 // REST ENDPOINTS FOR MONGO DB MIGRATION
 app.get('/api/districts', async (req, res) => {
@@ -62,10 +75,53 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
         const caseId = Number(req.params.caseId);
         const { officerId } = req.body;
         await models_1.CaseMaster.updateOne({ CaseMasterID: caseId }, { $set: { PolicePersonID: officerId } });
+        (0, hotspotController_1.invalidateHotspotCache)();
         res.json({ success: true });
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to reassign case' });
+    }
+});
+// Basic CRUD for Cases to trigger invalidation
+app.post('/api/cases', async (req, res) => {
+    try {
+        const newCase = new models_1.CaseMaster(req.body);
+        await newCase.save();
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.status(201).json(newCase);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to create case' });
+    }
+});
+app.put('/api/cases/:id', async (req, res) => {
+    try {
+        const updated = await models_1.CaseMaster.findOneAndUpdate({ CaseMasterID: Number(req.params.id) }, req.body, { new: true });
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json(updated);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to update case' });
+    }
+});
+app.patch('/api/cases/:id', async (req, res) => {
+    try {
+        const updated = await models_1.CaseMaster.findOneAndUpdate({ CaseMasterID: Number(req.params.id) }, { $set: req.body }, { new: true });
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json(updated);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to update case' });
+    }
+});
+app.delete('/api/cases/:id', async (req, res) => {
+    try {
+        await models_1.CaseMaster.deleteOne({ CaseMasterID: Number(req.params.id) });
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to delete case' });
     }
 });
 app.get('/api/victims', async (req, res) => {
@@ -127,6 +183,7 @@ app.get('/api/network/:caseId', async (req, res) => {
 });
 app.use('/api/ai', aiRoutes_1.default);
 app.use('/api/chatbot', chatbotRoutes_1.default);
+app.use('/api/hotspots', hotspotRoutes_1.default);
 // AI Intelligence Module Mock Endpoint
 // Runs predictive analytics, repeat offender pattern extraction and risk calculations
 app.post('/api/ai/predict-risk', (req, res) => {

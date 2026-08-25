@@ -2,13 +2,15 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, LogOut, Bell, User, MapPin } from 'lucide-react';
-import { mockDb, dbConnectionStatus, dbConnectionError } from '../utils/mockDb';
+import { mockDb, dbConnectionError } from '../utils/mockDb';
+import { useDbConnection } from '../hooks/useDbConnection';
 import { TransparentLogo } from './TransparentLogo';
 
 export const Navbar: React.FC = () => {
   const { user, role, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { status: dbConnectionStatus } = useDbConnection();
   const [lang, setLang] = React.useState('en');
 
   const handleLangChange = (newLang: string) => {
@@ -81,21 +83,27 @@ Sync Status: Fully Synchronized`);
                   ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30 hover:bg-emerald-900/60'
                   : dbConnectionStatus === 'error'
                   ? 'bg-red-950/60 text-red-400 border-red-500/30'
+                  : dbConnectionStatus === 'connecting'
+                  ? 'bg-blue-950/60 text-blue-400 border-blue-500/30'
                   : 'bg-amber-950/60 text-amber-400 border-amber-500/30'
               }`} 
               title={dbConnectionStatus === 'error' ? dbConnectionError || 'Unknown Connection Error' : 'Click to inspect database gateway status'}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${
+              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                 dbConnectionStatus === 'connected'
-                  ? 'bg-emerald-500 animate-pulse'
+                  ? 'bg-emerald-500'
                   : dbConnectionStatus === 'error'
-                  ? 'bg-red-500 animate-pulse'
+                  ? 'bg-red-500'
+                  : dbConnectionStatus === 'connecting'
+                  ? 'bg-blue-500'
                   : 'bg-amber-500'
               }`}></span>
               {dbConnectionStatus === 'connected'
                 ? 'Live DB'
                 : dbConnectionStatus === 'error'
                 ? 'DB Offline'
+                : dbConnectionStatus === 'connecting'
+                ? 'Connecting...'
                 : 'Offline Mode'}
             </span>
             <span>|</span>

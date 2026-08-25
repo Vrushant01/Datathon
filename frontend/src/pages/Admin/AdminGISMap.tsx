@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { mockDb } from '../../utils/mockDb';
-import L from 'leaflet';
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import { Filter, Layers, Info, Loader2 } from 'lucide-react';
-
-let DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { Filter, Layers, Info } from 'lucide-react';
+import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon } from '../../utils/geoUtils';
 
 export const AdminGISMap: React.FC = () => {
   const location = useLocation();
@@ -26,30 +20,26 @@ export const AdminGISMap: React.FC = () => {
   const [selectedCrimeHead, setSelectedCrimeHead] = useState<number | 'ALL'>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string | 'ALL'>('ALL');
   const [selectedGravity, setSelectedGravity] = useState<number | 'ALL'>('ALL');
-  const [showFIRs, setShowFIRs] = useState<boolean>(false);
   const [selectedHotspot, setSelectedHotspot] = useState<string>('ALL');
-
-
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
   
-  // Layers
-  const casesGroupRef = useRef<L.LayerGroup | null>(null);
-  const stationsGroupRef = useRef<L.LayerGroup | null>(null);
-  const districtCountsGroupRef = useRef<L.LayerGroup | null>(null);
-  const hotspotsGroupRef = useRef<L.LayerGroup | null>(null);
-  const boundsBoxRef = useRef<L.Rectangle | null>(null);
-
-
+  const stationsMarkersRef = useRef<maplibregl.Marker[]>([]);
+  
+  const [geoJsonData, setGeoJsonData] = useState<any>(null);
 
   // 1. Base Filter (Ignores Viewport)
   const baseFilteredCases = useMemo(() => {
-    if (selectedDistrict === 'ALL') return []; // Existing logic: no FIRs if ALL
-
     return cases.filter(c => {
       const station = stations.find(s => s.UnitID === c.PoliceStationID);
-      if (!station || station.DistrictID !== selectedDistrict) return false;
+      
+      if (selectedDistrict !== 'ALL') {
+         if (!station || station.DistrictID !== selectedDistrict) return false;
+      }
       
       if (selectedStation !== 'ALL' && c.PoliceStationID !== selectedStation) return false;
       if (selectedCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== selectedCrimeHead) return false;
@@ -58,104 +48,447 @@ export const AdminGISMap: React.FC = () => {
         if (statusName !== selectedStatus) return false;
       }
       if (selectedGravity !== 'ALL' && c.GravityOffenceID !== selectedGravity) return false;
+      
+      if (dateFrom || dateTo) {
+         const crimeDate = new Date(c.CrimeRegisteredDate);
+         if (dateFrom && crimeDate < new Date(dateFrom)) return false;
+         if (dateTo && crimeDate > new Date(dateTo)) return false;
+      }
+      
       return true;
     });
-  }, [cases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, stations]);
+  }, [cases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo, stations]);
 
+  const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
+  const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
 
-
-  // Compute hotspots across BASE cases so they don't pop in/out when panning near them
-  const activeHotspots = useMemo(() => {
-    if (!showFIRs) return [];
+  // Compute hotspots from backend
+  useEffect(() => {
+    const controller = new AbortController();
     
-    const hotspots: {lat: number, lng: number, count: number, crimeName: string, crimeMajorHeadID: number}[] = [];
-    const HOTSPOT_RADIUS_METERS = 2000;
-    const DENSITY_THRESHOLD = 5;
+    const fetchHotspots = async () => {
+      setIsHotspotsLoading(true);
+      try {
+        const query = new URLSearchParams();
+        if (selectedDistrict !== 'ALL') query.append('district', selectedDistrict.toString());
+        if (selectedStation !== 'ALL') query.append('station', selectedStation.toString());
+        if (selectedCrimeHead !== 'ALL') query.append('crimeHead', selectedCrimeHead.toString());
+        if (selectedStatus !== 'ALL') query.append('status', selectedStatus.toString());
+        if (selectedGravity !== 'ALL') query.append('gravity', selectedGravity.toString());
+        if (dateFrom) query.append('dateFrom', dateFrom);
+        if (dateTo) query.append('dateTo', dateTo);
 
-    baseFilteredCases.forEach(c => {
-      if (typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude)) {
-        const currentLatLng = L.latLng(c.latitude, c.longitude);
-        let nearbyCount = 0;
-        
-        baseFilteredCases.forEach(otherC => {
-          if (typeof otherC.latitude === 'number' && typeof otherC.longitude === 'number' && !isNaN(otherC.latitude) && !isNaN(otherC.longitude)) {
-            if (otherC.CrimeMajorHeadID === c.CrimeMajorHeadID) {
-              if (currentLatLng.distanceTo(L.latLng(otherC.latitude, otherC.longitude)) <= HOTSPOT_RADIUS_METERS) {
-                nearbyCount++;
-              }
-            }
-          }
+        const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+        const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
+          signal: controller.signal
         });
-
-        if (nearbyCount >= DENSITY_THRESHOLD) {
-          const alreadyDrawn = hotspots.some(h => 
-            L.latLng(h.lat, h.lng).distanceTo(currentLatLng) < (HOTSPOT_RADIUS_METERS * 0.8)
-          );
-          if (!alreadyDrawn) {
-            const crimeName = crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Unknown Crime';
-            hotspots.push({lat: c.latitude, lng: c.longitude, count: nearbyCount, crimeName, crimeMajorHeadID: c.CrimeMajorHeadID});
-          }
+        
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setActiveHotspots(data.hotspots.map((h: any) => ({
+             clusterId: h.clusterId,
+             lat: h.center.lat,
+             lng: h.center.lng,
+             count: h.incidentCount,
+             crimeName: Object.keys(h.crimeCategories || {}).sort((a,b) => (h.crimeCategories[b] - h.crimeCategories[a]))[0] || 'Multiple Crimes',
+             radiusKm: h.radiusKm,
+             riskScore: h.riskScore,
+             riskLevel: h.riskLevel,
+             trend: h.trend,
+             growthRate: h.growthRate,
+             forecast7DayLevel: h.forecast7DayLevel
+          })));
         }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch hotspots:", err);
+        }
+      } finally {
+        setIsHotspotsLoading(false);
       }
-    });
-    return hotspots;
-  }, [baseFilteredCases, showFIRs, crimeHeads]);
+    };
+
+    fetchHotspots();
+
+    return () => controller.abort();
+  }, [selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo]);
 
   // Handle Location State (Auto-navigate to Red Zone)
   useEffect(() => {
     if (location.state?.autoOpenHotspot && location.state?.prefillHotspotLocation) {
-      setShowFIRs(true);
       setTimeout(() => {
         setSelectedHotspot(location.state.prefillHotspotLocation);
       }, 500);
     }
   }, [location.state]);
 
+  useEffect(() => {
+    fetch('/karnataka_districts.geojson')
+      .then(res => res.json())
+      .then(data => setGeoJsonData(data))
+      .catch(err => console.error("Failed to load geojson", err));
+  }, []);
+
   // Handle zooming to selected hotspot
   useEffect(() => {
     if (selectedHotspot !== 'ALL' && mapRef.current) {
       const [lat, lng] = selectedHotspot.split(',').map(Number);
-      mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 14, duration: 1500 });
     }
   }, [selectedHotspot]);
 
   // Map Initialization
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
-      const karnatakaBounds = L.latLngBounds(
-        L.latLng(11.0, 73.5),
-        L.latLng(19.0, 79.0)
-      );
-
-      // 5. PERFORMANCE: preferCanvas
-      mapRef.current = L.map(mapContainerRef.current, {
-        maxBounds: karnatakaBounds,
-        maxBoundsViscosity: 1.0,
-        minZoom: 6,
-        preferCanvas: true 
-      }).setView([12.935242, 77.624478], 12);
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [76.5, 15.0],
+        zoom: 6,
+        maxBounds: [[68.0, 6.0], [98.0, 36.0]],
+        doubleClickZoom: false
+      });
+      mapRef.current = map;
       
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(mapRef.current);
+      map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-      // Layer Groups
-      casesGroupRef.current = L.layerGroup();
+      map.on('load', () => {
+         const resizeObserver = new ResizeObserver(() => {
+             if (mapRef.current) mapRef.current.resize();
+         });
+         if (mapContainerRef.current) resizeObserver.observe(mapContainerRef.current);
+         map.addSource('karnataka-districts', {
+             type: 'geojson',
+             data: { type: 'FeatureCollection', features: [] }
+         });
+         
+         map.addSource('hotspots', {
+             type: 'geojson',
+             data: { type: 'FeatureCollection', features: [] }
+         });
+         
+         map.addSource('fir-cases', {
+             type: 'geojson',
+             data: { type: 'FeatureCollection', features: [] },
+             cluster: true,
+             clusterMaxZoom: 14,
+             clusterRadius: 50
+         });
 
-      stationsGroupRef.current = L.layerGroup();
-      districtCountsGroupRef.current = L.layerGroup();
-      hotspotsGroupRef.current = L.layerGroup();
+         let insertBeforeId: string | undefined;
+         const layers = map.getStyle().layers;
+         if (layers) {
+             // Find the first layer that represents water, roads, or buildings
+             // We want our district fills to sit BELOW the road network and waterways
+             // but ABOVE the background and natural_earth raster.
+             for (const layer of layers) {
+                 if (
+                     layer.id.includes('waterway') || 
+                     layer.id.includes('water') || 
+                     layer.id.includes('road') || 
+                     layer.id.includes('tunnel') || 
+                     layer.id.includes('bridge')
+                 ) {
+                     insertBeforeId = layer.id;
+                     break;
+                 }
+             }
+         }
 
-      mapRef.current.addLayer(casesGroupRef.current);
-      mapRef.current.addLayer(stationsGroupRef.current);
-      mapRef.current.addLayer(districtCountsGroupRef.current);
-      mapRef.current.addLayer(hotspotsGroupRef.current);
+         map.addLayer({
+             id: 'district-fill',
+             type: 'fill',
+             source: 'karnataka-districts',
+             paint: {
+                 'fill-color': '#0b2240',
+                 'fill-opacity': [
+                     'case', 
+                     ['boolean', ['feature-state', 'selected'], false], 0.2, 
+                     ['boolean', ['feature-state', 'hover'], false], 0.15, 
+                     ['boolean', ['feature-state', 'hasSelection'], false], 0.05, 
+                     0.1
+                 ]
+             }
+         }, insertBeforeId);
+
+         map.addLayer({
+             id: 'district-line',
+             type: 'line',
+             source: 'karnataka-districts',
+             paint: {
+                 'line-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#d4af37', ['boolean', ['feature-state', 'hover'], false], '#d4af37', '#0b2240'],
+                 'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 2.5, 1],
+                 'line-opacity': [
+                     'case', 
+                     ['boolean', ['feature-state', 'selected'], false], 1, 
+                     ['boolean', ['feature-state', 'hasSelection'], false], 0.3, 
+                     0.8
+                 ]
+             }
+         }, insertBeforeId);
+
+         map.addLayer({
+             id: 'hotspots-fill',
+             type: 'fill',
+             source: 'hotspots',
+             paint: {
+                 'fill-color': '#ef4444',
+                 'fill-opacity': 0.2
+             }
+         });
+         
+         map.addLayer({
+             id: 'hotspots-line',
+             type: 'line',
+             source: 'hotspots',
+             paint: {
+                 'line-color': '#ef4444',
+                 'line-width': 1
+             }
+         });
+         
+         // Clustering Layers
+         map.addLayer({
+             id: 'clusters',
+             type: 'circle',
+             source: 'fir-cases',
+             filter: ['has', 'point_count'],
+             paint: {
+                 'circle-color': [
+                     'step',
+                     ['get', 'point_count'],
+                     '#2563eb', // Blue for 1-9
+                     10,
+                     '#f59e0b', // Amber for 10-49
+                     50,
+                     '#ef4444'  // Red for 50+
+                 ],
+                 'circle-radius': [
+                     'step',
+                     ['get', 'point_count'],
+                     15,
+                     10,
+                     20,
+                     50,
+                     25
+                 ],
+                 'circle-stroke-width': 2,
+                 'circle-stroke-color': '#ffffff'
+             }
+         });
+
+         map.addLayer({
+             id: 'cluster-count',
+             type: 'symbol',
+             source: 'fir-cases',
+             filter: ['has', 'point_count'],
+             layout: {
+                 'text-field': '{point_count_abbreviated}',
+                 'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                 'text-size': 12
+             },
+             paint: {
+                 'text-color': '#ffffff'
+             }
+         });
+
+         map.addLayer({
+             id: 'unclustered-point',
+             type: 'circle',
+             source: 'fir-cases',
+             filter: ['!', ['has', 'point_count']],
+             paint: {
+                 'circle-color': '#3b82f6',
+                 'circle-radius': 6,
+                 'circle-stroke-width': 2,
+                 'circle-stroke-color': '#ffffff'
+             }
+         });
+
+         // Hover logic
+         let hoveredStateId: string | null = null;
+
+         map.on('mousemove', 'district-fill', (e) => {
+             if (e.features && e.features.length > 0) {
+                 map.getCanvas().style.cursor = 'pointer';
+                 const feature = e.features[0];
+                 const id = feature.id as string;
+                 
+                 if (hoveredStateId !== null) {
+                     map.setFeatureState({ source: 'karnataka-districts', id: hoveredStateId }, { hover: false });
+                 }
+                 hoveredStateId = id;
+                 map.setFeatureState({ source: 'karnataka-districts', id: hoveredStateId }, { hover: true });
+             }
+         });
+
+         map.on('mouseleave', 'district-fill', () => {
+             map.getCanvas().style.cursor = '';
+             if (hoveredStateId !== null) {
+                 map.setFeatureState({ source: 'karnataka-districts', id: hoveredStateId }, { hover: false });
+             }
+             hoveredStateId = null;
+         });
+
+         map.on('click', 'district-fill', (e) => {
+             if (e.features && e.features.length > 0) {
+                 const properties = e.features[0].properties;
+                 if (properties && properties._dbDistrictId) {
+                     setSelectedDistrict(prev => {
+                         if (prev !== properties._dbDistrictId) {
+                             setSelectedStation('ALL');
+                             return properties._dbDistrictId;
+                         }
+                         return prev;
+                     });
+                 }
+             }
+         });
+         
+         // Hotspots popup logic
+         map.on('click', 'hotspots-fill', (e) => {
+            if (e.features && e.features.length > 0) {
+                const props = e.features[0].properties;
+                new maplibregl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(props?.popupHtml || '')
+                    .addTo(map);
+            }
+         });
+         
+         // Clusters logic
+         map.on('click', 'clusters', (e) => {
+             const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+             if (!features.length) return;
+             const clusterId = features[0].properties.cluster_id;
+             const source = map.getSource('fir-cases') as maplibregl.GeoJSONSource;
+             
+             source.getClusterExpansionZoom(clusterId).then((zoom) => {
+                 map.easeTo({
+                     center: (features[0].geometry as any).coordinates,
+                     zoom: zoom
+                 });
+             });
+         });
+
+         map.on('mouseenter', 'clusters', () => map.getCanvas().style.cursor = 'pointer');
+         map.on('mouseleave', 'clusters', () => map.getCanvas().style.cursor = '');
+
+         const firPopup = new maplibregl.Popup({
+             closeButton: false,
+             closeOnClick: false,
+             offset: 15,
+             maxWidth: '250px'
+         });
+
+         map.on('mouseenter', 'unclustered-point', (e) => {
+             map.getCanvas().style.cursor = 'pointer';
+             if (!e.features || !e.features.length) return;
+             const coordinates = (e.features[0].geometry as any).coordinates.slice();
+             const properties = e.features[0].properties;
+
+             firPopup.setLngLat(coordinates)
+                 .setHTML(`
+                     <div style="font-family: sans-serif; font-size: 11px; padding: 2px;">
+                       <strong style="color: #0b2240; border-bottom: 1px solid #ddd; display:block; padding-bottom:3px; margin-bottom:3px;">FIR No: ${properties.crimeNo}</strong>
+                       <b>Category:</b> ${properties.majorHeadName}<br/>
+                       <b>Station:</b> ${properties.station}<br/>
+                       <b>IO:</b> ${properties.ioName}<br/>
+                       <b>Status:</b> ${properties.statusName}<br/>
+                       <p style="margin: 4px 0 0 0; color: #555; font-style: italic;">"${properties.briefFacts}"</p>
+                     </div>
+                 `)
+                 .addTo(map);
+         });
+         
+         map.on('mouseleave', 'unclustered-point', () => {
+             map.getCanvas().style.cursor = '';
+             firPopup.remove();
+         });
+
+         // Prevent click on FIR from opening the Hotspot popup
+         map.on('click', 'unclustered-point', (e) => {
+             e.originalEvent.stopPropagation();
+         });
+         
+         // Prevent click on clusters from opening Hotspot popup (clusters have their own zoom logic)
+         map.on('click', 'clusters', (e) => {
+             e.originalEvent.stopPropagation();
+             // Zoom into cluster
+             const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+             map.easeTo({ center: (features[0].geometry as any).coordinates, zoom: map.getZoom() + 2 });
+         });
+
+         // Global click for Outside-Karnataka clear logic
+         map.on('click', (e) => {
+             const districtFeatures = map.queryRenderedFeatures(e.point, { layers: ['district-fill'] });
+             const clusterFeatures = map.queryRenderedFeatures(e.point, { layers: ['clusters', 'unclustered-point', 'hotspots-fill'] });
+             
+             // If we clicked on a cluster, point, or hotspot, don't reset district
+             if (clusterFeatures.length > 0) return;
+             
+             // If we clicked on empty space (outside Karnataka district-fill), reset
+             if (districtFeatures.length === 0) {
+                 setSelectedDistrict('ALL');
+                 setSelectedStation('ALL');
+                 
+                 // Force the zoom out animation in case state was already ALL but user manually panned
+                 map.flyTo({ center: [76.5, 15.0], zoom: 6, duration: 2500, essential: true });
+             }
+         });
+
+         map.on('error', (e) => {
+             console.error("MapLibre Error:", e);
+         });
+
+         setMapLoaded(true);
+      });
     }
-  }, []);
+
+    return () => {
+      // Clean up map instance on unmount
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []); // Run only once
+
+  // Update GeoJSON layer data
+  useEffect(() => {
+    if (!mapRef.current || !geoJsonData || !mapLoaded) return;
+    const features = geoJsonData.features.map((feature: any, index: number) => {
+        const dbDistrict = districts.find(d => getMappedGeoJsonFeature(d.DistrictName, { features: [feature] }) !== undefined);
+        return {
+            ...feature,
+            id: index.toString(),
+            properties: {
+                ...feature.properties,
+                _dbDistrictId: dbDistrict?.DistrictID,
+                _dbDistrictName: dbDistrict?.DistrictName
+            }
+        };
+    });
+
+    const source = mapRef.current.getSource('karnataka-districts') as maplibregl.GeoJSONSource;
+    if (source) {
+        source.setData({ type: 'FeatureCollection', features });
+    }
+  }, [geoJsonData, districts, mapLoaded]);
 
   // Update District View / Pan Map based on Filters
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !geoJsonData || !mapLoaded) return;
+
+    // Set selected states
+    const features = geoJsonData.features;
+    const hasSelection = selectedDistrict !== 'ALL';
+    features.forEach((_: any, index: number) => {
+        const isSelected = districts.find(d => getMappedGeoJsonFeature(d.DistrictName, { features: [features[index]] }) !== undefined)?.DistrictID === selectedDistrict;
+        mapRef.current!.setFeatureState({ source: 'karnataka-districts', id: index.toString() }, { selected: isSelected, hasSelection: hasSelection });
+    });
 
     let displayStations = stations;
     if (selectedDistrict !== 'ALL') {
@@ -165,147 +498,175 @@ export const AdminGISMap: React.FC = () => {
         displayStations = displayStations.filter(s => s.UnitID === selectedStation);
     }
 
-    // Bounding Box
-    if (boundsBoxRef.current) {
-        boundsBoxRef.current.remove();
-        boundsBoxRef.current = null;
-    }
-
-    if (selectedDistrict !== 'ALL' && displayStations.length > 0) {
-       let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
-       displayStations.forEach(s => {
-          if (s.latitude && s.longitude && !isNaN(s.latitude) && !isNaN(s.longitude)) {
-             minLat = Math.min(minLat, s.latitude);
-             maxLat = Math.max(maxLat, s.latitude);
-             minLng = Math.min(minLng, s.longitude);
-             maxLng = Math.max(maxLng, s.longitude);
-          }
-       });
-       
-       if (minLat !== 90) {
-           if (displayStations.length === 1) {
-               mapRef.current.flyTo([minLat, minLng], 14, { duration: 1.5 });
-           } else {
-               const bounds = L.latLngBounds(L.latLng(minLat, minLng), L.latLng(maxLat, maxLng));
-               const paddedBounds = bounds.pad(0.1);
-               mapRef.current.flyToBounds(paddedBounds, { duration: 1.5 });
-               boundsBoxRef.current = L.rectangle(paddedBounds, {
-                   color: '#d4af37', weight: 3, fillOpacity: 0.05, dashArray: '10, 10'
-               }).addTo(mapRef.current);
+    if (selectedStation !== 'ALL') {
+       const station = stations.find(s => s.UnitID === selectedStation);
+       if (station && typeof station.longitude === 'number' && typeof station.latitude === 'number') {
+           mapRef.current.flyTo({ center: [station.longitude, station.latitude], zoom: 14, duration: 2500 });
+       }
+    } else if (selectedDistrict !== 'ALL') {
+       const district = districts.find(d => d.DistrictID === selectedDistrict);
+       if (district) {
+           const f = features.find((f: any) => getMappedGeoJsonFeature(district.DistrictName, { features: [f] }) !== undefined);
+           if (f) {
+               const bbox = getBoundingBox(f);
+               if (bbox) {
+                   mapRef.current.fitBounds(bbox, { padding: 80, duration: 2500 });
+               }
            }
        }
     } else if (selectedDistrict === 'ALL' && selectedHotspot === 'ALL') {
-        mapRef.current.flyTo([15.3173, 75.7139], 7, { duration: 1.5 });
+       // Animate zoom out to view entire Karnataka when "ALL" is selected
+       mapRef.current.flyTo({
+           center: [76.5, 15.0],
+           zoom: 6,
+           duration: 2500,
+           essential: true
+       });
     }
-  }, [selectedDistrict, selectedStation, stations, selectedHotspot]);
+  }, [selectedDistrict, selectedStation, stations, selectedHotspot, geoJsonData, districts]);
 
   // Main Render Logic
   useEffect(() => {
-    if (!casesGroupRef.current || !stationsGroupRef.current || !districtCountsGroupRef.current || !hotspotsGroupRef.current) return;
+    if (!mapRef.current) return;
 
-    // Clear all layers cleanly
-    casesGroupRef.current.clearLayers();
-    stationsGroupRef.current.clearLayers();
-    districtCountsGroupRef.current.clearLayers();
-    hotspotsGroupRef.current.clearLayers();
+    // Clear old markers (only stations now, FIRs are GeoJSON)
+    stationsMarkersRef.current.forEach(m => m.remove());
+    stationsMarkersRef.current = [];
 
-    // -----------------------------------------
-    // Show Stations (Only if a specific district is selected)
-    // -----------------------------------------
+    let displayStations: any[] = [];
+    
+    // Show Stations (Only if a specific district is selected, or if a red zone is selected)
     if (selectedDistrict !== 'ALL') {
-      let displayStations = stations.filter(s => s.DistrictID === selectedDistrict);
+      displayStations = stations.filter(s => s.DistrictID === selectedDistrict);
       if (selectedStation !== 'ALL') {
           displayStations = displayStations.filter(s => s.UnitID === selectedStation);
       }
+    } else if (selectedHotspot !== 'ALL') {
+      const [hLat, hLng] = selectedHotspot.split(',').map(Number);
+      const selectedH = activeHotspots.find(h => h.lat === hLat && h.lng === hLng);
+      const psIds = new Set<number>();
+      baseFilteredCases.forEach(c => {
+          if (typeof c.latitude !== 'number' || typeof c.longitude !== 'number' || isNaN(c.latitude) || isNaN(c.longitude)) return;
+          if (selectedH && c.CrimeMajorHeadID !== selectedH.crimeMajorHeadID) return;
+          const dist = Math.sqrt(Math.pow(c.latitude - hLat, 2) + Math.pow(c.longitude - hLng, 2)) * 111000;
+          if (dist <= 2000) psIds.add(c.PoliceStationID);
+      });
+      displayStations = stations.filter(s => psIds.has(s.UnitID));
+    }
       
+    if (displayStations.length > 0) {
       displayStations.forEach(s => {
         if (s.latitude && s.longitude && !isNaN(s.latitude) && !isNaN(s.longitude)) {
-          const stationIcon = L.divIcon({
-            className: 'custom-station-pin',
-            html: `<div style="background-color: #facc15; width: 16px; height: 16px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 16]
-          });
-          L.marker([s.latitude, s.longitude], { icon: stationIcon })
-           .addTo(stationsGroupRef.current!)
-           .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>${s.UnitName}</b><br/>Police Station</div>`);
+          const el = document.createElement('div');
+          el.className = 'custom-station-pin';
+          el.innerHTML = `<div style="background-color: #facc15; width: 16px; height: 16px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`;
+          
+          const fullPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 })
+              .setLngLat([s.longitude, s.latitude])
+              .setHTML(`<div style="font-family: sans-serif; font-size: 11px; padding: 2px;"><b>${s.UnitName}</b><br/>Police Station</div>`);
+
+          const marker = new maplibregl.Marker({ element: el })
+            .setLngLat([s.longitude, s.latitude])
+            .addTo(mapRef.current!);
+            
+          el.addEventListener('mouseenter', () => fullPopup.addTo(mapRef.current!));
+          el.addEventListener('mouseleave', () => fullPopup.remove());
+            
+          stationsMarkersRef.current.push(marker);
         }
       });
     }
 
-    // -----------------------------------------
-    // Hotspots & FIRs
-    // -----------------------------------------
-    if (showFIRs) {
-      // Draw Hotspots
-      let customAIHotspotFound = false;
-      activeHotspots.forEach(h => {
-        if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
-        customAIHotspotFound = true;
-        L.circle([h.lat, h.lng], {
-          radius: 2000,
-          color: '#ef4444',
-          fillColor: '#ef4444',
-          fillOpacity: 0.2,
-          weight: 1
-        }).addTo(hotspotsGroupRef.current!)
-          .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>🚨 Red Zone Alert</b><br/>${h.count} cases of ${h.crimeName}</div>`);
-      });
+    // Draw Hotspots
+    const hotspotFeatures: any[] = [];
+    
+    let customAIHotspotFound = false;
+    activeHotspots.forEach(h => {
+      if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
+      customAIHotspotFound = true;
+      const poly = createCirclePolygon([h.lng, h.lat], h.radiusKm * 1000);
+      poly.properties = {
+          popupHtml: `<div style="font-family: sans-serif; font-size: 11px;">
+            <b>🚨 ${h.riskLevel} HOTSPOT</b><br/>
+            Risk Score: ${h.riskScore} / 100<br/>
+            ${h.count} incidents<br/>
+            Primary Crime: ${h.crimeName}<br/>
+            Trend: ${h.trend === 'INCREASING' ? '↑' : (h.trend === 'DECREASING' ? '↓' : '→')} ${h.growthRate}%<br/>
+            7-Day Outlook: ${h.forecast7DayLevel}<br/>
+            Spatial Radius: ${h.radiusKm} km
+          </div>`
+      };
+      hotspotFeatures.push(poly);
+    });
 
-      // Draw custom AI alert hotspot if it wasn't natively clustered
-      if (selectedHotspot !== 'ALL' && !customAIHotspotFound) {
+    if (selectedHotspot !== 'ALL' && !customAIHotspotFound) {
+      const [hLat, hLng] = selectedHotspot.split(',').map(Number);
+      const poly = createCirclePolygon([hLng, hLat], 2000);
+      poly.properties = {
+          popupHtml: `<div style="font-family: sans-serif; font-size: 11px;"><b>🚨 AI Identified Risk Zone</b><br/>Immediate intervention recommended</div>`
+      };
+      hotspotFeatures.push(poly);
+    }
+
+    // Construct GeoJSON Features for FIRs
+    const firFeatures: any[] = [];
+    
+    baseFilteredCases.forEach(c => {
+      if (typeof c.latitude !== 'number' || typeof c.longitude !== 'number' || isNaN(c.latitude) || isNaN(c.longitude)) return;
+      if (selectedHotspot !== 'ALL') {
         const [hLat, hLng] = selectedHotspot.split(',').map(Number);
-        L.circle([hLat, hLng], {
-          radius: 2000,
-          color: '#ef4444',
-          fillColor: '#ef4444',
-          fillOpacity: 0.2,
-          weight: 1
-        }).addTo(hotspotsGroupRef.current!)
-          .bindPopup(`<div style="font-family: sans-serif; font-size: 11px;"><b>🚨 AI Identified Risk Zone</b><br/>Immediate intervention recommended</div>`);
-      }
-
-      // Draw Markers
-      const markersToAdd: L.Marker[] = [];
-      baseFilteredCases.forEach(c => {
-        if (typeof c.latitude !== 'number' || typeof c.longitude !== 'number' || isNaN(c.latitude) || isNaN(c.longitude)) return;
-        // Red zone distance check
-        if (selectedHotspot !== 'ALL') {
-          const [hLat, hLng] = selectedHotspot.split(',').map(Number);
-          const selectedH = activeHotspots.find(h => h.lat === hLat && h.lng === hLng);
-          if (selectedH) {
-            if (c.CrimeMajorHeadID !== selectedH.crimeMajorHeadID) return;
-          }
-          const dist = L.latLng(c.latitude, c.longitude).distanceTo(L.latLng(hLat, hLng));
+        const selectedH = activeHotspots.find(h => h.lat === hLat && h.lng === hLng);
+        const dist = Math.sqrt(Math.pow(c.latitude - hLat, 2) + Math.pow(c.longitude - hLng, 2)) * 111000;
+        if (selectedH) {
+          if (dist > (selectedH.radiusKm * 1000)) return;
+        } else {
           if (dist > 2000) return;
         }
+      }
 
-        const station = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || 'Unknown PS';
-        const statusName = mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName;
-        const ioName = mockDb.getEmployees().find(e => e.EmployeeID === c.PolicePersonID)?.FirstName;
-        const majorHeadName = crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Penal Code';
+      const station = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || 'Unknown PS';
+      const statusName = mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName;
+      const ioName = mockDb.getEmployees().find(e => e.EmployeeID === c.PolicePersonID)?.FirstName;
+      const majorHeadName = crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Penal Code';
 
-        const marker = L.marker([c.latitude, c.longitude])
-          .bindPopup(`
-            <div style="font-family: sans-serif; font-size: 11px; padding: 2px;">
-              <strong style="color: #0b2240; border-bottom: 1px solid #ddd; display:block; padding-bottom:3px; margin-bottom:3px;">FIR No: ${c.CrimeNo}</strong>
-              <b>Category:</b> ${majorHeadName}<br/>
-              <b>Station:</b> ${station}<br/>
-              <b>IO:</b> ${ioName}<br/>
-              <b>Status:</b> ${statusName}<br/>
-              <p style="margin: 4px 0 0 0; color: #555; font-style: italic;">"${c.BriefFacts.substring(0, 80)}..."</p>
-            </div>
-          `);
-        markersToAdd.push(marker);
+      firFeatures.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
+          properties: {
+              crimeNo: c.CrimeNo,
+              majorHeadName: majorHeadName,
+              station: station,
+              ioName: ioName,
+              statusName: statusName,
+              briefFacts: c.BriefFacts.substring(0, 80) + '...'
+          }
       });
-      
-      // Batch add
-      markersToAdd.forEach(m => m.addTo(casesGroupRef.current!));
+    });
+    
+    const firSource = mapRef.current.getSource('fir-cases') as maplibregl.GeoJSONSource;
+    if (firSource) {
+        firSource.setData({ type: 'FeatureCollection', features: firFeatures });
     }
-  }, [baseFilteredCases, showFIRs, activeHotspots, selectedHotspot, stations, selectedDistrict, crimeHeads]);
+    
+    // Update Hotspots Source
+    const source = mapRef.current.getSource('hotspots') as maplibregl.GeoJSONSource;
+    if (source) {
+        source.setData({ type: 'FeatureCollection', features: hotspotFeatures });
+    }
+
+  }, [baseFilteredCases, activeHotspots, selectedHotspot, stations, selectedDistrict, crimeHeads, mapLoaded]);
+
+  // Handle Resize
+  useEffect(() => {
+     const handleResize = () => {
+         if (mapRef.current) mapRef.current.resize();
+     };
+     window.addEventListener('resize', handleResize);
+     return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div className="space-y-6 select-none font-sans">
+    <div className="space-y-6 select-none font-sans flex flex-col h-full">
       <div className="flex justify-between items-center border-b pb-4">
         <div>
           <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Spatial GIS Mapping</h2>
@@ -313,26 +674,12 @@ export const AdminGISMap: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow">
         
-        <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4 lg:col-span-1">
+        <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4 lg:col-span-1 h-fit">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2 mb-2">
             <Filter size={14} className="text-ksp-gold-dark" /> GIS Layers & Filters
           </h3>
-
-          <div className={`flex items-center justify-between bg-slate-50 p-2.5 rounded border ${selectedDistrict === 'ALL' ? 'opacity-50 cursor-not-allowed' : ''}`}>
-            <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-wide flex flex-col">
-              Show FIR Pinpoints
-              {selectedDistrict === 'ALL' && <span className="text-[9px] text-red-500 normal-case">(Select District First)</span>}
-            </span>
-            <input 
-              type="checkbox" 
-              checked={showFIRs && selectedDistrict !== 'ALL'} 
-              disabled={selectedDistrict === 'ALL'}
-              onChange={(e) => setShowFIRs(e.target.checked)}
-              className="w-4 h-4 text-ksp-navy border-slate-300 rounded focus:ring-ksp-navy disabled:opacity-50"
-            />
-          </div>
 
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">District</label>
@@ -369,7 +716,7 @@ export const AdminGISMap: React.FC = () => {
             </select>
           </div>
 
-          <div className={!showFIRs ? 'opacity-50' : ''}>
+          <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Crime Type</label>
             <select 
               value={selectedCrimeHead}
@@ -377,28 +724,26 @@ export const AdminGISMap: React.FC = () => {
                 const val = e.target.value;
                 setSelectedCrimeHead(val === 'ALL' ? 'ALL' : Number(val));
               }}
-              disabled={!showFIRs}
-              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
+              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy"
             >
               <option value="ALL">All Crimes</option>
               {crimeHeads.map(ch => <option key={ch.CrimeHeadID} value={ch.CrimeHeadID}>{ch.CrimeGroupName}</option>)}
             </select>
           </div>
 
-          <div className={!showFIRs ? 'opacity-50' : ''}>
+          <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Case Status</label>
             <select 
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              disabled={!showFIRs}
-              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
+              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy"
             >
               <option value="ALL">All Statuses</option>
               {mockDb.getCaseStatuses().map(s => <option key={s.CaseStatusID} value={s.CaseStatusName}>{s.CaseStatusName}</option>)}
             </select>
           </div>
 
-          <div className={!showFIRs ? 'opacity-50' : ''}>
+          <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Gravity</label>
             <select 
               value={selectedGravity}
@@ -406,15 +751,32 @@ export const AdminGISMap: React.FC = () => {
                 const val = e.target.value;
                 setSelectedGravity(val === 'ALL' ? 'ALL' : Number(val));
               }}
-              disabled={!showFIRs}
-              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
+              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy"
             >
               <option value="ALL">All Gravities</option>
               {gravityOffences.map(g => <option key={g.GravityOffenceID} value={g.GravityOffenceID}>{g.LookupValue}</option>)}
             </select>
           </div>
 
-          <div className={!showFIRs || activeHotspots.length === 0 ? 'opacity-50' : ''}>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Date Range</label>
+            <div className="flex gap-2">
+               <input 
+                  type="date" 
+                  value={dateFrom} 
+                  onChange={e => setDateFrom(e.target.value)} 
+                  className="w-1/2 p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy text-[11px]" 
+               />
+               <input 
+                  type="date" 
+                  value={dateTo} 
+                  onChange={e => setDateTo(e.target.value)} 
+                  className="w-1/2 p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy text-[11px]" 
+               />
+            </div>
+          </div>
+
+          <div className={activeHotspots.length === 0 ? 'opacity-50' : ''}>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Active Red Zones</label>
             <select 
               value={selectedHotspot}
@@ -423,10 +785,10 @@ export const AdminGISMap: React.FC = () => {
                 setSelectedHotspot(val);
                 if (val !== 'ALL' && mapRef.current) {
                   const [lat, lng] = val.split(',').map(Number);
-                  mapRef.current.flyTo([lat, lng], 14, { duration: 1.5 });
+                  mapRef.current.flyTo({ center: [lng, lat], zoom: 14, speed: 0.2, curve: 1 });
                 }
               }}
-              disabled={!showFIRs || activeHotspots.length === 0}
+              disabled={activeHotspots.length === 0}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
             >
               <option value="ALL">All Active Hotspots ({activeHotspots.length})</option>
@@ -465,18 +827,23 @@ export const AdminGISMap: React.FC = () => {
                 <span>AI Detected Heinous Hotspot Zones</span>
               </div>
             </div>
+            
+            {isHotspotsLoading && (
+              <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs flex items-center gap-2 font-bold animate-pulse">
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                Recalculating Intelligence...
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-white p-2 rounded-xl border shadow-sm lg:col-span-3 min-h-[500px] relative overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between p-2 bg-slate-50 border-b text-[10px] text-slate-400 font-semibold select-none">
+        <div className="lg:col-span-3 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[500px] relative flex flex-col">
+          <div className="flex items-center justify-between p-2 bg-slate-50 border-b text-[10px] text-slate-400 font-semibold select-none z-10 relative">
             <div className="flex items-center gap-1.5">
               <Info size={14} className="text-ksp-gold-dark" /> Mapped cases matching filter: {baseFilteredCases.length} of {cases.length}
             </div>
-
           </div>
-
-          <div ref={mapContainerRef} className="flex-grow rounded-lg overflow-hidden h-[450px] z-0"></div>
+          <div ref={mapContainerRef} className="flex-grow w-full h-full focus:outline-none outline-none" style={{ outline: 'none' }} />
         </div>
 
       </div>
