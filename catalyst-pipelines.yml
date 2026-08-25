@@ -9,17 +9,11 @@ pipeline-when:
     - << event.ref >>
     - refs/heads/main
 
-images:
-  Node20:
-    image: node:20-bookworm
-
 jobs:
 
   backend-build:
     cwd: /catalyst/backend
     steps:
-      - node --version
-      - npm --version
       - npm ci
       - npm run build
 
@@ -34,20 +28,18 @@ jobs:
       - >-
         catalyst deploy appsail
         --name backend
-        --build-path "/catalyst/backend"
+        --build-path "backend"
         --stack "NodeJS 20"
-        --command "node dist/app.js"
+        --command "npm start"
         --token "$CATALYST_TOKEN"
         --verbose
 
 stages:
 
   - name: build
-    image: Node20
     jobs:
       - backend-build
 
   - name: deploy
-    image: Node20
     jobs:
       - backend-deploy
