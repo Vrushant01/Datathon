@@ -22,15 +22,15 @@ jobs:
       equal:
         - << status.build.backend-build >>
         - success
-    cwd: /catalyst
+    cwd: /catalyst/backend
     steps:
       - npm install -g zcatalyst-cli@beta
       - >-
         catalyst deploy appsail
         --name backend
-        --build-path "backend"
-        --stack node20
-        --command "npm start"
+        --build-path "/catalyst/backend"
+        --stack "NodeJS 20"
+        --command "node dist/app.js"
         --token "$CATALYST_TOKEN"
         --verbose
 
