@@ -57,7 +57,7 @@ app.get("/health", (req, res) => {
 const PORT =
   Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT) ||
   Number(process.env.PORT) ||
-  9000;
+  5000;
 
 app.use(cors());
 app.use(express.json());
