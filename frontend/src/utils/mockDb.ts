@@ -695,7 +695,7 @@ export const syncFromMongo = async (): Promise<void> => {
     console.log('[DB] startup');
     setDbStatus('connecting', null, false);
     
-    const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
     
     // 1. Health check with retries
     console.log(`[DB] health check started URL: ${API_BASE_URL}/api/health`);
@@ -1151,7 +1151,7 @@ export const mockDb = {
     saveDbState(state);
 
     // Persist change to MongoDB
-    const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
     try {
       fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
         method: 'PUT',
