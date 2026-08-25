@@ -363,7 +363,7 @@ const connectDB = async () => {
   }
 };
 
-app.listen(PORT, async () => {
+app.listen(PORT, '0.0.0.0', async () => {
   await connectDB();
   console.log(`Server running on port ${PORT}`);
 });
