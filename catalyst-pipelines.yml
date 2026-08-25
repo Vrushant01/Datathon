@@ -30,7 +30,7 @@
         - >-
           catalyst deploy appsail --name backend
           --build-path "/catalyst/backend"
-          --stack "node20"
+          --stack node20
           --command "npm start"
           --token "$CATALYST_TOKEN"
           --verbose
