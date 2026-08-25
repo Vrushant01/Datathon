@@ -24,6 +24,8 @@ jobs:
         - success
     cwd: /catalyst/backend
     steps:
+      - npm ci
+      - npm run build
       - npm install -g zcatalyst-cli@beta
       - >-
         catalyst deploy appsail --name backend
