@@ -9,7 +9,7 @@ pipeline-when:
     - << event.ref >>
     - refs/heads/main
 
-jobs:
+jobs: 
 
   backend-build:
     cwd: /catalyst/backend
