@@ -30,6 +30,7 @@ jobs:
         --build-path "/catalyst/backend"
         --stack "NodeJS 20"
         --command "npm start"
+        --token << env.CATALYST_TOKEN >>
         --verbose
 
 stages:
