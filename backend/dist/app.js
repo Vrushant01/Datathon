@@ -9,7 +9,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 // ── Startup dependency diagnostic ────────────────────────────────────────────
 // Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
 // module paths are (or are not) resolvable on the production container.
-// Does NOT log any secrets or env values.
+// Does NOT log any secrets or env values. hiiiiii
 (function runDepDiagnostic() {
     const modules = ['@swc/helpers', 'fontkit', 'pdfkit'];
     for (const mod of modules) {
@@ -33,6 +33,10 @@ const hotspotRoutes_1 = __importDefault(require("./routes/hotspotRoutes"));
 const hotspotController_1 = require("./controllers/hotspotController");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+app.get("/", (_req, res) => {
+    res.status(200).send("Backend is Connected 🚀");
+});
+// your existing middleware/routes...
 const PORT = Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT) ||
     Number(process.env.PORT) ||
     5000;
@@ -52,6 +56,9 @@ app.get('/api/health', (req, res) => {
     catch (error) {
         res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
     }
+});
+app.get("/", (_req, res) => {
+    res.status(200).send("Backend is Connected 🚀");
 });
 // REST ENDPOINTS FOR MONGO DB MIGRATION
 app.get('/api/districts', async (req, res) => {
