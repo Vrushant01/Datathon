@@ -1,0 +1,35 @@
+version: 1
+runners:
+  high:
+    config-id: 3
+pipeline-when:
+  equal:
+    - << event.ref >>
+    - refs/heads/main
+jobs:
+  backend-build:
+    cwd: /catalyst/backend
+    steps:
+      - npm ci --omit=dev
+      - npm run build
+      - npm ls @swc/helpers --depth=0
+  backend-deploy:
+    when:
+      equal:
+        - << status.build.backend-build >>
+        - success
+    cwd: /catalyst/backend
+    steps:
+      - npm install -g zcatalyst-cli@beta
+      - >-
+        catalyst deploy appsail --name backend --build-path "/catalyst/backend"
+        --stack "NodeJS 20" --command "npm start" --verbose
+stages:
+  - name: build
+    jobs:
+      - backend-build
+  - name: deploy
+    jobs:
+      - backend-deploy
+variables:
+  CATALYST_TOKEN: m_1004.1a648792570867d8a72c854aeaeb19a4.20ac4eab8d10a2bb0795d782122609db
