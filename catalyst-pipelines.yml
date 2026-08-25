@@ -29,8 +29,8 @@ jobs:
       - npm install -g zcatalyst-cli@beta
       - >-
         catalyst deploy appsail --name backend
-        --build-path "/catalyst/backend"
-        --stack "node20"
+        --build-path "."
+        --stack "NodeJS 20"
         --command "npm start"
         --token "$CATALYST_TOKEN"
         --verbose
