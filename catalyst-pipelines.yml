@@ -17,7 +17,7 @@ jobs:
       - npm ci
       - npm run build
 
-  backend-deploy:
+    backend-deploy:
     when:
       equal:
         - << status.build.backend-build >>
@@ -25,6 +25,7 @@ jobs:
     cwd: /catalyst
     steps:
       - cd backend && npm ci && npm run build
+      - find backend/dist -type f
       - npm install -g zcatalyst-cli@beta
       - >-
         catalyst deploy appsail --name backend
