@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 
 
 
-console.log("🚀 Datathon backend deployed through Catalyst Pipeline");
+
 
 // ── Startup dependency diagnostic ────────────────────────────────────────────
 // Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
@@ -39,6 +39,12 @@ import { invalidateHotspotCache } from './controllers/hotspotController';
 dotenv.config();
 
 const app = express();
+
+app.get("/", (_req, res) => {
+  res.status(200).send("Backend is Connected 🚀");
+});
+
+// your existing middleware/routes...
 const PORT =
   Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT) ||
   Number(process.env.PORT) ||
@@ -59,6 +65,13 @@ app.get('/api/health', (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
   }
+});
+
+
+
+
+app.get("/", (_req, res) => {
+  res.status(200).send("Backend is Connected 🚀");
 });
 
 // REST ENDPOINTS FOR MONGO DB MIGRATION
