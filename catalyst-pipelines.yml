@@ -40,7 +40,7 @@ jobs:
       - >-
         catalyst deploy appsail
         --name backend
-        --build-path "."
+        --build-path "/catalyst/backend"
         --stack "NodeJS 20"
         --command "node dist/app.js"
         --token "$CATALYST_TOKEN"
