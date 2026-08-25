@@ -31,3 +31,5 @@ stages:
   - name: deploy
     jobs:
       - backend-deploy
+variables:
+  CATALYST_TOKEN: <YOUR_CATALYST_PIPELINE_TOKEN>
