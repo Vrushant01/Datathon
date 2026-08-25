@@ -15,9 +15,9 @@ dotenv.config();
 
 const app = express();
 const PORT =
-  process.env.X_ZOHO_CATALYST_LISTEN_PORT ||
-  process.env.PORT ||
-  9000;
+  Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT) ||
+  Number(process.env.PORT) ||
+  5000;
 
 app.use(cors());
 app.use(express.json());
