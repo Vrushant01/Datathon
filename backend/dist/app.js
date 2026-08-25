@@ -15,7 +15,9 @@ const hotspotRoutes_1 = __importDefault(require("./routes/hotspotRoutes"));
 const hotspotController_1 = require("./controllers/hotspotController");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.X_ZOHO_CATALYST_LISTEN_PORT ||
+    process.env.PORT ||
+    9000;
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 // Emergency live connection verification
