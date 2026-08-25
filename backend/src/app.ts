@@ -11,7 +11,7 @@ import dotenv from 'dotenv';
 // ── Startup dependency diagnostic ────────────────────────────────────────────
 // Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
 // module paths are (or are not) resolvable on the production container.
-// Does NOT log any secrets or env values. hiiiiii
+// Does NOT log any secrets or env values
 (function runDepDiagnostic() {
   const modules = ['@swc/helpers', 'fontkit', 'pdfkit'] as const;
   for (const mod of modules) {
