@@ -53,11 +53,7 @@ jobs:
       - ls -lh dist/app.js
 
       - npm install -g zcatalyst-cli@beta
-
-      - >-
-        catalyst deploy appsail
-        --token "$CATALYST_TOKEN"
-        --verbose
+      - catalyst deploy --token "$CATALYST_TOKEN" --verbose
 
 stages:
 
