@@ -4,10 +4,6 @@ runners:
   high:
     config-id: 3
 
-images:
-  Node20:
-    image: node:20
-
 pipeline-when:
   equal:
     - << event.ref >>
@@ -18,6 +14,10 @@ jobs:
   backend-build:
     cwd: /catalyst/backend
     steps:
+      - apt-get update
+      - apt-get install -y curl
+      - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      - apt-get install -y nodejs
       - node --version
       - npm --version
       - npm ci
@@ -28,15 +28,19 @@ jobs:
       equal:
         - << status.build.backend-build >>
         - success
-    cwd: /catalyst
+    cwd: /catalyst/backend
     steps:
+      - apt-get update
+      - apt-get install -y curl
+      - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      - apt-get install -y nodejs
       - node --version
       - npm --version
       - npm install -g zcatalyst-cli@beta
       - >-
         catalyst deploy appsail
         --name backend
-        --build-path "/catalyst/backend"
+        --build-path "."
         --stack "NodeJS 20"
         --command "node dist/app.js"
         --token "$CATALYST_TOKEN"
@@ -45,11 +49,9 @@ jobs:
 stages:
 
   - name: build
-    image: Node20
     jobs:
       - backend-build
 
   - name: deploy
-    image: Node20
     jobs:
       - backend-deploy
