@@ -24,8 +24,10 @@ jobs:
         - success
     cwd: /catalyst
     steps:
+      - ls -la backend/src || echo "NO SRC DIR"
       - cd backend && npm ci && npm run build
-      - find backend/dist -type f
+      - echo "BUILD EXIT: $?"
+      - find backend/dist -type f || echo "NO DIST"
       - npm install -g zcatalyst-cli@beta
       - >-
         catalyst deploy appsail --name backend
