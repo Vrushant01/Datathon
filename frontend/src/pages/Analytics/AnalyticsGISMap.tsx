@@ -51,7 +51,7 @@ export const AnalyticsGISMap: React.FC = () => {
         if (selectedStatus !== 'ALL') query.append('status', selectedStatus.toString());
         if (selectedGravity !== 'ALL') query.append('gravity', selectedGravity.toString());
 
-        const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://datathon-qs4x.onrender.com';
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
         const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
           signal: controller.signal
         });
@@ -92,7 +92,24 @@ export const AnalyticsGISMap: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/liberty',
+      style: {
+        version: 8 as const,
+        sources: {
+          osm: {
+            type: 'raster' as const,
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          }
+        },
+        layers: [{
+          id: 'osm-tiles',
+          type: 'raster' as const,
+          source: 'osm',
+          minzoom: 0,
+          maxzoom: 19
+        }]
+      },
       center: [77.5946, 12.9716],
       zoom: 12,
       maxBounds: [[68.0, 6.0], [98.0, 36.0]], // India bounds
