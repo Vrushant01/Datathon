@@ -345,7 +345,7 @@ app.get('/api/reports/case/:id', (req, res) => {
     .font('Helvetica-Bold')
     .text('Authorized Signature / Stamp', { align: 'right' });
 
-  // Finalize PDF file stream
+  // Finalize PDF file stream ..
   doc.end();
 });
 
