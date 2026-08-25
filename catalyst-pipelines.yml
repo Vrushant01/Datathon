@@ -27,6 +27,7 @@ jobs:
       - >-
         cd backend && npm ci && npm run build &&
         git add -f dist node_modules &&
+        git -c user.email="ci@local" -c user.name="ci" commit -m "ci: include build output for deploy" --no-verify &&
         npm install -g zcatalyst-cli@beta &&
         catalyst deploy appsail --name backend
         --build-path "backend"
