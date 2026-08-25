@@ -31,5 +31,3 @@ stages:
   - name: deploy
     jobs:
       - backend-deploy
-variables:
-  CATALYST_TOKEN: m_1004.1a648792570867d8a72c854aeaeb19a4.20ac4eab8d10a2bb0795d782122609db
