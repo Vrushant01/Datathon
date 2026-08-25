@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+
+
+
+
+console.log("🚀 Datathon backend deployed through Catalyst Pipeline");
+
 // ── Startup dependency diagnostic ────────────────────────────────────────────
 // Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
 // module paths are (or are not) resolvable on the production container.
