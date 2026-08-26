@@ -810,50 +810,26 @@ let memoryDbState: DbState | null = null;
 export const loadDbState = (): DbState => {
   if (memoryDbState) return memoryDbState;
   
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) {
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('ksp_crime_platform_db_v')) {
-        keysToRemove.push(key);
-      }
+  // Clean up any old massive local storage states from previous versions to free quota
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('ksp_crime_platform_db_v')) {
+      keysToRemove.push(key);
     }
-    keysToRemove.forEach(k => localStorage.removeItem(k));
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState));
-    } catch (e) {
-      console.warn('Failed to save to localStorage. The dataset might be too large.', e);
-    }
-    memoryDbState = defaultState;
-    return defaultState;
   }
-  try {
-    const parsed = JSON.parse(data);
-    memoryDbState = { ...defaultState, ...parsed };
-    return memoryDbState;
-  } catch (e) {
-    memoryDbState = defaultState;
-    return defaultState;
-  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+  
+  memoryDbState = defaultState;
+  return memoryDbState;
 };
 
 export const saveDbState = (state: DbState): void => {
   memoryDbState = state;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    console.warn('Failed to save to localStorage (exceeded quota). Using in-memory store instead.', e);
-  }
 };
 
 export const resetDbState = (): void => {
   memoryDbState = defaultState;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultState));
-  } catch (e) {
-    console.warn('Failed to save to localStorage. The dataset might be too large.', e);
-  }
 };
 
 // -------------------------------------------------------------
