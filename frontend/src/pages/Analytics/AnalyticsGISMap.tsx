@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { mockDb } from '../../utils/mockDb';
+import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { MapPin, Filter } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
@@ -51,7 +52,7 @@ export const AnalyticsGISMap: React.FC = () => {
         if (selectedStatus !== 'ALL') query.append('status', selectedStatus.toString());
         if (selectedGravity !== 'ALL') query.append('gravity', selectedGravity.toString());
 
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        
         const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
           signal: controller.signal
         });

@@ -5,7 +5,7 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Filter, Layers, Info } from 'lucide-react';
 import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon } from '../../utils/geoUtils';
-
+import { API_BASE_URL } from '../../config/api';
 export const AdminGISMap: React.FC = () => {
   const location = useLocation();
   const cases = mockDb.getCases();
@@ -78,7 +78,7 @@ export const AdminGISMap: React.FC = () => {
         if (dateFrom) query.append('dateFrom', dateFrom);
         if (dateTo) query.append('dateTo', dateTo);
 
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+        
         const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
           signal: controller.signal
         });

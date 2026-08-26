@@ -1,5 +1,5 @@
 import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from './seedData';
-
+import { API_BASE_URL } from '../config/api';
 // KSP Mock Database and Client-Side State Manager
 // Implements the exact ER Schema of the Karnataka Police Department
 // Stores state in LocalStorage for persistence across page reloads
@@ -666,7 +666,7 @@ const cleanPayload = (table: string, record: any) => {
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000) => {
+const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 120000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -695,7 +695,7 @@ export const syncFromMongo = async (): Promise<void> => {
     console.log('[DB] startup');
     setDbStatus('connecting', null, false);
     
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    
     
     // 1. Health check with retries
     console.log(`[DB] health check started URL: ${API_BASE_URL}/api/health`);
@@ -735,7 +735,7 @@ export const syncFromMongo = async (): Promise<void> => {
     console.log('[Dashboard] stats request started');
     const fetchTable = async (route: string) => {
       try {
-        const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 10000);
+        const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return await res.json();
       } catch (e: any) {
@@ -1151,7 +1151,7 @@ export const mockDb = {
     saveDbState(state);
 
     // Persist change to MongoDB
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+    
     try {
       fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
         method: 'PUT',
