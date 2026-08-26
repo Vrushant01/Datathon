@@ -43,13 +43,13 @@ dotenv.config();
 const app = express();
 
 app.get("/", (req, res) => {
-  res.status(200).send("Backend is Connected 🚀");
+  res.status(200).send("Backend is Connected with pipeline 🚀");
 });
 
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
-    message: "Backend is Connected 🚀"
+    message: "Backend is Connected with pipeline 🚀"
   });
 });
 
