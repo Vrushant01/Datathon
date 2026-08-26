@@ -81,10 +81,22 @@ export const getHotspots = async (req: Request, res: Response) => {
       categoryName: CRIME_HEADS[c.CrimeMajorHeadID] || 'Other'
     }));
 
-    // DBSCAN: eps = 2km, minPts = 3
-    const clusters = performDBSCAN(points, 2.0, 3);
+    // Group points by crimeMajorHeadId
+    const pointsByCrime: Record<number, FIRPoint[]> = {};
+    points.forEach(p => {
+      const typeId = p.crimeMajorHeadId || 0;
+      if (!pointsByCrime[typeId]) pointsByCrime[typeId] = [];
+      pointsByCrime[typeId].push(p);
+    });
 
-    const hotspots = generateHotspotsRiskAnalysis(clusters, cases);
+    // Run DBSCAN independently per crime type: eps = 2km, minPts = 3
+    let allClusters: FIRPoint[][] = [];
+    for (const typeId in pointsByCrime) {
+      const typeClusters = performDBSCAN(pointsByCrime[typeId], 2.0, 3);
+      allClusters = allClusters.concat(typeClusters);
+    }
+
+    const hotspots = generateHotspotsRiskAnalysis(allClusters, cases);
     
     // Sort hotspots by risk score descending
     hotspots.sort((a, b) => b.riskScore - a.riskScore);
