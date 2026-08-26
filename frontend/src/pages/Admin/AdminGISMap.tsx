@@ -158,8 +158,14 @@ export const AdminGISMap: React.FC = () => {
   }, [location.state]);
 
   useEffect(() => {
+    console.log("[GIS] before geojson fetch");
+    console.log("[GIS] geojson URL:", karnatakaGeoJsonUrl);
     fetch(karnatakaGeoJsonUrl)
-      .then(res => res.json())
+      .then(res => {
+         console.log("[GIS] geojson fetch status:", res.status);
+         console.log("[GIS] geojson content-type:", res.headers.get("content-type"));
+         return res.json();
+      })
       .then(data => setGeoJsonData(data))
       .catch(err => console.error("Failed to load geojson", err));
   }, []);
@@ -654,7 +660,9 @@ export const AdminGISMap: React.FC = () => {
     activeHotspots.forEach(h => {
       if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
       customAIHotspotFound = true;
-      const poly = createCirclePolygon([h.lng, h.lat], h.radiusKm * 1000);
+      // Cap radius to 10km to prevent giant screen-covering blobs from data outliers
+      const safeRadiusKm = Math.min(10, h.radiusKm);
+      const poly = createCirclePolygon([h.lng, h.lat], safeRadiusKm * 1000);
       poly.properties = {
           popupHtml: `<div style="font-family: sans-serif; font-size: 11px;">
             <b>🚨 ${h.riskLevel} HOTSPOT</b><br/>
