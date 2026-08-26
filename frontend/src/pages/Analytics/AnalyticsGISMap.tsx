@@ -350,7 +350,9 @@ export const AnalyticsGISMap: React.FC = () => {
     activeHotspots.forEach(h => {
       if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
 
-      const poly = createCirclePolygon([h.lng, h.lat], h.radiusKm * 1000);
+      // Cap radius to 10km to prevent giant screen-covering blobs from data outliers
+      const safeRadiusKm = Math.min(10, h.radiusKm);
+      const poly = createCirclePolygon([h.lng, h.lat], safeRadiusKm * 1000);
       poly.properties = {
           popupHtml: `<div style="font-family: sans-serif; font-size: 11px;">
             <b>🚨 ${h.riskLevel} HOTSPOT</b><br/>
