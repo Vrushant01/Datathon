@@ -8,7 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
 maplibregl.setWorkerUrl(workerUrl);
-import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon } from '../../utils/geoUtils';
+import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon, getDistance } from '../../utils/geoUtils';
 import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 
 export const AnalyticsGISMap: React.FC = () => {
@@ -30,7 +30,7 @@ export const AnalyticsGISMap: React.FC = () => {
   const [selectedHotspot, setSelectedHotspot] = useState<string>('ALL');
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
 
-  const filteredCases = React.useMemo(() => {
+  const baseFilteredCases = React.useMemo(() => {
     return mockDb.getCases().filter(c => {
       if (c.PoliceStationID !== unitId) return false;
       if (selectedCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== selectedCrimeHead) return false;
@@ -42,6 +42,36 @@ export const AnalyticsGISMap: React.FC = () => {
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
+
+  // Parent-Child Filter Cascades
+  useEffect(() => {
+    setSelectedHotspot('ALL');
+  }, [selectedCrimeHead, selectedStatus, selectedGravity]);
+
+  // Dynamic Case Counts for Hotspots
+  const hotspotCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    activeHotspots.forEach(h => {
+      counts[h.clusterId] = baseFilteredCases.filter(c => {
+        if (h.crimeMajorHeadID && c.CrimeMajorHeadID !== h.crimeMajorHeadID) return false;
+        const distKm = getDistance(c.latitude, c.longitude, h.lat, h.lng);
+        return distKm <= h.radiusKm;
+      }).length;
+    });
+    return counts;
+  }, [baseFilteredCases, activeHotspots]);
+
+  // Single Source of Truth for all GIS UI
+  const finalFilteredCases = React.useMemo(() => {
+    if (selectedHotspot === 'ALL') return baseFilteredCases;
+    const h = activeHotspots.find(h => h.clusterId === selectedHotspot);
+    if (!h) return baseFilteredCases;
+    return baseFilteredCases.filter(c => {
+      if (h.crimeMajorHeadID && c.CrimeMajorHeadID !== h.crimeMajorHeadID) return false;
+      const distKm = getDistance(c.latitude, c.longitude, h.lat, h.lng);
+      return distKm <= h.radiusKm;
+    });
+  }, [baseFilteredCases, selectedHotspot, activeHotspots]);
 
   useEffect(() => {
     if (!unitId) return;
@@ -70,6 +100,7 @@ export const AnalyticsGISMap: React.FC = () => {
              lat: h.center.lat,
              lng: h.center.lng,
              count: h.incidentCount,
+             crimeMajorHeadID: h.crimeMajorHeadId,
              crimeName: Object.keys(h.crimeCategories || {}).sort((a,b) => (h.crimeCategories[b] - h.crimeCategories[a]))[0] || 'Multiple Crimes',
              radiusKm: h.radiusKm,
              riskScore: h.riskScore,
@@ -351,7 +382,7 @@ export const AnalyticsGISMap: React.FC = () => {
 
     const hotspotFeatures: any[] = [];
     activeHotspots.forEach(h => {
-      if (selectedHotspot !== 'ALL' && selectedHotspot !== `${h.lat},${h.lng}`) return;
+      if (selectedHotspot !== 'ALL' && selectedHotspot !== h.clusterId) return;
 
       // Cap radius to 10km to prevent giant screen-covering blobs from data outliers
       const safeRadiusKm = Math.min(10, h.radiusKm);
@@ -375,36 +406,19 @@ export const AnalyticsGISMap: React.FC = () => {
         source.setData({ type: 'FeatureCollection', features: hotspotFeatures });
     }
 
-    const firFeatures: any[] = [];
-
-    filteredCases.forEach(c => {
-      if (typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude)) {
-        if (selectedHotspot !== 'ALL') {
-          const [hLat, hLng] = selectedHotspot.split(',').map(Number);
-          const selectedH = activeHotspots.find(h => h.lat === hLat && h.lng === hLng);
-          const dist = Math.sqrt(Math.pow(c.latitude - hLat, 2) + Math.pow(c.longitude - hLng, 2)) * 111000;
-          if (selectedH) {
-            if (dist > (selectedH.radiusKm * 1000)) return;
-          } else {
-            if (dist > 2000) return;
-          }
+    const firFeatures = finalFilteredCases
+      .filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude))
+      .map(c => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
+        properties: {
+          id: c.CaseMasterID,
+          crimeNo: c.CrimeNo,
+          majorHeadName: crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Penal Code',
+          statusName: mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName || 'N/A',
+          briefFacts: c.BriefFacts.substring(0, 80) + '...'
         }
-
-        const statusName = mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName;
-        const majorHeadName = crimeHeads.find(ch => ch.CrimeHeadID === c.CrimeMajorHeadID)?.CrimeGroupName || 'Penal Code';
-
-        firFeatures.push({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
-            properties: {
-                crimeNo: c.CrimeNo,
-                majorHeadName: majorHeadName,
-                statusName: statusName,
-                briefFacts: c.BriefFacts.substring(0, 80) + '...'
-            }
-        });
-      }
-    });
+      }));
 
     const firSource = mapRef.current.getSource('fir-cases') as maplibregl.GeoJSONSource;
     if (firSource) {
@@ -412,12 +426,19 @@ export const AnalyticsGISMap: React.FC = () => {
     }
 
     if (selectedHotspot !== 'ALL') {
-         const [hLat, hLng] = selectedHotspot.split(',').map(Number);
-         mapRef.current.flyTo({ center: [hLng, hLat], zoom: 14, speed: 0.2, curve: 1 });
+         const selectedH = activeHotspots.find(h => h.clusterId === selectedHotspot);
+         if (selectedH) {
+           const radiusInDegrees = (selectedH.radiusKm / 111.32);
+           const bbox = [
+             [selectedH.lng - radiusInDegrees, selectedH.lat - radiusInDegrees],
+             [selectedH.lng + radiusInDegrees, selectedH.lat + radiusInDegrees]
+           ] as maplibregl.LngLatBoundsLike;
+           mapRef.current.fitBounds(bbox, { padding: 100, duration: 1500 });
+         }
     } else {
          mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 800 });
     }
-  }, [unitId, filteredCases, activeHotspots, selectedHotspot, mapLoaded]);
+  }, [unitId, finalFilteredCases, activeHotspots, selectedHotspot, mapLoaded]);
 
   // Handle Resize
   useEffect(() => {
@@ -446,6 +467,7 @@ export const AnalyticsGISMap: React.FC = () => {
         
         {/* Filter Card */}
         <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4 lg:col-span-1 h-fit">
+          <span className="text-gray-500 font-medium">Mapped cases matching filter: {finalFilteredCases.length}</span>
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2 mb-2">
             <Filter size={14} className="text-ksp-gold-dark" /> Station GIS Filters
           </h3>
@@ -508,8 +530,8 @@ export const AnalyticsGISMap: React.FC = () => {
             >
               <option value="ALL">All Active Hotspots ({activeHotspots.length})</option>
               {activeHotspots.map((h, i) => (
-                <option key={i} value={`${h.lat},${h.lng}`}>
-                  {h.crimeName} ({h.count} Cases)
+                <option key={i} value={h.clusterId}>
+                  {h.crimeName} ({hotspotCounts[h.clusterId] || 0} Cases)
                 </option>
               ))}
             </select>

@@ -95,7 +95,20 @@ export interface FIRPoint extends Point {
 }
 
 export const generateHotspotsRiskAnalysis = (clusters: FIRPoint[][], allCases: any[]) => {
-  const currentDate = new Date();
+  let maxDateMs = Date.now();
+  if (allCases && allCases.length > 0) {
+    let maxDateStr = allCases[0].CrimeRegisteredDate;
+    for (const c of allCases) {
+      if (c.CrimeRegisteredDate && new Date(c.CrimeRegisteredDate) > new Date(maxDateStr)) {
+        maxDateStr = c.CrimeRegisteredDate;
+      }
+    }
+    if (maxDateStr) {
+      maxDateMs = new Date(maxDateStr).getTime();
+    }
+  }
+
+  const currentDate = new Date(maxDateMs);
   const thirtyDaysAgo = new Date(currentDate.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(currentDate.getTime() - 60 * 24 * 60 * 60 * 1000);
 
@@ -196,6 +209,7 @@ export const generateHotspotsRiskAnalysis = (clusters: FIRPoint[][], allCases: a
       trend,
       growthRate: Number(growthRate.toFixed(1)),
       crimeCategories,
+      crimeMajorHeadID: cluster[0]?.crimeMajorHeadId,
       forecastAvailable: true,
       forecast7DayScore,
       forecast7DayLevel,
