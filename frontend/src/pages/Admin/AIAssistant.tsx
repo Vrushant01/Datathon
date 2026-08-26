@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Send, Bot, User, Loader2, Sparkles, AlertCircle, BarChart2, RefreshCw } from 'lucide-react';
-
+import { API_BASE_URL } from '../../config/api';
 interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -44,7 +44,7 @@ export const AIAssistant: React.FC = () => {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  
 
   const fetchAnalytics = async () => {
     try {
