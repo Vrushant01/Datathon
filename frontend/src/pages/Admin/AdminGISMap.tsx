@@ -6,6 +6,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Filter, Layers, Info } from 'lucide-react';
 import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon } from '../../utils/geoUtils';
 import { API_BASE_URL } from '../../config/api';
+import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
+
 export const AdminGISMap: React.FC = () => {
   const location = useLocation();
   const cases = mockDb.getCases();
@@ -125,7 +127,7 @@ export const AdminGISMap: React.FC = () => {
   }, [location.state]);
 
   useEffect(() => {
-    fetch('/karnataka_districts.geojson')
+    fetch(karnatakaGeoJsonUrl)
       .then(res => res.json())
       .then(data => setGeoJsonData(data))
       .catch(err => console.error("Failed to load geojson", err));

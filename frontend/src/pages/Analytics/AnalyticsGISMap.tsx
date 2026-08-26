@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { MapPin, Filter } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { createCirclePolygon } from '../../utils/geoUtils';
+import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon } from '../../utils/geoUtils';
+import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 
 export const AnalyticsGISMap: React.FC = () => {
   const { user } = useAuth();
