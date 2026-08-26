@@ -1,7 +1,7 @@
 src/
 .env
 .env.*
-!.env.example
+
 .DS_Store
 *.log
 .git/

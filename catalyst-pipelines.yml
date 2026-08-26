@@ -41,24 +41,28 @@ jobs:
       - node --version
       - npm --version
 
-      # IMPORTANT: this job has its own workspace,
-      # so build the deployable application here too.
+      # Each pipeline job has its own isolated workspace.
+      # Build AND install node_modules — AppSail does NOT auto-run npm install.
       - npm ci
       - npm run build
 
-      # HARD PROOF that the file exists in the SAME job
-      # that performs the AppSail upload.
+      # Hard-verify both critical files exist before packaging.
       - test -f package.json
       - test -f dist/app.js
-      - ls -lh dist/app.js
 
-      - npm install -g zcatalyst-cli@beta
+      # Pin to EXACT same CLI version as local (1.27.0).
+      # @beta uses a different standalone mode that bypasses app-config.json
+      # and does not reliably include node_modules/dist in the archive.
+      - npm install -g zcatalyst-cli@1.27.0
+
+      # Initialized-project deploy: CLI walks up from /catalyst/backend
+      # to find /catalyst/catalyst.json, reads appsail entry
+      # {source: "backend", name: "backend"}, then reads
+      # backend/app-config.json for stack/command/buildPath.
+      # Archive is built from /catalyst/backend including node_modules/ + dist/.
       - >-
-        catalyst deploy appsail
-        --name backend
-        --build-path "/catalyst/backend"
-        --stack "NodeJS 20"
-        --command "node dist/app.js"
+        catalyst deploy
+        --only appsail
         --token "$CATALYST_TOKEN"
         --verbose
 
