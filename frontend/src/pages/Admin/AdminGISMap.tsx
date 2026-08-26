@@ -30,7 +30,8 @@ export const AdminGISMap: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   
-  const stationsMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const stationsMarkersRef = useRef<{ [key: number]: maplibregl.Marker }>({});
+  const stationPopupsRef = useRef<{ [key: number]: maplibregl.Popup }>({});
   
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
 
@@ -63,6 +64,35 @@ export const AdminGISMap: React.FC = () => {
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
+  const [isMapTransitioning, setIsMapTransitioning] = useState<boolean>(false);
+
+  // Handle map transitions to hide old data while camera moves
+  useEffect(() => {
+    setIsMapTransitioning(true);
+    const timer = setTimeout(() => setIsMapTransitioning(false), 800);
+    return () => clearTimeout(timer);
+  }, [selectedDistrict, selectedStation]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return;
+    const opacity = isMapTransitioning ? 0 : 1;
+    
+    // Attempt to set opacities safely
+    try {
+        mapRef.current.setPaintProperty('clusters', 'circle-opacity', opacity);
+        mapRef.current.setPaintProperty('clusters', 'circle-stroke-opacity', opacity);
+        mapRef.current.setPaintProperty('cluster-count', 'text-opacity', opacity);
+        
+        mapRef.current.setPaintProperty('unclustered-point', 'circle-opacity', opacity);
+        mapRef.current.setPaintProperty('unclustered-point', 'circle-stroke-opacity', opacity);
+        
+        const hotspotOpacity = isMapTransitioning ? 0 : 0.2;
+        mapRef.current.setPaintProperty('hotspots-fill', 'fill-opacity', hotspotOpacity);
+        mapRef.current.setPaintProperty('hotspots-line', 'line-opacity', opacity);
+    } catch (e) {
+        // Layers might not be initialized yet
+    }
+  }, [isMapTransitioning, mapLoaded]);
 
   // Compute hotspots from backend
   useEffect(() => {
@@ -70,6 +100,7 @@ export const AdminGISMap: React.FC = () => {
     
     const fetchHotspots = async () => {
       setIsHotspotsLoading(true);
+      setActiveHotspots([]); // Clear immediately when filters change
       try {
         const query = new URLSearchParams();
         if (selectedDistrict !== 'ALL') query.append('district', selectedDistrict.toString());
@@ -228,7 +259,9 @@ export const AdminGISMap: React.FC = () => {
                      ['boolean', ['feature-state', 'hover'], false], 0.15, 
                      ['boolean', ['feature-state', 'hasSelection'], false], 0.05, 
                      0.1
-                 ]
+                 ],
+                 'fill-opacity-transition': { duration: 400 },
+                 'fill-color-transition': { duration: 400 }
              }
          }, insertBeforeId);
 
@@ -244,7 +277,9 @@ export const AdminGISMap: React.FC = () => {
                      ['boolean', ['feature-state', 'selected'], false], 1, 
                      ['boolean', ['feature-state', 'hasSelection'], false], 0.3, 
                      0.8
-                 ]
+                 ],
+                 'line-opacity-transition': { duration: 400 },
+                 'line-color-transition': { duration: 400 }
              }
          }, insertBeforeId);
 
@@ -254,7 +289,9 @@ export const AdminGISMap: React.FC = () => {
              source: 'hotspots',
              paint: {
                  'fill-color': '#ef4444',
-                 'fill-opacity': 0.2
+                 'fill-opacity': 0.2,
+                 'fill-opacity-transition': { duration: 400 },
+                 'fill-color-transition': { duration: 400 }
              }
          });
          
@@ -264,7 +301,8 @@ export const AdminGISMap: React.FC = () => {
              source: 'hotspots',
              paint: {
                  'line-color': '#ef4444',
-                 'line-width': 1
+                 'line-width': 1,
+                 'line-color-transition': { duration: 400 }
              }
          });
          
@@ -294,7 +332,10 @@ export const AdminGISMap: React.FC = () => {
                      25
                  ],
                  'circle-stroke-width': 2,
-                 'circle-stroke-color': '#ffffff'
+                 'circle-stroke-color': '#ffffff',
+                 'circle-color-transition': { duration: 400 },
+                 'circle-radius-transition': { duration: 400 },
+                 'circle-stroke-opacity-transition': { duration: 400 }
              }
          });
 
@@ -322,7 +363,9 @@ export const AdminGISMap: React.FC = () => {
                  'circle-color': '#3b82f6',
                  'circle-radius': 6,
                  'circle-stroke-width': 2,
-                 'circle-stroke-color': '#ffffff'
+                 'circle-stroke-color': '#ffffff',
+                 'circle-color-transition': { duration: 400 },
+                 'circle-stroke-opacity-transition': { duration: 400 }
              }
          });
 
@@ -379,6 +422,7 @@ export const AdminGISMap: React.FC = () => {
          
          // Clusters logic
          map.on('click', 'clusters', (e) => {
+             e.originalEvent.stopPropagation();
              const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
              if (!features.length) return;
              const clusterId = features[0].properties.cluster_id;
@@ -431,14 +475,6 @@ export const AdminGISMap: React.FC = () => {
          map.on('click', 'unclustered-point', (e) => {
              e.originalEvent.stopPropagation();
          });
-         
-         // Prevent click on clusters from opening Hotspot popup (clusters have their own zoom logic)
-         map.on('click', 'clusters', (e) => {
-             e.originalEvent.stopPropagation();
-             // Zoom into cluster
-             const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-             map.easeTo({ center: (features[0].geometry as any).coordinates, zoom: map.getZoom() + 2 });
-         });
 
          // Global click for Outside-Karnataka clear logic
          map.on('click', (e) => {
@@ -454,7 +490,7 @@ export const AdminGISMap: React.FC = () => {
                  setSelectedStation('ALL');
                  
                  // Force the zoom out animation in case state was already ALL but user manually panned
-                 map.flyTo({ center: [76.5, 15.0], zoom: 6, duration: 2500, essential: true });
+                 map.flyTo({ center: [76.5, 15.0], zoom: 6, duration: 1500, essential: true });
              }
          });
 
@@ -520,7 +556,7 @@ export const AdminGISMap: React.FC = () => {
     if (selectedStation !== 'ALL') {
        const station = stations.find(s => s.UnitID === selectedStation);
        if (station && typeof station.longitude === 'number' && typeof station.latitude === 'number') {
-           mapRef.current.flyTo({ center: [station.longitude, station.latitude], zoom: 14, duration: 2500 });
+           mapRef.current.flyTo({ center: [station.longitude, station.latitude], zoom: 14, duration: 1500 });
        }
     } else if (selectedDistrict !== 'ALL') {
        const district = districts.find(d => d.DistrictID === selectedDistrict);
@@ -529,7 +565,7 @@ export const AdminGISMap: React.FC = () => {
            if (f) {
                const bbox = getBoundingBox(f);
                if (bbox) {
-                   mapRef.current.fitBounds(bbox, { padding: 80, duration: 2500 });
+                   mapRef.current.fitBounds(bbox, { padding: 80, duration: 1500 });
                }
            }
        }
@@ -538,7 +574,7 @@ export const AdminGISMap: React.FC = () => {
        mapRef.current.flyTo({
            center: [76.5, 15.0],
            zoom: 6,
-           duration: 2500,
+           duration: 1500,
            essential: true
        });
     }
@@ -547,10 +583,6 @@ export const AdminGISMap: React.FC = () => {
   // Main Render Logic
   useEffect(() => {
     if (!mapRef.current) return;
-
-    // Clear old markers (only stations now, FIRs are GeoJSON)
-    stationsMarkersRef.current.forEach(m => m.remove());
-    stationsMarkersRef.current = [];
 
     let displayStations: any[] = [];
     
@@ -573,11 +605,29 @@ export const AdminGISMap: React.FC = () => {
       displayStations = stations.filter(s => psIds.has(s.UnitID));
     }
       
+    const currentStationIds = new Set(displayStations.map(s => s.UnitID));
+
+    // Remove markers that are no longer in displayStations
+    Object.keys(stationsMarkersRef.current).forEach(id => {
+       const unitId = Number(id);
+       if (!currentStationIds.has(unitId)) {
+           stationsMarkersRef.current[unitId].remove();
+           delete stationsMarkersRef.current[unitId];
+           if (stationPopupsRef.current[unitId]) {
+               stationPopupsRef.current[unitId].remove();
+               delete stationPopupsRef.current[unitId];
+           }
+       }
+    });
+
     if (displayStations.length > 0) {
       displayStations.forEach(s => {
         if (s.latitude && s.longitude && !isNaN(s.latitude) && !isNaN(s.longitude)) {
+          // If marker already exists, do nothing
+          if (stationsMarkersRef.current[s.UnitID]) return;
+
           const el = document.createElement('div');
-          el.className = 'custom-station-pin';
+          el.className = 'custom-station-pin transition-all duration-300';
           el.innerHTML = `<div style="background-color: #facc15; width: 16px; height: 16px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`;
           
           const fullPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 })
@@ -591,7 +641,8 @@ export const AdminGISMap: React.FC = () => {
           el.addEventListener('mouseenter', () => fullPopup.addTo(mapRef.current!));
           el.addEventListener('mouseleave', () => fullPopup.remove());
             
-          stationsMarkersRef.current.push(marker);
+          stationsMarkersRef.current[s.UnitID] = marker;
+          stationPopupsRef.current[s.UnitID] = fullPopup;
         }
       });
     }
