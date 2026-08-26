@@ -1,1 +1,8 @@
-{}
+{
+  "appsail": [
+    {
+      "source": "backend",
+      "name": "backend"
+    }
+  ]
+}

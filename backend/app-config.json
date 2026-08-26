@@ -1,6 +1,9 @@
 {
-  "name": "backend",
+  "command": "node dist/app.js",
+  "buildPath": ".",
   "stack": "node20",
-  "build_path": "./",
-  "command": "node dist/app.js"
+  "env_variables": {},
+  "memory": 256,
+  "scripts": {},
+  "raw": {}
 }
