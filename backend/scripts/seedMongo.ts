@@ -5,7 +5,7 @@ import { faker } from '@faker-js/faker';
 import { State, District, UnitType, Unit, Employee, CaseMaster, Victim, Accused, CustomEdge } from '../src/models';
 
 // Import seed data manually from frontend utils
-import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from '../../frontend/src/utils/seedData';
+import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES, SEED_ACCUSED, SEED_VICTIMS } from './generated/seedData';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -19,6 +19,22 @@ const seedDB = async () => {
   try {
     await mongoose.connect(mongoURI);
     console.log('MongoDB connected for seeding...');
+
+    // Record existing counts
+    console.log('Recording current collection counts...');
+    const currentCounts = await Promise.all([
+      District.countDocuments({}),
+      Unit.countDocuments({}),
+      Employee.countDocuments({}),
+      CaseMaster.countDocuments({}),
+      Victim.countDocuments({}),
+      Accused.countDocuments({})
+    ]);
+    console.log(`Current Counts - Districts: ${currentCounts[0]}, Units: ${currentCounts[1]}, Employees: ${currentCounts[2]}, Cases: ${currentCounts[3]}, Victims: ${currentCounts[4]}, Accused: ${currentCounts[5]}`);
+
+    // Verify generated dataset counts
+    console.log('Verifying payload counts before deletion...');
+    console.log(`Payload Counts - Districts: ${SEED_DISTRICTS.length}, Units: ${SEED_UNITS.length}, Cases: ${SEED_CASES.length}, Victims: ${SEED_VICTIMS.length}, Accused: ${SEED_ACCUSED.length}`);
 
     // Clear existing data
     console.log('Clearing old collections...');
@@ -64,6 +80,17 @@ const seedDB = async () => {
       const batch = SEED_CASES.slice(i, i + batchSize);
       await CaseMaster.insertMany(batch);
       console.log(`Inserted cases ${i} to ${i + batch.length}`);
+    }
+
+    console.log('Inserting Accused & Victims...');
+    // Seed in batches to avoid payload limits
+    for (let i = 0; i < SEED_ACCUSED.length; i += batchSize) {
+      const batch = SEED_ACCUSED.slice(i, i + batchSize);
+      await Accused.insertMany(batch);
+    }
+    for (let i = 0; i < SEED_VICTIMS.length; i += batchSize) {
+      const batch = SEED_VICTIMS.slice(i, i + batchSize);
+      await Victim.insertMany(batch);
     }
 
     console.log('MongoDB Seed complete!');
