@@ -162,7 +162,9 @@ export const AnalyticsGISMap: React.FC = () => {
             source: 'hotspots',
             paint: {
                 'fill-color': '#ef4444',
-                'fill-opacity': 0.2
+                'fill-opacity': 0.2,
+                'fill-opacity-transition': { duration: 400 },
+                'fill-color-transition': { duration: 400 }
             }
         });
         
@@ -172,7 +174,8 @@ export const AnalyticsGISMap: React.FC = () => {
             source: 'hotspots',
             paint: {
                 'line-color': '#ef4444',
-                'line-width': 1
+                'line-width': 1,
+                'line-color-transition': { duration: 400 }
             }
         });
 
@@ -198,7 +201,9 @@ export const AnalyticsGISMap: React.FC = () => {
                      15, 10, 20, 50, 25
                 ],
                 'circle-stroke-width': 2,
-                'circle-stroke-color': '#ffffff'
+                'circle-stroke-color': '#ffffff',
+                'circle-color-transition': { duration: 400 },
+                'circle-radius-transition': { duration: 400 }
             }
         });
 
@@ -242,6 +247,7 @@ export const AnalyticsGISMap: React.FC = () => {
         
         // Clusters logic
         map.on('click', 'clusters', (e) => {
+            e.originalEvent.stopPropagation();
             const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
             if (!features.length) return;
             const clusterId = features[0].properties.cluster_id;
@@ -292,13 +298,6 @@ export const AnalyticsGISMap: React.FC = () => {
         map.on('click', 'unclustered-point', (e) => {
             e.originalEvent.stopPropagation();
         });
-        
-        // Prevent click on clusters from opening Hotspot popup
-        map.on('click', 'clusters', (e) => {
-            e.originalEvent.stopPropagation();
-            const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
-            map.easeTo({ center: (features[0].geometry as any).coordinates, zoom: map.getZoom() + 2 });
-        });
 
         map.on('error', (e) => {
             console.error("MapLibre Error:", e);
@@ -318,30 +317,34 @@ export const AnalyticsGISMap: React.FC = () => {
   useEffect(() => {
     if (!unitId || !mapRef.current || !mapLoaded) return;
 
-    // Clear old markers
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current = [];
+    if (markersRef.current.length === 0) {
+      const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
+      const station = stations.find(u => u.UnitID === unitId);
+
+      if (station && station.latitude && station.longitude) {
+        const el = document.createElement('div');
+        el.className = 'custom-station-pin';
+        el.innerHTML = `<div style="background-color: #facc15; width: 20px; height: 20px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`;
+        
+        const popup = new maplibregl.Popup({ offset: 25 })
+          .setHTML(`<div style="font-family: sans-serif; font-size: 11px;"><b>${station.UnitName}</b><br/>Command Center</div>`);
+
+        const stMarker = new maplibregl.Marker({ element: el })
+            .setLngLat([station.longitude, station.latitude])
+            .setPopup(popup)
+            .addTo(mapRef.current);
+        markersRef.current.push(stMarker);
+      }
+    }
+  }, [unitId, mapLoaded]);
+
+  useEffect(() => {
+    if (!unitId || !mapRef.current || !mapLoaded) return;
 
     const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
     const station = stations.find(u => u.UnitID === unitId);
     let centerLat = station?.latitude || 12.9716;
     let centerLng = station?.longitude || 77.5946;
-
-    // Draw Station Marker
-    if (station && station.latitude && station.longitude) {
-      const el = document.createElement('div');
-      el.className = 'custom-station-pin';
-      el.innerHTML = `<div style="background-color: #facc15; width: 20px; height: 20px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`;
-      
-      const popup = new maplibregl.Popup({ offset: 25 })
-        .setHTML(`<div style="font-family: sans-serif; font-size: 11px;"><b>${station.UnitName}</b><br/>Command Center</div>`);
-
-      const stMarker = new maplibregl.Marker({ element: el })
-          .setLngLat([station.longitude, station.latitude])
-          .setPopup(popup)
-          .addTo(mapRef.current);
-      markersRef.current.push(stMarker);
-    }
 
     const hotspotFeatures: any[] = [];
     activeHotspots.forEach(h => {
@@ -407,7 +410,7 @@ export const AnalyticsGISMap: React.FC = () => {
          const [hLat, hLng] = selectedHotspot.split(',').map(Number);
          mapRef.current.flyTo({ center: [hLng, hLat], zoom: 14, speed: 0.2, curve: 1 });
     } else {
-         mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 2500 });
+         mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 800 });
     }
   }, [unitId, filteredCases, activeHotspots, selectedHotspot, mapLoaded]);
 
