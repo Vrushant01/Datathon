@@ -90,6 +90,7 @@ const VictimSchema = new mongoose.Schema({
   AgeYear: Number,
   GenderID: Number,
   VictimPolice: String,
+  PersonID: String,
 });
 
 const AccusedSchema = new mongoose.Schema({
