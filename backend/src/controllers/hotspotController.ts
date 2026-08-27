@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { CaseMaster, Unit } from '../models';
+import { RepositoryFactory } from '../repositories/RepositoryFactory';
+import { Unit } from '../models'; // keep for now if needed, or remove. wait, we should replace Unit.find too.
 import { performDBSCAN, generateHotspotsRiskAnalysis, FIRPoint } from '../services/ai/spatialAnalysis';
 
 const CRIME_HEADS: Record<number, string> = {
@@ -19,6 +20,7 @@ export const invalidateHotspotCache = () => {
 
 export const getHotspots = async (req: Request, res: Response) => {
   try {
+    const db = RepositoryFactory.getRepository(req);
     const { district, station, crimeHead, status, gravity, dateFrom, dateTo } = req.query;
 
     const filter: any = {
@@ -27,7 +29,7 @@ export const getHotspots = async (req: Request, res: Response) => {
     };
 
     if (district && district !== 'ALL' && (!station || station === 'ALL')) {
-      const stationsInDistrict = await Unit.find({ DistrictID: Number(district) }).select('UnitID').lean();
+      const stationsInDistrict = await db.getUnits(Number(district));
       const stationIds = stationsInDistrict.map((s: any) => s.UnitID);
       filter.PoliceStationID = { $in: stationIds };
     }
@@ -69,7 +71,7 @@ export const getHotspots = async (req: Request, res: Response) => {
       if (dateTo) filter.CrimeRegisteredDate.$lte = dateTo;
     }
 
-    const cases = await CaseMaster.find(filter).lean();
+    const cases = await db.getCases(filter);
 
     const points: FIRPoint[] = cases.map((c: any) => ({
       id: c.CaseMasterID,

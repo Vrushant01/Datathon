@@ -30,15 +30,20 @@ export const AnalyticsGISMap: React.FC = () => {
   const [selectedHotspot, setSelectedHotspot] = useState<string>('ALL');
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
 
+  // 0. Base Valid Cases (Single Source of Truth for valid coordinates)
+  const validBaseCases = React.useMemo(() => {
+    return mockDb.getCases().filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude));
+  }, []);
+
   const baseFilteredCases = React.useMemo(() => {
-    return mockDb.getCases().filter(c => {
+    return validBaseCases.filter(c => {
       if (c.PoliceStationID !== unitId) return false;
       if (selectedCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== selectedCrimeHead) return false;
       if (selectedStatus !== 'ALL' && c.CaseStatusID !== selectedStatus) return false;
       if (selectedGravity !== 'ALL' && c.GravityOffenceID !== selectedGravity) return false;
       return true;
     });
-  }, [unitId, selectedCrimeHead, selectedStatus, selectedGravity]);
+  }, [validBaseCases, unitId, selectedCrimeHead, selectedStatus, selectedGravity]);
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
@@ -391,7 +396,7 @@ export const AnalyticsGISMap: React.FC = () => {
           popupHtml: `<div style="font-family: sans-serif; font-size: 11px;">
             <b>🚨 ${h.riskLevel} HOTSPOT</b><br/>
             Risk Score: ${h.riskScore} / 100<br/>
-            ${h.count} incidents<br/>
+            ${hotspotCounts[h.clusterId] || 0} incidents<br/>
             Primary Crime: ${h.crimeName}<br/>
             Trend: ${h.trend === 'INCREASING' ? '↑' : (h.trend === 'DECREASING' ? '↓' : '→')} ${h.growthRate}%<br/>
             7-Day Outlook: ${h.forecast7DayLevel}<br/>
@@ -406,9 +411,7 @@ export const AnalyticsGISMap: React.FC = () => {
         source.setData({ type: 'FeatureCollection', features: hotspotFeatures });
     }
 
-    const firFeatures = finalFilteredCases
-      .filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude))
-      .map(c => ({
+    const firFeatures = finalFilteredCases.map(c => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
         properties: {
@@ -438,6 +441,18 @@ export const AnalyticsGISMap: React.FC = () => {
     } else {
          mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 800 });
     }
+
+    // [GIS DEBUG] Output exactly as requested by user
+    if (selectedHotspot !== 'ALL') {
+       const selectedH = activeHotspots.find(h => h.clusterId === selectedHotspot);
+       if (selectedH) {
+           console.log(`[GIS DEBUG] dropdown hotspot count = ${hotspotCounts[selectedH.clusterId] || 0}`);
+           console.log(`[GIS DEBUG] rendered finalFilteredCases count = ${finalFilteredCases.length}`);
+           console.log(`[GIS DEBUG] dropdown case IDs = [${finalFilteredCases.map(c => c.CaseMasterID).join(', ')}]`);
+           console.log(`[GIS DEBUG] rendered case IDs = [${firFeatures.map(f => f.properties.id).join(', ')}]`);
+       }
+    }
+
   }, [unitId, finalFilteredCases, activeHotspots, selectedHotspot, mapLoaded]);
 
   // Handle Resize

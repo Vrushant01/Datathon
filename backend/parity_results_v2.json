@@ -1,0 +1,74 @@
+[
+  {
+    "endpoint": "/districts",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 357,
+    "csTime": 133,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/units",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 175,
+    "csTime": 327,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/employees",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 1014,
+    "csTime": 631,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/cases",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 1402,
+    "csTime": 1272,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/hotspots",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 747,
+    "csTime": 394,
+    "nosqlCalls": 0,
+    "cacheHits": 1,
+    "cacheMisses": 0,
+    "dataMatch": "PARTIAL (Fields Mismatch)",
+    "differences": []
+  },
+  {
+    "endpoint": "/ai/dashboard",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 864,
+    "csTime": 90,
+    "nosqlCalls": 0,
+    "cacheHits": 7,
+    "cacheMisses": 0,
+    "dataMatch": "PARTIAL (Fields Mismatch)",
+    "differences": []
+  }
+]

@@ -1,0 +1,84 @@
+[
+  {
+    "endpoint": "/districts",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 2182,
+    "csTime": 164,
+    "dataMatch": "PARTIAL (Fields Mismatch)",
+    "differences": [
+      "Data structure mismatch on first item",
+      "Mongo: {\"DistrictID\":1001,\"DistrictName\":\"Bengaluru Urban\",\"StateID\":1,\"Active\":true}",
+      "CS: {\"DistrictName\":\"Bengaluru Urban\",\"Active\":true,\"DistrictID\":1001,\"StateID\":1}"
+    ]
+  },
+  {
+    "endpoint": "/units",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 170,
+    "csTime": 1634,
+    "dataMatch": "FAIL",
+    "differences": [
+      "Count mismatch: Mongo=930, CS=929"
+    ]
+  },
+  {
+    "endpoint": "/employees",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 318,
+    "csTime": 2622,
+    "dataMatch": "PARTIAL (Fields Mismatch)",
+    "differences": [
+      "Data structure mismatch on first item",
+      "Mongo: {\"EmployeeID\":10001,\"DistrictID\":1001,\"UnitID\":2000,\"RankID\":4,\"DesignationID\":1,\"KGID\":\"KGID10001\",\"FirstName\":\"Ramesh Murthy\",\"EmployeeDOB\":\"1980-01-10\",\"GenderID\":1,\"BloodGroupID\":4,\"PhysicallyChallenged\":false,\"AppointmentDate\":\"2001-03-05\",\"email\":\"officer10001@ksp.gov.in\",\"status\":\"Active\"}",
+      "CS: {\"DesignationID\":1,\"DistrictID\":1001,\"FirstName\":\"Ramesh Murthy\",\"EmployeeDOB\":\"1980-01-10\",\"AppointmentDate\":\"2001-03-05\",\"RankID\":4,\"GenderID\":1,\"KGID\":\"KGID10001\",\"UnitID\":2000,\"BloodGroupID\":4,\"PhysicallyChallenged\":false,\"EmployeeID\":10001,\"email\":\"officer10001@ksp.gov.in\",\"status\":\"Active\"}"
+    ]
+  },
+  {
+    "endpoint": "/cases",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 954,
+    "csTime": 5991,
+    "dataMatch": "FAIL",
+    "differences": [
+      "Count mismatch: Mongo=5000, CS=0"
+    ]
+  },
+  {
+    "endpoint": "/hotspots",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 875,
+    "csTime": 5740,
+    "dataMatch": "FAIL",
+    "differences": [
+      "Response is not an array"
+    ]
+  },
+  {
+    "endpoint": "/ai/district-intelligence",
+    "mongoStatus": 404,
+    "csStatus": 404,
+    "mongoTime": 37,
+    "csTime": 40,
+    "dataMatch": "FAIL",
+    "differences": [
+      "Status mismatch: Mongo=404, CS=404",
+      "CS Error: <!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /api/ai/district-intelligence</pre>\n</body>\n</html>\n"
+    ]
+  },
+  {
+    "endpoint": "/ai/dashboard",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 1053,
+    "csTime": 25343,
+    "dataMatch": "FAIL",
+    "differences": [
+      "Response is not an array"
+    ]
+  }
+]

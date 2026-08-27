@@ -1,0 +1,1001 @@
+{
+  "summary": {
+    "text": "Today's Intelligence Summary:\n- 0 geospatial hotspots detected via DBSCAN.\n- 59 police stations experiencing critical workload limits.\n- 5 high-risk repeat offenders identified through network linkage.\n- 1 geographic outliers isolated by DBO algorithms.",
+    "criticalAlertsCount": 8,
+    "emergingHotspotsCount": 0,
+    "repeatOffendersCount": 5,
+    "overloadedStationsCount": 59,
+    "highSeverityCount": 8
+  },
+  "alerts": [
+    {
+      "id": "ALT-RO-A-1482",
+      "severity": "Critical",
+      "confidence": 50,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Statewide",
+      "policeStation": "Network",
+      "crimeType": "Recidivism",
+      "riskScore": 100,
+      "algorithmUsed": "Graph Linkage + Simple Statistical Difference (Fallback)",
+      "evidence": "10 link hits",
+      "historicalAverage": 1,
+      "currentValue": 10,
+      "percentIncrease": 900,
+      "reason": "Generated because offender Priya Reddy breached repeat incidence threshold with an increasing trajectory.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "View Criminal Network",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-RO-A-1535",
+      "severity": "Critical",
+      "confidence": 50,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Statewide",
+      "policeStation": "Network",
+      "crimeType": "Recidivism",
+      "riskScore": 100,
+      "algorithmUsed": "Graph Linkage + Simple Statistical Difference (Fallback)",
+      "evidence": "10 link hits",
+      "historicalAverage": 1,
+      "currentValue": 10,
+      "percentIncrease": 900,
+      "reason": "Generated because offender Geetha Shetty breached repeat incidence threshold with an increasing trajectory.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "View Criminal Network",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-RO-A-1539",
+      "severity": "Critical",
+      "confidence": 50,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Statewide",
+      "policeStation": "Network",
+      "crimeType": "Recidivism",
+      "riskScore": 100,
+      "algorithmUsed": "Graph Linkage + Simple Statistical Difference (Fallback)",
+      "evidence": "10 link hits",
+      "historicalAverage": 1,
+      "currentValue": 10,
+      "percentIncrease": 900,
+      "reason": "Generated because offender Manoj Patil breached repeat incidence threshold with an increasing trajectory.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "View Criminal Network",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-RO-A-1602",
+      "severity": "Critical",
+      "confidence": 50,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Statewide",
+      "policeStation": "Network",
+      "crimeType": "Recidivism",
+      "riskScore": 100,
+      "algorithmUsed": "Graph Linkage + Simple Statistical Difference (Fallback)",
+      "evidence": "10 link hits",
+      "historicalAverage": 1,
+      "currentValue": 10,
+      "percentIncrease": 900,
+      "reason": "Generated because offender Sneha Pujari breached repeat incidence threshold with an increasing trajectory.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "View Criminal Network",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-RO-A-1605",
+      "severity": "Critical",
+      "confidence": 50,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Statewide",
+      "policeStation": "Network",
+      "crimeType": "Recidivism",
+      "riskScore": 100,
+      "algorithmUsed": "Graph Linkage + Simple Statistical Difference (Fallback)",
+      "evidence": "10 link hits",
+      "historicalAverage": 1,
+      "currentValue": 10,
+      "percentIncrease": 900,
+      "reason": "Generated because offender Anjali Patil breached repeat incidence threshold with an increasing trajectory.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "View Criminal Network",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-SL-2159",
+      "severity": "Critical",
+      "confidence": 96,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Urban",
+      "policeStation": "Dharwad City PS 10",
+      "crimeType": "Operational Load",
+      "riskScore": 89,
+      "algorithmUsed": "Z-Score Statistical Deviation",
+      "evidence": "27 pending FIRs",
+      "historicalAverage": 7,
+      "currentValue": 27,
+      "percentIncrease": 293,
+      "reason": "Workload exceeds historical average by 3.93 standard deviations.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "Assign Officer",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-SL-2315",
+      "severity": "Critical",
+      "confidence": 96,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Urban",
+      "policeStation": "Shivamogga Station PS 16",
+      "crimeType": "Operational Load",
+      "riskScore": 89,
+      "algorithmUsed": "Z-Score Statistical Deviation",
+      "evidence": "27 pending FIRs",
+      "historicalAverage": 7,
+      "currentValue": 27,
+      "percentIncrease": 293,
+      "reason": "Workload exceeds historical average by 3.93 standard deviations.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "Assign Officer",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-SL-2682",
+      "severity": "Critical",
+      "confidence": 96,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Urban",
+      "policeStation": "Kolar Cyber PS 23",
+      "crimeType": "Operational Load",
+      "riskScore": 87,
+      "algorithmUsed": "Z-Score Statistical Deviation",
+      "evidence": "26 pending FIRs",
+      "historicalAverage": 7,
+      "currentValue": 26,
+      "percentIncrease": 274,
+      "reason": "Workload exceeds historical average by 3.74 standard deviations.",
+      "recommendedActions": [
+        "Escalate to District SP",
+        "Assign Additional Investigating Officer",
+        "Assign Officer",
+        "Notify Police Station"
+      ]
+    },
+    {
+      "id": "ALT-OUT-104456",
+      "severity": "High",
+      "confidence": 85,
+      "generatedTime": "2026-08-27T13:21:33.802Z",
+      "district": "Rural",
+      "policeStation": "Geospatial Sector",
+      "crimeType": "Geographic Outlier",
+      "riskScore": 45.45839077594589,
+      "latitude": 17.183784146568406,
+      "longitude": 76.04492614233642,
+      "algorithmUsed": "Distance-Based Outlier (DBO) + Z-Score",
+      "evidence": "Isolated crime event",
+      "historicalAverage": 0,
+      "currentValue": 3.091678155189178,
+      "percentIncrease": 0,
+      "reason": "Crime occurred significantly far from standard cluster bounds (Z-Score: 3.09).",
+      "recommendedActions": [
+        "Assign Officer",
+        "Notify Police Station"
+      ]
+    }
+  ],
+  "districtIntelligence": {
+    "districts": [
+      {
+        "districtId": 1004,
+        "name": "Dakshina Kannada",
+        "totalCases": 354,
+        "pendingCases": 149,
+        "violentCrime": 245,
+        "economicCrime": 0,
+        "growthPercent": "11.3",
+        "riskIndex": 56
+      },
+      {
+        "districtId": 1006,
+        "name": "Dharwad",
+        "totalCases": 194,
+        "pendingCases": 83,
+        "violentCrime": 134,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 31
+      },
+      {
+        "districtId": 1024,
+        "name": "Kolar",
+        "totalCases": 198,
+        "pendingCases": 82,
+        "violentCrime": 122,
+        "economicCrime": 0,
+        "growthPercent": "11.3",
+        "riskIndex": 29
+      },
+      {
+        "districtId": 1019,
+        "name": "Haveri",
+        "totalCases": 194,
+        "pendingCases": 77,
+        "violentCrime": 125,
+        "economicCrime": 0,
+        "growthPercent": "11.3",
+        "riskIndex": 29
+      },
+      {
+        "districtId": 1021,
+        "name": "Chikkamagaluru",
+        "totalCases": 177,
+        "pendingCases": 62,
+        "violentCrime": 129,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 29
+      },
+      {
+        "districtId": 1005,
+        "name": "Belagavi",
+        "totalCases": 194,
+        "pendingCases": 63,
+        "violentCrime": 122,
+        "economicCrime": 0,
+        "growthPercent": "-5.5",
+        "riskIndex": 28
+      },
+      {
+        "districtId": 1011,
+        "name": "Shivamogga",
+        "totalCases": 193,
+        "pendingCases": 71,
+        "violentCrime": 120,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 28
+      },
+      {
+        "districtId": 1014,
+        "name": "Mandya",
+        "totalCases": 192,
+        "pendingCases": 75,
+        "violentCrime": 115,
+        "economicCrime": 0,
+        "growthPercent": "11.3",
+        "riskIndex": 27
+      },
+      {
+        "districtId": 1020,
+        "name": "Gadag",
+        "totalCases": 184,
+        "pendingCases": 59,
+        "violentCrime": 122,
+        "economicCrime": 0,
+        "growthPercent": "-5.5",
+        "riskIndex": 27
+      },
+      {
+        "districtId": 1028,
+        "name": "Chamarajanagar",
+        "totalCases": 173,
+        "pendingCases": 53,
+        "violentCrime": 120,
+        "economicCrime": 0,
+        "growthPercent": "7.1",
+        "riskIndex": 27
+      },
+      {
+        "districtId": 1003,
+        "name": "Mysuru",
+        "totalCases": 180,
+        "pendingCases": 72,
+        "violentCrime": 116,
+        "economicCrime": 0,
+        "growthPercent": "7.1",
+        "riskIndex": 27
+      },
+      {
+        "districtId": 1026,
+        "name": "Bidar",
+        "totalCases": 179,
+        "pendingCases": 67,
+        "violentCrime": 116,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 27
+      },
+      {
+        "districtId": 1025,
+        "name": "Ramanagara",
+        "totalCases": 168,
+        "pendingCases": 71,
+        "violentCrime": 106,
+        "economicCrime": 0,
+        "growthPercent": "-5.5",
+        "riskIndex": 25
+      },
+      {
+        "districtId": 1009,
+        "name": "Vijayapura",
+        "totalCases": 159,
+        "pendingCases": 60,
+        "violentCrime": 110,
+        "economicCrime": 0,
+        "growthPercent": "11.3",
+        "riskIndex": 25
+      },
+      {
+        "districtId": 1030,
+        "name": "Vijayanagara",
+        "totalCases": 157,
+        "pendingCases": 48,
+        "violentCrime": 107,
+        "economicCrime": 0,
+        "growthPercent": "-5.5",
+        "riskIndex": 24
+      },
+      {
+        "districtId": 1031,
+        "name": "Chikkaballapur",
+        "totalCases": 154,
+        "pendingCases": 60,
+        "violentCrime": 103,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 24
+      },
+      {
+        "districtId": 1010,
+        "name": "Bagalkot",
+        "totalCases": 154,
+        "pendingCases": 72,
+        "violentCrime": 98,
+        "economicCrime": 0,
+        "growthPercent": "-5.5",
+        "riskIndex": 23
+      },
+      {
+        "districtId": 1029,
+        "name": "Uttara Kannada",
+        "totalCases": 152,
+        "pendingCases": 65,
+        "violentCrime": 101,
+        "economicCrime": 0,
+        "growthPercent": "11.3",
+        "riskIndex": 23
+      },
+      {
+        "districtId": 1017,
+        "name": "Raichur",
+        "totalCases": 154,
+        "pendingCases": 61,
+        "violentCrime": 99,
+        "economicCrime": 0,
+        "growthPercent": "2.9",
+        "riskIndex": 23
+      },
+      {
+        "districtId": 1013,
+        "name": "Tumakuru",
+        "totalCases": 153,
+        "pendingCases": 62,
+        "violentCrime": 100,
+        "economicCrime": 0,
+        "growthPercent": "7.1",
+        "riskIndex": 23
+      },
+      {
+        "districtId": 1015,
+        "name": "Udupi",
+        "totalCases": 138,
+        "pendingCases": 56,
+        "violentCrime": 97,
+        "economicCrime": 0,
+        "growthPercent": "-5.5",
+        "riskIndex": 22
+      },
+      {
+        "districtId": 1007,
+        "name": "Kalaburagi",
+        "totalCases": 134,
+        "pendingCases": 49,
+        "violentCrime": 95,
+        "economicCrime": 0,
+        "growthPercent": "2.9",
+        "riskIndex": 21
+      },
+      {
+        "districtId": 1001,
+        "name": "Bengaluru Urban",
+        "totalCases": 146,
+        "pendingCases": 64,
+        "violentCrime": 90,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 21
+      },
+      {
+        "districtId": 1027,
+        "name": "Yadgir",
+        "totalCases": 126,
+        "pendingCases": 50,
+        "violentCrime": 87,
+        "economicCrime": 0,
+        "growthPercent": "2.9",
+        "riskIndex": 20
+      },
+      {
+        "districtId": 1016,
+        "name": "Kodagu",
+        "totalCases": 122,
+        "pendingCases": 56,
+        "violentCrime": 86,
+        "economicCrime": 0,
+        "growthPercent": "-1.3",
+        "riskIndex": 20
+      },
+      {
+        "districtId": 1023,
+        "name": "Davanagere",
+        "totalCases": 135,
+        "pendingCases": 49,
+        "violentCrime": 85,
+        "economicCrime": 0,
+        "growthPercent": "7.1",
+        "riskIndex": 19
+      },
+      {
+        "districtId": 1002,
+        "name": "Bengaluru Rural",
+        "totalCases": 118,
+        "pendingCases": 50,
+        "violentCrime": 80,
+        "economicCrime": 0,
+        "growthPercent": "2.9",
+        "riskIndex": 19
+      },
+      {
+        "districtId": 1018,
+        "name": "Koppal",
+        "totalCases": 117,
+        "pendingCases": 43,
+        "violentCrime": 82,
+        "economicCrime": 0,
+        "growthPercent": "7.1",
+        "riskIndex": 19
+      },
+      {
+        "districtId": 1012,
+        "name": "Hassan",
+        "totalCases": 123,
+        "pendingCases": 45,
+        "violentCrime": 81,
+        "economicCrime": 0,
+        "growthPercent": "2.9",
+        "riskIndex": 18
+      },
+      {
+        "districtId": 1008,
+        "name": "Ballari",
+        "totalCases": 121,
+        "pendingCases": 46,
+        "violentCrime": 75,
+        "economicCrime": 0,
+        "growthPercent": "7.1",
+        "riskIndex": 17
+      },
+      {
+        "districtId": 1022,
+        "name": "Chitradurga",
+        "totalCases": 57,
+        "pendingCases": 24,
+        "violentCrime": 35,
+        "economicCrime": 0,
+        "growthPercent": "2.9",
+        "riskIndex": 8
+      }
+    ],
+    "insights": {
+      "highestGrowth": {
+        "name": "Mandya",
+        "val": 11.3
+      },
+      "highestPending": {
+        "name": "Dakshina Kannada",
+        "val": 149
+      },
+      "highestViolent": {
+        "name": "Dakshina Kannada",
+        "val": 245
+      },
+      "mostImproved": {
+        "name": "Udupi",
+        "val": 5.5
+      }
+    }
+  },
+  "hotspots": [],
+  "repeatOffenders": [
+    {
+      "personId": "A-1482",
+      "name": "Priya Reddy",
+      "offenceCount": 10,
+      "caseIds": [
+        101782,
+        102043,
+        102272,
+        102596,
+        102809,
+        103385,
+        103789,
+        104704,
+        104821,
+        104917
+      ],
+      "riskScore": 100
+    },
+    {
+      "personId": "A-1535",
+      "name": "Geetha Shetty",
+      "offenceCount": 10,
+      "caseIds": [
+        100046,
+        100563,
+        101343,
+        101467,
+        101502,
+        101877,
+        102050,
+        102759,
+        104343,
+        104881
+      ],
+      "riskScore": 100
+    },
+    {
+      "personId": "A-1539",
+      "name": "Manoj Patil",
+      "offenceCount": 10,
+      "caseIds": [
+        100079,
+        100612,
+        101162,
+        101185,
+        101200,
+        101748,
+        101963,
+        102441,
+        104624,
+        104817
+      ],
+      "riskScore": 100
+    },
+    {
+      "personId": "A-1602",
+      "name": "Sneha Pujari",
+      "offenceCount": 10,
+      "caseIds": [
+        101679,
+        102218,
+        102363,
+        102873,
+        103018,
+        103610,
+        103986,
+        104219,
+        104225,
+        104801
+      ],
+      "riskScore": 100
+    },
+    {
+      "personId": "A-1605",
+      "name": "Anjali Patil",
+      "offenceCount": 10,
+      "caseIds": [
+        100034,
+        100129,
+        100498,
+        101032,
+        101546,
+        102406,
+        102743,
+        103795,
+        104312,
+        104970
+      ],
+      "riskScore": 100
+    }
+  ],
+  "stationLoad": [
+    {
+      "stationId": 2159,
+      "stationName": "Dharwad City PS 10",
+      "caseCount": 27,
+      "zScore": 3.930299012283647
+    },
+    {
+      "stationId": 2315,
+      "stationName": "Shivamogga Station PS 16",
+      "caseCount": 27,
+      "zScore": 3.930299012283647
+    },
+    {
+      "stationId": 2682,
+      "stationName": "Kolar Cyber PS 23",
+      "caseCount": 26,
+      "zScore": 3.7433123303880675
+    },
+    {
+      "stationId": 2871,
+      "stationName": "Vijayanagara New PS 2",
+      "caseCount": 25,
+      "zScore": 3.5563256484924874
+    },
+    {
+      "stationId": 2646,
+      "stationName": "Davanagere PS 2",
+      "caseCount": 24,
+      "zScore": 3.369338966596908
+    },
+    {
+      "stationId": 2081,
+      "stationName": "Mysuru Central PS 22",
+      "caseCount": 23,
+      "zScore": 3.1823522847013277
+    },
+    {
+      "stationId": 2007,
+      "stationName": "Bengaluru Traffic PS 8",
+      "caseCount": 23,
+      "zScore": 3.1823522847013277
+    },
+    {
+      "stationId": 2877,
+      "stationName": "Vijayanagara Town PS 8",
+      "caseCount": 23,
+      "zScore": 3.1823522847013277
+    },
+    {
+      "stationId": 2125,
+      "stationName": "Belagavi Cyber PS 6",
+      "caseCount": 23,
+      "zScore": 3.1823522847013277
+    },
+    {
+      "stationId": 2916,
+      "stationName": "Chikkaballapur Suburban PS 17",
+      "caseCount": 23,
+      "zScore": 3.1823522847013277
+    },
+    {
+      "stationId": 2665,
+      "stationName": "Kolar Industrial PS 6",
+      "caseCount": 22,
+      "zScore": 2.995365602805748
+    },
+    {
+      "stationId": 2268,
+      "stationName": "Vijayapura Garden PS 29",
+      "caseCount": 22,
+      "zScore": 2.995365602805748
+    },
+    {
+      "stationId": 2636,
+      "stationName": "Chitradurga Cyber PS 7",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2727,
+      "stationName": "Bidar North PS 8",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2090,
+      "stationName": "Mangaluru City PS 1",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2131,
+      "stationName": "Belagavi Rural PS 12",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2287,
+      "stationName": "Bagalkot Town PS 18",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2100,
+      "stationName": "Mangaluru South PS 11",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2769,
+      "stationName": "Yadgir Rural PS 20",
+      "caseCount": 21,
+      "zScore": 2.8083789209101684
+    },
+    {
+      "stationId": 2625,
+      "stationName": "Chikkamagaluru East PS 26",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2547,
+      "stationName": "Haveri Town PS 8",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2613,
+      "stationName": "Chikkamagaluru Women PS 14",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2420,
+      "stationName": "Udupi Town PS 1",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2122,
+      "stationName": "Belagavi North PS 3",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2743,
+      "stationName": "Bidar South PS 24",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2895,
+      "stationName": "Vijayanagara South PS 26",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2187,
+      "stationName": "Kalaburagi Traffic PS 8",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2744,
+      "stationName": "Bidar Market PS 25",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2163,
+      "stationName": "Dharwad Station PS 14",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2000,
+      "stationName": "Bengaluru South PS 1",
+      "caseCount": 20,
+      "zScore": 2.6213922390145883
+    },
+    {
+      "stationId": 2539,
+      "stationName": "Koppal Town PS 30",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2093,
+      "stationName": "Mangaluru East PS 4",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2377,
+      "stationName": "Tumakuru Cyber PS 18",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2151,
+      "stationName": "Dharwad Central PS 2",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2416,
+      "stationName": "Mandya New PS 27",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2825,
+      "stationName": "Uttara Industrial PS 16",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2117,
+      "stationName": "Mangaluru Extension PS 28",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2443,
+      "stationName": "Udupi Women PS 24",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2468,
+      "stationName": "Kodagu New PS 19",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2063,
+      "stationName": "Mysuru West PS 4",
+      "caseCount": 19,
+      "zScore": 2.4344055571190086
+    },
+    {
+      "stationId": 2396,
+      "stationName": "Mandya North PS 7",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2651,
+      "stationName": "Davanagere PS 7",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2845,
+      "stationName": "Dakshina Traffic PS 6",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2302,
+      "stationName": "Shivamogga Women PS 3",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2400,
+      "stationName": "Mandya Industrial PS 11",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2807,
+      "stationName": "Chamarajanagar Highway PS 28",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2711,
+      "stationName": "Ramanagara West PS 22",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2598,
+      "stationName": "Gadag Rural PS 29",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2659,
+      "stationName": "Davanagere PS 15",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2283,
+      "stationName": "Bagalkot Town PS 14",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2815,
+      "stationName": "Uttara Women PS 6",
+      "caseCount": 18,
+      "zScore": 2.2474188752234285
+    },
+    {
+      "stationId": 2555,
+      "stationName": "Haveri Garden PS 16",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2800,
+      "stationName": "Chamarajanagar City PS 21",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2795,
+      "stationName": "Chamarajanagar North PS 16",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2052,
+      "stationName": "Bengaluru Extension PS 23",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2388,
+      "stationName": "Tumakuru New PS 29",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2851,
+      "stationName": "Dakshina Highway PS 12",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2630,
+      "stationName": "Chitradurga West PS 1",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    },
+    {
+      "stationId": 2167,
+      "stationName": "Dharwad Highway PS 18",
+      "caseCount": 17,
+      "zScore": 2.060432193327849
+    }
+  ],
+  "outliers": [
+    {
+      "id": 104456,
+      "latitude": 17.183784146568406,
+      "longitude": 76.04492614233642,
+      "outlierScore": 3.091678155189178,
+      "algorithmUsed": "Distance-Based Outlier (DBO) + Z-Score",
+      "confidence": 85
+    }
+  ]
+}

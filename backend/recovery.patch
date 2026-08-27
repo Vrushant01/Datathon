@@ -1,0 +1,167 @@
+﻿--- a/backend/src/app.ts
++++ b/backend/src/app.ts
+@@ -40,7 +40,7 @@ import { invalidateHotspotCache } from './controllers/hotspotController';
+ 
+ dotenv.config();
+ 
+-const app = express();
++app.use(express.json());
+ 
+ app.get("/", (req, res) => {
+   res.status(200).send("Backend is Connected with pipeline dYs?");
+@@ -53,34 +53,77 @@ app.get("/health", (req, res) => {
+   });
+ });
+ 
+-// your existing middleware/routes...
+ const PORT =
+   Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT) ||
+   Number(process.env.PORT) ||
+   5000;
+ 
+-app.use(cors());
+-app.use(express.json());
+-
+ // Emergency live connection verification
+ app.get('/api/health', (req, res) => {
+   try {
++    const provider = process.env.DB_PROVIDER || 'mongo';
++    if (provider === 'cloudscale') {
++      res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale' });
++      return;
++    }
++
+     const dbState = mongoose.connection.readyState;
+     if (dbState === 1) {
+-      res.json({ success: true, status: 'online', database: 'connected' });
++      res.json({ success: true, status: 'online', database: 'connected', provider: 'mongo' });
+     } else {
+-      res.status(503).json({ success: false, status: 'online', database: 'disconnected' });
++      res.status(503).json({ success: false, status: 'online', database: 'disconnected', provider: 'mongo' });
+     }
+   } catch (error) {
+     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
+   }
+ });
+ 
+-// REST ENDPOINTS FOR MONGO DB MIGRATION
++// Forensic Endpoint
++app.get('/api/forensic', async (req, res) => {
++  try {
++    const catalyst = require('zcatalyst-sdk-node');
++    const catalystApp = catalyst.initialize(req);
++    const datastore = catalystApp.datastore();
++    
++    const results = [];
++    
++    async function checkRecord(tableName, keyName, keyValue) {
++      try {
++        const query = `SELECT ROWID, * FROM ${tableName} WHERE ${keyName} = ${keyValue} LIMIT 1`;
++        const zcql = catalystApp.zcql();
++        const rows = await zcql.executeZCQLQuery(query);
++        results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: rows.length > 0 ? 'YES' : 'NO', Raw: rows[0] });
++      } catch (err) {
++        results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: 'ERROR', Raw: err.message });
++      }
++    }
++
++    await checkRecord('districts', 'DistrictID', 1);
++    await checkRecord('units', 'UnitID', 1);
++    await checkRecord('employees', 'EmployeeID', 30001);
++    await checkRecord('casemasters', 'CaseMasterID', 100001);
++    await checkRecord('accuseds', 'CaseMasterID', 100001);
++    await checkRecord('victims', 'CaseMasterID', 100001);
++
++    const projectDetails = catalystApp.projectDetails();
++
++    res.json({
++      projectDetails: projectDetails,
++      forensicResults: results,
++      dbProvider: process.env.DB_PROVIDER || 'mongo',
++    });
++
++  } catch (error) {
++    res.status(500).json({ error: error.message, stack: error.stack });
++  }
++});
++
++import { RepositoryFactory } from './repositories/RepositoryFactory';
+ 
+ app.get('/api/districts', async (req, res) => {
+   try {
+-    const data = await District.find();
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getDistricts();
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch districts' });
+@@ -89,7 +132,8 @@ app.get('/api/districts', async (req, res) => {
+ 
+ app.get('/api/units', async (req, res) => {
+   try {
+-    const data = await Unit.find();
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getUnits();
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch units' });
+@@ -98,7 +142,8 @@ app.get('/api/units', async (req, res) => {
+ 
+ app.get('/api/employees', async (req, res) => {
+   try {
+-    const data = await Employee.find();
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getEmployees();
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch employees' });
+@@ -107,7 +152,8 @@ app.get('/api/employees', async (req, res) => {
+ 
+ app.get('/api/cases', async (req, res) => {
+   try {
+-    const data = await CaseMaster.find(); // Fetch all 5000 cases
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getCases({});
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch cases' });
+@@ -170,7 +216,8 @@ app.delete('/api/cases/:id', async (req, res) => {
+ 
+ app.get('/api/victims', async (req, res) => {
+   try {
+-    const data = await Victim.find();
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getAllVictims();
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch victims' });
+@@ -179,7 +226,8 @@ app.get('/api/victims', async (req, res) => {
+ 
+ app.get('/api/accused', async (req, res) => {
+   try {
+-    const data = await Accused.find();
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getAllAccused();
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch accused' });
+@@ -197,7 +245,8 @@ app.get('/api/customedges', async (req, res) => {
+ 
+ app.get('/api/cases/officer/:officerId', async (req, res) => {
+   try {
+-    const data = await CaseMaster.find({ PolicePersonID: Number(req.params.officerId) });
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getCasesByOfficer(Number(req.params.officerId));
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch officer cases' });
+@@ -206,7 +255,8 @@ app.get('/api/cases/officer/:officerId', async (req, res) => {
+ 
+ app.get('/api/cases/station/:stationId', async (req, res) => {
+   try {
+-    const data = await CaseMaster.find({ PoliceStationID: Number(req.params.stationId) });
++    const db = RepositoryFactory.getRepository(req);
++    const data = await db.getCasesByStation(Number(req.params.stationId));
+     res.json(data);
+   } catch (error) {
+     res.status(500).json({ error: 'Failed to fetch station cases' });

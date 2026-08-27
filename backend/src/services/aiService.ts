@@ -1,4 +1,4 @@
-import { CaseMaster, Accused, Unit, District } from '../models';
+import { IDataRepository } from '../repositories/IDataRepository';
 import { performDBSCAN } from './ai/spatialAnalysis';
 import { calculateZScores } from './ai/statisticalAnalysis';
 import { analyzeTrend } from './ai/timeSeriesAnalysis';
@@ -6,12 +6,9 @@ import { detectDistanceBasedOutliers } from './ai/outlierDetection';
 import { generateRecommendations } from './ai/recommendationEngine';
 import { getDistrictIntelligence } from './ai/districtIntelligence';
 
-export const getDashboardData = async () => {
+export const getDashboardData = async (db: IDataRepository) => {
   // 1. Fetch recent cases
-  const cases = await CaseMaster.find({
-    latitude: { $nin: [null, 0] },
-    longitude: { $nin: [null, 0] }
-  }).sort({ CrimeRegisteredDate: -1 }).limit(5000).lean();
+  const cases = await db.getAllCasesForAnalytics();
 
   const points = cases.map((c: any) => ({
     id: c.CaseMasterID,
@@ -43,18 +40,7 @@ export const getDashboardData = async () => {
   const outliers = detectDistanceBasedOutliers(spatialPoints, 5).slice(0, 5);
 
   // 4. Repeat Offenders
-  const repeatOffendersAgg = await Accused.aggregate([
-    { $match: { PersonID: { $nin: [null, ""] } } },
-    { $group: {
-        _id: "$PersonID",
-        name: { $first: "$AccusedName" },
-        offenceCount: { $sum: 1 },
-        caseIds: { $push: "$CaseMasterID" }
-    }},
-    { $match: { offenceCount: { $gt: 1 } } },
-    { $sort: { offenceCount: -1 } },
-    { $limit: 5 }
-  ]);
+  const repeatOffendersAgg = await db.getRepeatOffenders();
 
   const repeatOffenders = repeatOffendersAgg.map((ro: any) => ({
     personId: ro._id,
@@ -65,25 +51,23 @@ export const getDashboardData = async () => {
   }));
 
   // 5. Station Workloads (Time Series + Z-Score)
-  const stationCounts = await CaseMaster.aggregate([
-    { $group: { _id: "$PoliceStationID", caseCount: { $sum: 1 } } }
-  ]);
-  const counts = stationCounts.map((s: any) => s.caseCount);
+  const stationCounts = await db.getStationCaseCounts();
+  const counts = stationCounts.map((s: any) => s.count);
   const zScores = calculateZScores(counts);
   const stationLoads = [];
   
   // Cache all units to memory to prevent slow DB lookups in a loop
-  const allUnits = await Unit.find().lean();
+  const allUnits = await db.getUnits();
   const unitMap = new Map();
   allUnits.forEach((u: any) => unitMap.set(u.UnitID, u.UnitName));
 
   for (let i = 0; i < stationCounts.length; i++) {
     if (zScores[i].isAnomaly && zScores[i].zScore > 0) {
-      const sName = unitMap.get(stationCounts[i]._id) || `Station ${stationCounts[i]._id}`;
+      const sName = unitMap.get(stationCounts[i].stationId) || `Station ${stationCounts[i].stationId}`;
       stationLoads.push({
-        stationId: stationCounts[i]._id,
+        stationId: stationCounts[i].stationId,
         stationName: sName,
-        caseCount: stationCounts[i].caseCount,
+        caseCount: stationCounts[i].count,
         zScore: zScores[i].zScore
       });
     }
@@ -187,8 +171,8 @@ export const getDashboardData = async () => {
 
   alerts.sort((a, b) => b.riskScore - a.riskScore);
 
-  // 7. District Intelligence
-  const districtData = await getDistrictIntelligence();
+  // 6. District Intelligence Network
+  const districtData = await getDistrictIntelligence(db);
 
   // 8. Overall Summary Text
   const summary = {

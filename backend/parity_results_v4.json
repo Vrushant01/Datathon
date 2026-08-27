@@ -1,0 +1,74 @@
+[
+  {
+    "endpoint": "/districts",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 2250,
+    "csTime": 54,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts & Content Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/units",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 200,
+    "csTime": 139,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts & Content Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/employees",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 343,
+    "csTime": 320,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts & Content Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/cases",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 1508,
+    "csTime": 1402,
+    "nosqlCalls": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "dataMatch": "PASS (Counts & Content Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/hotspots",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 786,
+    "csTime": 6754,
+    "nosqlCalls": 200,
+    "cacheHits": 0,
+    "cacheMisses": 1,
+    "dataMatch": "PASS (Content Match)",
+    "differences": []
+  },
+  {
+    "endpoint": "/ai/dashboard",
+    "mongoStatus": 200,
+    "csStatus": 200,
+    "mongoTime": 1261,
+    "csTime": 7407,
+    "nosqlCalls": 240,
+    "cacheHits": 4,
+    "cacheMisses": 3,
+    "dataMatch": "PARTIAL (Fields Mismatch)",
+    "differences": "Expected values to be strictly deep-equal:\n+ actual - expected\n... Skipped lines\n\n  {\n    alerts: [\n"
+  }
+]
