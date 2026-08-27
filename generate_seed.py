@@ -192,7 +192,8 @@ cases = []
 accused_rows = []
 victim_rows = []
 
-start_date = datetime(2023, 1, 1)
+# Phase 1 Temporal Fix: Use UTC NOW and dense distributions
+NOW = datetime.utcnow()
 
 total_weight = sum(station_case_weights.values())
 station_ids_list = list(station_case_weights.keys())
@@ -205,7 +206,37 @@ for i in range(5000):
     uid = random.choices(station_ids_list, weights=station_weights_list, k=1)[0]
     station = next(u for u in units if u["UnitID"] == uid)
     
-    crime_date = start_date + timedelta(days=random.randint(0, 365*3))
+    # Crime category
+    cat_id = random.randint(1, 3)
+    gravity_id = random.randint(1, 3)
+    major_head_id = random.choice([100, 200, 300, 400, 500, 600])
+    minor_head_id = random.randint(1, 5)
+    
+    # Generate timestamp using density rule
+    r = random.random()
+    if r < 0.05: # 5% in last 24H
+        days_ago = random.uniform(0, 1)
+    elif r < 0.30: # 25% in last 7D
+        days_ago = random.uniform(1, 7)
+    elif r < 0.60: # 30% in last 30D
+        days_ago = random.uniform(7, 30)
+    else: # 40% in last 24 months
+        days_ago = random.uniform(30, 730)
+        
+    date_part = NOW - timedelta(days=days_ago)
+    
+    # Synthetic time-of-day by crime category
+    if major_head_id in [100, 200, 500, 600]:
+        hour = random.choice(list(range(18, 24)) + list(range(0, 5)))
+    else:
+        hour = random.choice(list(range(9, 18)))
+        
+    final_dt = date_part.replace(hour=hour, minute=random.randint(0, 59), second=random.randint(0, 59), microsecond=0)
+    if final_dt > NOW:
+        final_dt = NOW
+        
+    crime_date_str = final_dt.strftime("%Y-%m-%d")
+    crime_datetime_str = final_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     
     # Cases within 3km of station
     c_lat, c_lon = generate_point_near(station["latitude"], station["longitude"], 3.0)
@@ -216,20 +247,21 @@ for i in range(5000):
     
     cases.append({
         "CaseMasterID": cid,
-        "CrimeNo": f"CR/{cid}/2026",
+        "CrimeNo": f"CR/{cid}/{final_dt.year}",
         "CaseNo": f"FIR-{cid}",
-        "CrimeRegisteredDate": crime_date.strftime("%Y-%m-%d"),
+        "CrimeRegisteredDate": crime_date_str,
+        "CrimeRegisteredDateTime": crime_datetime_str,
         "PolicePersonID": io,
         "PoliceStationID": station["UnitID"],
-        "CaseCategoryID": random.randint(1, 3),
-        "GravityOffenceID": random.randint(1, 3),
-        "CrimeMajorHeadID": random.choice([100, 200, 300, 400, 500, 600]),
-        "CrimeMinorHeadID": random.randint(1, 5),
+        "CaseCategoryID": cat_id,
+        "GravityOffenceID": gravity_id,
+        "CrimeMajorHeadID": major_head_id,
+        "CrimeMinorHeadID": minor_head_id,
         "CaseStatusID": random.choices([1, 2, 3, 4, 5], weights=[40, 20, 20, 10, 10])[0],
         "CourtID": 1,
-        "IncidentFromDate": (crime_date - timedelta(days=random.randint(0, 10))).strftime("%Y-%m-%d"),
-        "IncidentToDate": crime_date.strftime("%Y-%m-%d"),
-        "InfoReceivedPSDate": crime_date.strftime("%Y-%m-%d"),
+        "IncidentFromDate": (final_dt - timedelta(days=random.randint(0, 10))).strftime("%Y-%m-%d"),
+        "IncidentToDate": crime_date_str,
+        "InfoReceivedPSDate": crime_date_str,
         "latitude": c_lat,
         "longitude": c_lon,
         "BriefFacts": "Generated synthetic crime incident."

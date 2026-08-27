@@ -59,6 +59,7 @@ const CaseMasterSchema = new mongoose.Schema({
   CrimeNo: String,
   CaseNo: String,
   CrimeRegisteredDate: String,
+  CrimeRegisteredDateTime: String,
   PolicePersonID: Number,
   PoliceStationID: Number,
   CaseCategoryID: Number,

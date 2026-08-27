@@ -1,0 +1,384 @@
+﻿diff --git a/backend/src/app.ts b/backend/src/app.ts
+index af391e0..ea19534 100644
+--- a/backend/src/app.ts
++++ b/backend/src/app.ts
+@@ -36,12 +36,22 @@ import {
+ import aiRoutes from './routes/aiRoutes';
+ import chatbotRoutes from './routes/chatbotRoutes';
+ import hotspotRoutes from './routes/hotspotRoutes';
++import adminRoutes from './routes/adminRoutes';
+ import { invalidateHotspotCache } from './controllers/hotspotController';
+ 
+ dotenv.config();
+ 
+ const app = express();
+ 
++app.use(express.json());
++app.use(cors());
++
++// Mount the new dedicated routers
++app.use('/api/ai', aiRoutes);
++app.use('/api/chatbot', chatbotRoutes);
++app.use('/api/hotspots', hotspotRoutes);
++app.use('/api/admin', adminRoutes);
++
+ app.get("/", (req, res) => {
+   res.status(200).send("Backend is Connected with pipeline ≡ƒÜÇ");
+ });
+@@ -207,8 +217,14 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
+ // Basic CRUD for Cases to trigger invalidation
+ app.post('/api/cases', async (req, res) => {
+   try {
+-    const newCase = new CaseMaster(req.body);
+-    await newCase.save();
++    const db = RepositoryFactory.getRepository(req);
++    const caseData = { ...req.body };
++    if (!caseData.CrimeRegisteredDateTime) {
++      const now = new Date();
++      caseData.CrimeRegisteredDateTime = now.toISOString();
++      caseData.CrimeRegisteredDate = now.toISOString().split('T')[0];
++    }
++    const newCase = await db.createCase(caseData);
+     invalidateHotspotCache();
+     res.status(201).json(newCase);
+   } catch (error) {
+diff --git a/backend/src/controllers/adminController.ts b/backend/src/controllers/adminController.ts
+index 925503c..3880f8a 100644
+--- a/backend/src/controllers/adminController.ts
++++ b/backend/src/controllers/adminController.ts
+@@ -78,12 +78,12 @@ async function runMigrationBackground(app: any) {
+     migrationState.startTime = new Date();
+     migrationState.endTime = null;
+     
+-    await migrateCollection(app, District, 'districts');
+-    await migrateCollection(app, Unit, 'units');
+-    await migrateCollection(app, Employee, 'employees');
++    // await migrateCollection(app, District, 'districts');
++    // await migrateCollection(app, Unit, 'units');
++    // await migrateCollection(app, Employee, 'employees');
+     await migrateCollection(app, CaseMaster, 'casemasters');
+-    await migrateCollection(app, Accused, 'accuseds');
+-    await migrateCollection(app, Victim, 'victims');
++    // await migrateCollection(app, Accused, 'accuseds');
++    // await migrateCollection(app, Victim, 'victims');
+ 
+     migrationState.status = 'completed';
+     migrationState.message = 'Migration successful';
+diff --git a/backend/src/models/index.ts b/backend/src/models/index.ts
+index 32de8ab..2b06741 100644
+--- a/backend/src/models/index.ts
++++ b/backend/src/models/index.ts
+@@ -59,6 +59,7 @@ const CaseMasterSchema = new mongoose.Schema({
+   CrimeNo: String,
+   CaseNo: String,
+   CrimeRegisteredDate: String,
++  CrimeRegisteredDateTime: String,
+   PolicePersonID: Number,
+   PoliceStationID: Number,
+   CaseCategoryID: Number,
+diff --git a/backend/src/repositories/CloudScaleRepository.ts b/backend/src/repositories/CloudScaleRepository.ts
+index ae304b5..03ed1d3 100644
+--- a/backend/src/repositories/CloudScaleRepository.ts
++++ b/backend/src/repositories/CloudScaleRepository.ts
+@@ -145,6 +145,21 @@ export class CloudScaleRepository implements IDataRepository {
+     return await this.scanAll('Employee');
+   }
+ 
++  async createCase(caseData: any): Promise<any> {
++    const nosql = this.app.nosql();
++    const table = nosql.table('casemasters');
++    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
++    const item = NoSQLItem.from(caseData);
++    
++    // Explicitly using the already-proven insertItems
++    await table.insertItems({ item });
++    
++    // Invalidate caches explicitly
++    GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
++    
++    return caseData;
++  }
++
+   async getCases(filter: any): Promise<any[]> {
+     const cases = await this.scanAll('CaseMaster');
+     return cases.filter(c => {
+diff --git a/backend/src/repositories/IDataRepository.ts b/backend/src/repositories/IDataRepository.ts
+index 9e48c7a..8670cf6 100644
+--- a/backend/src/repositories/IDataRepository.ts
++++ b/backend/src/repositories/IDataRepository.ts
+@@ -7,6 +7,7 @@ export interface IDataRepository {
+   getCases(filter: any): Promise<any[]>;
+   getCaseById(caseId: number): Promise<any | null>;
+   getAllCasesForAnalytics(): Promise<any[]>;
++  createCase(caseData: any): Promise<any>;
+   
+   // Relationships
+   getAccusedByCase(caseId: number): Promise<any[]>;
+diff --git a/backend/src/repositories/MongoRepository.ts b/backend/src/repositories/MongoRepository.ts
+index e1d61b1..f50f7a3 100644
+--- a/backend/src/repositories/MongoRepository.ts
++++ b/backend/src/repositories/MongoRepository.ts
+@@ -22,6 +22,12 @@ export class MongoRepository implements IDataRepository {
+     return await CaseMaster.find(filter).lean();
+   }
+ 
++  async createCase(caseData: any): Promise<any> {
++    const newCase = new CaseMaster(caseData);
++    await newCase.save();
++    return newCase.toObject();
++  }
++
+   async getCaseById(caseId: number): Promise<any | null> {
+     return await CaseMaster.findOne({ CaseMasterID: caseId }).lean();
+   }
+diff --git a/frontend/src/pages/Admin/AdminDashboard.tsx b/frontend/src/pages/Admin/AdminDashboard.tsx
+index 185e792..c568efb 100644
+--- a/frontend/src/pages/Admin/AdminDashboard.tsx
++++ b/frontend/src/pages/Admin/AdminDashboard.tsx
+@@ -23,38 +23,73 @@ export const AdminDashboard: React.FC = () => {
+   const units = useMemo(() => mockDb.getUnits(), [dataLoaded]);
+   const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), [dataLoaded]);
+ 
+-  const totalFIR = cases.length;
+-  const solved = cases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
++  const [timeFilter, setTimeFilter] = React.useState<'24H' | '7D' | '30D' | 'ALL'>('ALL');
++
++  // Filter cases based on the selected time boundary
++  const filteredCases = useMemo(() => {
++    if (timeFilter === 'ALL') return cases;
++    const now = Date.now();
++    const boundary = now - (timeFilter === '24H' ? 24 * 3600000 : timeFilter === '7D' ? 7 * 86400000 : 30 * 86400000);
++    return cases.filter(c => {
++      const ts = c.CrimeRegisteredDateTime ? new Date(c.CrimeRegisteredDateTime).getTime() : new Date(c.CrimeRegisteredDate).getTime();
++      return ts >= boundary && ts <= now;
++    });
++  }, [cases, timeFilter]);
++
++  const totalFIR = filteredCases.length;
++  const solved = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+   const underInvestigation = totalFIR - solved;
+   const activeOfficersCount = officers.filter(o => o.status === 'Active').length;
+   const totalStations = units.filter(u => u.TypeID === 1).length;
+ 
+-  // Chart 1: Monthly Trends (Dynamically calculated from CrimeRegisteredDate)
+-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+-  const monthCounts = new Array(12).fill(0);
+-  
+-  cases.forEach(c => {
+-    if (c.CrimeRegisteredDate) {
+-      const date = new Date(c.CrimeRegisteredDate);
+-      const m = date.getMonth();
+-      if (m >= 0 && m < 12) {
+-        monthCounts[m]++;
++  // Chart 1: Dynamic Trends
++  const trendData = useMemo(() => {
++    const buckets: Record<string, number> = {};
++    const now = new Date();
++    
++    if (timeFilter === '24H') {
++      // 24 hourly buckets
++      for (let i = 23; i >= 0; i--) {
++        const d = new Date(now.getTime() - i * 3600000);
++        buckets[`${d.getHours().toString().padStart(2, '0')}:00`] = 0;
+       }
++      filteredCases.forEach(c => {
++        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
++        buckets[`${d.getHours().toString().padStart(2, '0')}:00`] = (buckets[`${d.getHours().toString().padStart(2, '0')}:00`] || 0) + 1;
++      });
++    } else if (timeFilter === '7D' || timeFilter === '30D') {
++      // Daily buckets
++      const days = timeFilter === '7D' ? 7 : 30;
++      for (let i = days - 1; i >= 0; i--) {
++        const d = new Date(now.getTime() - i * 86400000);
++        buckets[`${d.getMonth()+1}/${d.getDate()}`] = 0;
++      }
++      filteredCases.forEach(c => {
++        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
++        buckets[`${d.getMonth()+1}/${d.getDate()}`] = (buckets[`${d.getMonth()+1}/${d.getDate()}`] || 0) + 1;
++      });
++    } else {
++      // All time - monthly buckets
++      filteredCases.forEach(c => {
++        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
++        const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
++        buckets[key] = (buckets[key] || 0) + 1;
++      });
+     }
+-  });
++    
++    // Convert to sorted array for Recharts
++    return Object.entries(buckets)
++      .sort((a, b) => a[0].localeCompare(b[0]))
++      .map(([name, count]) => ({ name, Cases: count }));
++  }, [filteredCases, timeFilter]);
+ 
+-  // Limit to first 6 months if we want to preserve the previous look, or show all 12.
+-  // The python script generated dates for 2026, let's just show Jan-Dec.
+-  const monthlyData = monthNames.map((name, index) => ({
+-    name,
+-    Cases: monthCounts[index]
+-  }));
++  const trendTitle = timeFilter === '24H' ? 'Last 24 Hours' : timeFilter === '7D' ? 'Last 7 Days' : timeFilter === '30D' ? 'Last 30 Days' : 'Historical Registration Trend';
+ 
+   // Chart 2: Crime Categories (Based on CrimeHead)
+   const categoryCounts = crimeHeads.map(ch => {
+     return {
+       name: ch.CrimeGroupName,
+-      value: cases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length
++      value: filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length
+     };
+   }).filter(item => item.value > 0);
+ 
+@@ -72,6 +107,17 @@ export const AdminDashboard: React.FC = () => {
+           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
+         </div>
+         <div className="flex items-center gap-3">
++          <select 
++            value={timeFilter} 
++            onChange={e => setTimeFilter(e.target.value as any)}
++            className="text-xs font-bold border rounded px-2 py-1 outline-none text-slate-700 bg-slate-50"
++          >
++            <option value="24H">Last 24 Hours</option>
++            <option value="7D">Last 7 Days</option>
++            <option value="30D">Last 30 Days</option>
++            <option value="ALL">All Time</option>
++          </select>
++
+           {dbConnectionStatus === 'error' && (
+             <button 
+               onClick={() => syncFromMongo()} 
+@@ -153,11 +199,11 @@ export const AdminDashboard: React.FC = () => {
+         {/* Chart 1: Monthly Trend */}
+         <div className="bg-white p-5 rounded-xl border shadow-sm lg:col-span-2 flex flex-col">
+           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+-            <TrendingUp size={14} className="text-ksp-blue" /> Case Registration Trend (2026)
++            <TrendingUp size={14} className="text-ksp-blue" /> {trendTitle}
+           </h3>
+           <div className="h-64 w-full text-xs">
+             <ResponsiveContainer width="100%" height="100%">
+-              <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
++              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                 <XAxis dataKey="name" />
+                 <YAxis allowDecimals={false} />
+diff --git a/frontend/src/pages/Admin/FIRManagement.tsx b/frontend/src/pages/Admin/FIRManagement.tsx
+index 8699a0a..6c595b8 100644
+--- a/frontend/src/pages/Admin/FIRManagement.tsx
++++ b/frontend/src/pages/Admin/FIRManagement.tsx
+@@ -128,16 +128,15 @@ export const FIRManagement: React.FC = () => {
+     setModalOpen(true);
+   };
+ 
+-  const handleRegisterFIR = () => {
++  const handleRegisterFIR = async () => {
+     if (!briefFacts || !compName || !victimName || !accusedName) {
+       showNotification('error', 'All wizard tabs must be completed.');
+       return;
+     }
+ 
+     try {
+-      mockDb.createCase(
+-        {
+-          CrimeRegisteredDate: new Date().toISOString().split('T')[0],
++      // Backend expects CaseMaster schema (it auto-generates CaseMasterID and CrimeRegisteredDateTime)
++      const casePayload = {
+           PolicePersonID: assignedOfficer,
+           PoliceStationID: stationId,
+           CaseCategoryID: caseCategory,
+@@ -152,43 +151,21 @@ export const FIRManagement: React.FC = () => {
+           latitude: Number(latitude),
+           longitude: Number(longitude),
+           BriefFacts: briefFacts
+-        },
+-        {
+-          ComplainantName: compName,
+-          AgeYear: Number(compAge),
+-          OccupationID: compOccupation,
+-          ReligionID: compReligion,
+-          CasteID: compCaste,
+-          GenderID: compGender
+-        },
+-        [
+-          {
+-            VictimName: victimName,
+-            AgeYear: Number(victimAge),
+-            GenderID: victimGender,
+-            VictimPolice: victimPolice
+-          }
+-        ],
+-        [
+-          {
+-            AccusedName: accusedName,
+-            AgeYear: Number(accusedAge),
+-            GenderID: accusedGender,
+-            PersonID: 'A1'
+-          }
+-        ],
+-        [
+-          {
+-            ActID: selectedAct,
+-            SectionID: selectedSection,
+-            ActOrderID: 1,
+-            SectionOrderID: 1
+-          }
+-        ]
+-      );
++      };
++
++      const res = await fetch('http://localhost:5000/api/cases', {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify(casePayload)
++      });
++      
++      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+ 
+       showNotification('success', 'FIR Case Registered officially and assigned.');
+       setModalOpen(false);
++      
++      // Refresh only the cases to update the UI
++      await mockDb.refreshCases();
+       setCases(mockDb.getCases());
+     } catch (e: any) {
+       console.error("Error creating case:", e);
+diff --git a/frontend/src/utils/mockDb.ts b/frontend/src/utils/mockDb.ts
+index c31c5f7..70737f1 100644
+--- a/frontend/src/utils/mockDb.ts
++++ b/frontend/src/utils/mockDb.ts
+@@ -47,6 +47,7 @@ export interface CaseMasterRow {
+   CrimeNo: string;
+   CaseNo: string;
+   CrimeRegisteredDate: string;
++  CrimeRegisteredDateTime?: string;
+   PolicePersonID: number;
+   PoliceStationID: number;
+   CaseCategoryID: number;
+@@ -833,11 +834,24 @@ export const resetDbState = (): void => {
+   memoryDbState = defaultState;
+ };
+ 
+-// -------------------------------------------------------------
+-// Database Query APIs (Fully Type-safe simulated Supabase queries)
+-// -------------------------------------------------------------
+-
+ export const mockDb = {
++  // Provider-independent refresh
++  refreshCases: async () => {
++    try {
++      const res = await fetch('http://localhost:5000/api/cases');
++      if (res.ok) {
++        const freshCases = await res.json();
++        const state = loadDbState();
++        state.cases = freshCases;
++        saveDbState(state);
++        return true;
++      }
++    } catch (err) {
++      console.error('Failed to refresh cases', err);
++    }
++    return false;
++  },
++
+   // Cases Queries
+   getCases: () => {
+     const state = loadDbState();

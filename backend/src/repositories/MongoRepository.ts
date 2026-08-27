@@ -22,6 +22,12 @@ export class MongoRepository implements IDataRepository {
     return await CaseMaster.find(filter).lean();
   }
 
+  async createCase(caseData: any): Promise<any> {
+    const newCase = new CaseMaster(caseData);
+    await newCase.save();
+    return newCase.toObject();
+  }
+
   async getCaseById(caseId: number): Promise<any | null> {
     return await CaseMaster.findOne({ CaseMasterID: caseId }).lean();
   }
