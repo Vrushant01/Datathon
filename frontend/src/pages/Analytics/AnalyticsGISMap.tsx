@@ -105,7 +105,7 @@ export const AnalyticsGISMap: React.FC = () => {
              lat: h.center.lat,
              lng: h.center.lng,
              count: h.incidentCount,
-             crimeMajorHeadID: h.crimeMajorHeadId,
+             crimeMajorHeadID: h.crimeMajorHeadID,
              crimeName: Object.keys(h.crimeCategories || {}).sort((a,b) => (h.crimeCategories[b] - h.crimeCategories[a]))[0] || 'Multiple Crimes',
              radiusKm: h.radiusKm,
              riskScore: h.riskScore,

@@ -15,6 +15,7 @@ export const getMappedGeoJsonFeature = (districtName: string, geoJsonData: any) 
     const name = districtName.toLowerCase().replace(/[^a-z]/g, '');
     const mappings: Record<string, string> = {
         'bengalurucity': 'bangalore',
+        'bengaluruurban': 'bangalore',
         'bengalururural': 'bangalorerural',
         'mysuru': 'mysore',
         'mangaluru': 'dakshinakannada',
