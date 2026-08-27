@@ -1,4 +1,4 @@
-import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from '../../../../backend/scripts/generated/seedData';
+import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from './seedData';
 import { API_BASE_URL } from '../config/api';
 // KSP Mock Database and Client-Side State Manager
 // Implements the exact ER Schema of the Karnataka Police Department
@@ -422,10 +422,10 @@ const COMPLAINANTS: ComplainantRow[] = [
 ];
 
 const VICTIMS: VictimRow[] = [
-  { VictimMasterID: 70001, CaseMasterID: 50001, VictimName: 'Suresh Kumar Gowda', AgeYear: 38, GenderID: 1, VictimPolice: '0' },
-  { VictimMasterID: 70002, CaseMasterID: 50002, VictimName: 'Priya Shastry', AgeYear: 29, GenderID: 2, VictimPolice: '0' },
-  { VictimMasterID: 70003, CaseMasterID: 50003, VictimName: 'State of Karnataka', AgeYear: 0, GenderID: 1, VictimPolice: '1' },
-  { VictimMasterID: 70004, CaseMasterID: 50004, VictimName: 'Amit Nair', AgeYear: 34, GenderID: 1, VictimPolice: '0' }
+  { VictimMasterID: 70001, CaseMasterID: 50001, VictimName: 'Suresh Kumar Gowda', AgeYear: 38, GenderID: 1, VictimPolice: '0', PersonID: 'V1' },
+  { VictimMasterID: 70002, CaseMasterID: 50002, VictimName: 'Priya Shastry', AgeYear: 29, GenderID: 2, VictimPolice: '0', PersonID: 'V2' },
+  { VictimMasterID: 70003, CaseMasterID: 50003, VictimName: 'State of Karnataka', AgeYear: 0, GenderID: 1, VictimPolice: '1', PersonID: 'V3' },
+  { VictimMasterID: 70004, CaseMasterID: 50004, VictimName: 'Amit Nair', AgeYear: 34, GenderID: 1, VictimPolice: '0', PersonID: 'V4' }
 ];
 
 const ACCUSED: AccusedRow[] = [
