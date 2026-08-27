@@ -47,6 +47,7 @@ export interface CaseMasterRow {
   CrimeNo: string;
   CaseNo: string;
   CrimeRegisteredDate: string;
+  CrimeRegisteredDateTime?: string;
   PolicePersonID: number;
   PoliceStationID: number;
   CaseCategoryID: number;
@@ -833,11 +834,24 @@ export const resetDbState = (): void => {
   memoryDbState = defaultState;
 };
 
-// -------------------------------------------------------------
-// Database Query APIs (Fully Type-safe simulated Supabase queries)
-// -------------------------------------------------------------
-
 export const mockDb = {
+  // Provider-independent refresh
+  refreshCases: async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/cases');
+      if (res.ok) {
+        const freshCases = await res.json();
+        const state = loadDbState();
+        state.cases = freshCases;
+        saveDbState(state);
+        return true;
+      }
+    } catch (err) {
+      console.error('Failed to refresh cases', err);
+    }
+    return false;
+  },
+
   // Cases Queries
   getCases: () => {
     const state = loadDbState();

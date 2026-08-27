@@ -36,42 +36,43 @@ const seedDB = async () => {
     console.log('Verifying payload counts before deletion...');
     console.log(`Payload Counts - Districts: ${SEED_DISTRICTS.length}, Units: ${SEED_UNITS.length}, Cases: ${SEED_CASES.length}, Victims: ${SEED_VICTIMS.length}, Accused: ${SEED_ACCUSED.length}`);
 
-    // Clear existing data
-    console.log('Clearing old collections...');
+    // Clear existing data (Only CaseMaster for Temporal Fix)
+    console.log('Clearing old collections (CaseMaster only)...');
     await Promise.all([
-      District.deleteMany({}),
-      Unit.deleteMany({}),
-      Employee.deleteMany({}),
+      // District.deleteMany({}),
+      // Unit.deleteMany({}),
+      // Employee.deleteMany({}),
       CaseMaster.deleteMany({}),
-      Victim.deleteMany({}),
-      Accused.deleteMany({}),
+      // Victim.deleteMany({}),
+      // Accused.deleteMany({}),
     ]);
 
-    console.log('Inserting Districts...');
-    await District.insertMany(SEED_DISTRICTS);
+    // console.log('Inserting Districts...');
+    // await District.insertMany(SEED_DISTRICTS);
 
-    console.log('Inserting Units...');
-    await Unit.insertMany(SEED_UNITS);
+    // console.log('Inserting Units...');
+    // await Unit.insertMany(SEED_UNITS);
 
-    console.log('Inserting Employees...');
-    const baseEmployees = SEED_EMPLOYEES.map(e => ({
-      ...e,
-      status: 'Active'
-    }));
+    // console.log('Inserting Employees...');
+    // const baseEmployees = SEED_EMPLOYEES.map(e => ({
+    //   ...e,
+    //   status: 'Active'
+    // }));
+    // const extraEmployees = Array.from({ length: 860 }, (_, i) => {
+    //   const newId = 10001 + SEED_EMPLOYEES.length + i;
+    //   return {
+    //     EmployeeID: newId,
+    //     UnitID: SEED_UNITS[Math.floor(Math.random() * SEED_UNITS.length)].UnitID,
+    //     FirstName: faker.person.firstName(),
+    //     LastName: faker.person.lastName(),
+    //     status: 'Active',
+    //     EmployeeNo: `KG${newId}`,
+    //     phone: faker.phone.number(),
+    //     email: `officer${newId}@ksp.gov.in`
+    //   };
+    // });
     
-    // Generate 1 extra officer per station (so 2 total per station)
-    const extraEmployees = baseEmployees.map(e => {
-      const newId = e.EmployeeID + 20000;
-      return {
-        ...e,
-        EmployeeID: newId,
-        KGID: `KGID${newId}`,
-        FirstName: faker.person.fullName(),
-        email: `officer${newId}@ksp.gov.in`
-      };
-    });
-    
-    await Employee.insertMany([...baseEmployees, ...extraEmployees]);
+    // await Employee.insertMany([...baseEmployees, ...extraEmployees]);
 
     console.log('Inserting Cases...');
     // Seed cases in batches of 1000
@@ -82,16 +83,16 @@ const seedDB = async () => {
       console.log(`Inserted cases ${i} to ${i + batch.length}`);
     }
 
-    console.log('Inserting Accused & Victims...');
-    // Seed in batches to avoid payload limits
-    for (let i = 0; i < SEED_ACCUSED.length; i += batchSize) {
-      const batch = SEED_ACCUSED.slice(i, i + batchSize);
-      await Accused.insertMany(batch);
-    }
-    for (let i = 0; i < SEED_VICTIMS.length; i += batchSize) {
-      const batch = SEED_VICTIMS.slice(i, i + batchSize);
-      await Victim.insertMany(batch);
-    }
+    // console.log('Inserting Accused & Victims...');
+    // // Seed in batches to avoid payload limits
+    // for (let i = 0; i < SEED_ACCUSED.length; i += batchSize) {
+    //   const batch = SEED_ACCUSED.slice(i, i + batchSize);
+    //   await Accused.insertMany(batch);
+    // }
+    // for (let i = 0; i < SEED_VICTIMS.length; i += batchSize) {
+    //   const batch = SEED_VICTIMS.slice(i, i + batchSize);
+    //   await Victim.insertMany(batch);
+    // }
 
     console.log('MongoDB Seed complete!');
     process.exit(0);

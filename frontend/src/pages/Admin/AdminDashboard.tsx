@@ -23,38 +23,83 @@ export const AdminDashboard: React.FC = () => {
   const units = useMemo(() => mockDb.getUnits(), [dataLoaded]);
   const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), [dataLoaded]);
 
-  const totalFIR = cases.length;
-  const solved = cases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+  const [timeFilter, setTimeFilter] = React.useState<'24H' | '7D' | '30D' | 'ALL'>('ALL');
+
+  // Filter cases based on the selected time boundary
+  const filteredCases = useMemo(() => {
+    if (timeFilter === 'ALL') return cases;
+    const now = Date.now();
+    const boundary = now - (timeFilter === '24H' ? 24 * 3600000 : timeFilter === '7D' ? 7 * 86400000 : 30 * 86400000);
+    return cases.filter(c => {
+      const ts = c.CrimeRegisteredDateTime ? new Date(c.CrimeRegisteredDateTime).getTime() : new Date(c.CrimeRegisteredDate).getTime();
+      return ts >= boundary && ts <= now;
+    });
+  }, [cases, timeFilter]);
+
+  const totalFIR = filteredCases.length;
+  const solved = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
   const underInvestigation = totalFIR - solved;
   const activeOfficersCount = officers.filter(o => o.status === 'Active').length;
   const totalStations = units.filter(u => u.TypeID === 1).length;
 
-  // Chart 1: Monthly Trends (Dynamically calculated from CrimeRegisteredDate)
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const monthCounts = new Array(12).fill(0);
-  
-  cases.forEach(c => {
-    if (c.CrimeRegisteredDate) {
-      const date = new Date(c.CrimeRegisteredDate);
-      const m = date.getMonth();
-      if (m >= 0 && m < 12) {
-        monthCounts[m]++;
+  // Chart 1: Dynamic Trends
+  const trendData = useMemo(() => {
+    const buckets: Record<string, number> = {};
+    const now = new Date();
+    
+    if (timeFilter === '24H') {
+      // 24 hourly buckets
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 3600000);
+        buckets[`${d.getHours().toString().padStart(2, '0')}:00`] = 0;
       }
+      filteredCases.forEach(c => {
+        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
+        buckets[`${d.getHours().toString().padStart(2, '0')}:00`] = (buckets[`${d.getHours().toString().padStart(2, '0')}:00`] || 0) + 1;
+      });
+    } else if (timeFilter === '7D' || timeFilter === '30D') {
+      // Daily buckets
+      const days = timeFilter === '7D' ? 7 : 30;
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 86400000);
+        buckets[`${d.getMonth()+1}/${d.getDate()}`] = 0;
+      }
+      filteredCases.forEach(c => {
+        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
+        buckets[`${d.getMonth()+1}/${d.getDate()}`] = (buckets[`${d.getMonth()+1}/${d.getDate()}`] || 0) + 1;
+      });
+    } else {
+      // All time - but graph only shows last 6 months buckets for readability
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
+        buckets[key] = 0;
+      }
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).getTime();
+      filteredCases.forEach(c => {
+        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
+        if (d.getTime() >= sixMonthsAgo) {
+          const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
+          if (buckets[key] !== undefined) {
+             buckets[key] = (buckets[key] || 0) + 1;
+          }
+        }
+      });
     }
-  });
+    
+    // Convert to sorted array for Recharts
+    return Object.entries(buckets)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, Cases: count }));
+  }, [filteredCases, timeFilter]);
 
-  // Limit to first 6 months if we want to preserve the previous look, or show all 12.
-  // The python script generated dates for 2026, let's just show Jan-Dec.
-  const monthlyData = monthNames.map((name, index) => ({
-    name,
-    Cases: monthCounts[index]
-  }));
+  const trendTitle = timeFilter === '24H' ? 'Last 24 Hours' : timeFilter === '7D' ? 'Last 7 Days' : timeFilter === '30D' ? 'Last 30 Days' : 'Historical Registration Trend';
 
   // Chart 2: Crime Categories (Based on CrimeHead)
   const categoryCounts = crimeHeads.map(ch => {
     return {
       name: ch.CrimeGroupName,
-      value: cases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length
+      value: filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length
     };
   }).filter(item => item.value > 0);
 
@@ -72,6 +117,17 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
         </div>
         <div className="flex items-center gap-3">
+          <select 
+            value={timeFilter} 
+            onChange={e => setTimeFilter(e.target.value as any)}
+            className="text-xs font-bold border rounded px-2 py-1 outline-none text-slate-700 bg-slate-50"
+          >
+            <option value="24H">Last 24 Hours</option>
+            <option value="7D">Last 7 Days</option>
+            <option value="30D">Last 30 Days</option>
+            <option value="ALL">All Time</option>
+          </select>
+
           {dbConnectionStatus === 'error' && (
             <button 
               onClick={() => syncFromMongo()} 
@@ -153,11 +209,11 @@ export const AdminDashboard: React.FC = () => {
         {/* Chart 1: Monthly Trend */}
         <div className="bg-white p-5 rounded-xl border shadow-sm lg:col-span-2 flex flex-col">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <TrendingUp size={14} className="text-ksp-blue" /> Case Registration Trend (2026)
+            <TrendingUp size={14} className="text-ksp-blue" /> {trendTitle}
           </h3>
           <div className="h-64 w-full text-xs">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" />
                 <YAxis allowDecimals={false} />

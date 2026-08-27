@@ -128,16 +128,15 @@ export const FIRManagement: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleRegisterFIR = () => {
+  const handleRegisterFIR = async () => {
     if (!briefFacts || !compName || !victimName || !accusedName) {
       showNotification('error', 'All wizard tabs must be completed.');
       return;
     }
 
     try {
-      mockDb.createCase(
-        {
-          CrimeRegisteredDate: new Date().toISOString().split('T')[0],
+      // Backend expects CaseMaster schema (it auto-generates CaseMasterID and CrimeRegisteredDateTime)
+      const casePayload = {
           PolicePersonID: assignedOfficer,
           PoliceStationID: stationId,
           CaseCategoryID: caseCategory,
@@ -152,43 +151,21 @@ export const FIRManagement: React.FC = () => {
           latitude: Number(latitude),
           longitude: Number(longitude),
           BriefFacts: briefFacts
-        },
-        {
-          ComplainantName: compName,
-          AgeYear: Number(compAge),
-          OccupationID: compOccupation,
-          ReligionID: compReligion,
-          CasteID: compCaste,
-          GenderID: compGender
-        },
-        [
-          {
-            VictimName: victimName,
-            AgeYear: Number(victimAge),
-            GenderID: victimGender,
-            VictimPolice: victimPolice
-          }
-        ],
-        [
-          {
-            AccusedName: accusedName,
-            AgeYear: Number(accusedAge),
-            GenderID: accusedGender,
-            PersonID: 'A1'
-          }
-        ],
-        [
-          {
-            ActID: selectedAct,
-            SectionID: selectedSection,
-            ActOrderID: 1,
-            SectionOrderID: 1
-          }
-        ]
-      );
+      };
+
+      const res = await fetch('http://localhost:5000/api/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(casePayload)
+      });
+      
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
       showNotification('success', 'FIR Case Registered officially and assigned.');
       setModalOpen(false);
+      
+      // Refresh only the cases to update the UI
+      await mockDb.refreshCases();
       setCases(mockDb.getCases());
     } catch (e: any) {
       console.error("Error creating case:", e);

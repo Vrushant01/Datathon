@@ -36,11 +36,21 @@ import {
 import aiRoutes from './routes/aiRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
 import hotspotRoutes from './routes/hotspotRoutes';
+import adminRoutes from './routes/adminRoutes';
 import { invalidateHotspotCache } from './controllers/hotspotController';
 
 dotenv.config();
 
 const app = express();
+
+app.use(express.json());
+app.use(cors());
+
+// Mount the new dedicated routers
+app.use('/api/ai', aiRoutes);
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/hotspots', hotspotRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).send("Backend is Connected with pipeline 🚀");
@@ -207,8 +217,20 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
 // Basic CRUD for Cases to trigger invalidation
 app.post('/api/cases', async (req, res) => {
   try {
-    const newCase = new CaseMaster(req.body);
-    await newCase.save();
+    const db = RepositoryFactory.getRepository(req);
+    const caseData = { ...req.body };
+    if (!caseData.CrimeRegisteredDateTime) {
+      const now = new Date();
+      caseData.CrimeRegisteredDateTime = now.toISOString();
+      caseData.CrimeRegisteredDate = now.toISOString().split('T')[0];
+    } else {
+      const inputDate = new Date(caseData.CrimeRegisteredDateTime);
+      const now = new Date();
+      if (inputDate > now) {
+        return res.status(400).json({ error: 'CrimeRegisteredDateTime cannot be in the future' });
+      }
+    }
+    const newCase = await db.createCase(caseData);
     invalidateHotspotCache();
     res.status(201).json(newCase);
   } catch (error) {

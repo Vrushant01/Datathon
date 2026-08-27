@@ -78,12 +78,12 @@ async function runMigrationBackground(app: any) {
     migrationState.startTime = new Date();
     migrationState.endTime = null;
     
-    await migrateCollection(app, District, 'districts');
-    await migrateCollection(app, Unit, 'units');
-    await migrateCollection(app, Employee, 'employees');
+    // await migrateCollection(app, District, 'districts');
+    // await migrateCollection(app, Unit, 'units');
+    // await migrateCollection(app, Employee, 'employees');
     await migrateCollection(app, CaseMaster, 'casemasters');
-    await migrateCollection(app, Accused, 'accuseds');
-    await migrateCollection(app, Victim, 'victims');
+    // await migrateCollection(app, Accused, 'accuseds');
+    // await migrateCollection(app, Victim, 'victims');
 
     migrationState.status = 'completed';
     migrationState.message = 'Migration successful';

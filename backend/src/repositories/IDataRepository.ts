@@ -7,6 +7,7 @@ export interface IDataRepository {
   getCases(filter: any): Promise<any[]>;
   getCaseById(caseId: number): Promise<any | null>;
   getAllCasesForAnalytics(): Promise<any[]>;
+  createCase(caseData: any): Promise<any>;
   
   // Relationships
   getAccusedByCase(caseId: number): Promise<any[]>;

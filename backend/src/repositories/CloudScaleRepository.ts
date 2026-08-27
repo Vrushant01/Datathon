@@ -145,6 +145,21 @@ export class CloudScaleRepository implements IDataRepository {
     return await this.scanAll('Employee');
   }
 
+  async createCase(caseData: any): Promise<any> {
+    const nosql = this.app.nosql();
+    const table = nosql.table('casemasters');
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    const item = NoSQLItem.from(caseData);
+    
+    // Explicitly using the already-proven insertItems
+    await table.insertItems({ item });
+    
+    // Invalidate caches explicitly
+    GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+    
+    return caseData;
+  }
+
   async getCases(filter: any): Promise<any[]> {
     const cases = await this.scanAll('CaseMaster');
     return cases.filter(c => {
