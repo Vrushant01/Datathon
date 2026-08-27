@@ -1,4 +1,4 @@
-import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from './seedData';
+import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from '../../../../backend/scripts/generated/seedData';
 import { API_BASE_URL } from '../config/api';
 // KSP Mock Database and Client-Side State Manager
 // Implements the exact ER Schema of the Karnataka Police Department
@@ -98,6 +98,7 @@ export interface VictimRow {
   AgeYear: number;
   GenderID: number;
   VictimPolice: string; // "1" or "0"
+  PersonID: string;
 }
 
 export interface AccusedRow {

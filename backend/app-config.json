@@ -2,7 +2,9 @@
   "command": "node dist/app.js",
   "buildPath": ".",
   "stack": "node20",
-  "env_variables": {},
+  "env_variables": {
+    "DB_PROVIDER": "cloudscale"
+  },
   "memory": 256,
   "scripts": {},
   "raw": {}

@@ -1,0 +1,203 @@
+{
+  "FIR count": 5000,
+  "station count": 930,
+  "district count": 31,
+  "accused record count": 5000,
+  "unique accused count": 3111,
+  "victim record count": 5000,
+  "unique victim count": 4020,
+  "orphan PoliceStationIDs": 0,
+  "orphan DistrictIDs": 0,
+  "invalid coordinates": 0,
+  "cases too far from assigned station": 0,
+  "average FIR -> station distance (km)": 1.5,
+  "max FIR -> station distance (km)": 3.0,
+  "cases per district (min/max/avg)": "57 / 354 / 161.3",
+  "cases per station (min/max/avg)": "0 / 27 / 5.4",
+  "stations with 0 cases": 94,
+  "stations with 1-5 cases": 492,
+  "stations with 6-25 cases": 341,
+  "stations with 26-60 cases": 3,
+  "stations with 61+ cases": 0,
+  "unique coordinate pairs": 930,
+  "duplicate coordinate groups": 0,
+  "largest duplicate group size": 0,
+  "unique accused distribution": {
+    "exactly 1 FIR": 2318,
+    "2-3 FIRs": 628,
+    "4+ FIRs": 165
+  },
+  "FIR assignment distribution": {
+    "first-time offenders": "46.4%",
+    "2-3 case offenders": "31.1%",
+    "4+ case offenders": "22.6%"
+  },
+  "top 20 repeat offenders": [
+    [
+      "A-2120",
+      10
+    ],
+    [
+      "A-3571",
+      10
+    ],
+    [
+      "A-1605",
+      10
+    ],
+    [
+      "A-1535",
+      10
+    ],
+    [
+      "A-1539",
+      10
+    ],
+    [
+      "A-1702",
+      10
+    ],
+    [
+      "A-2081",
+      10
+    ],
+    [
+      "A-4073",
+      10
+    ],
+    [
+      "A-2916",
+      10
+    ],
+    [
+      "A-3879",
+      10
+    ],
+    [
+      "A-3796",
+      10
+    ],
+    [
+      "A-1624",
+      10
+    ],
+    [
+      "A-3864",
+      10
+    ],
+    [
+      "A-3841",
+      10
+    ],
+    [
+      "A-3218",
+      10
+    ],
+    [
+      "A-3749",
+      10
+    ],
+    [
+      "A-2832",
+      10
+    ],
+    [
+      "A-3068",
+      10
+    ],
+    [
+      "A-1818",
+      10
+    ],
+    [
+      "A-1602",
+      10
+    ]
+  ],
+  "first-time victim count": 3609,
+  "2-3 case victim count": 328,
+  "4+ case victim count": 83,
+  "top 20 repeat victims": [
+    [
+      "V-4584",
+      10
+    ],
+    [
+      "V-3838",
+      10
+    ],
+    [
+      "V-4822",
+      10
+    ],
+    [
+      "V-2391",
+      10
+    ],
+    [
+      "V-4723",
+      10
+    ],
+    [
+      "V-4031",
+      10
+    ],
+    [
+      "V-2036",
+      10
+    ],
+    [
+      "V-3787",
+      10
+    ],
+    [
+      "V-2480",
+      10
+    ],
+    [
+      "V-3941",
+      9
+    ],
+    [
+      "V-2961",
+      9
+    ],
+    [
+      "V-4381",
+      9
+    ],
+    [
+      "V-2887",
+      9
+    ],
+    [
+      "V-4755",
+      9
+    ],
+    [
+      "V-1192",
+      9
+    ],
+    [
+      "V-3102",
+      9
+    ],
+    [
+      "V-2258",
+      8
+    ],
+    [
+      "V-3648",
+      8
+    ],
+    [
+      "V-3088",
+      8
+    ],
+    [
+      "V-1834",
+      8
+    ]
+  ],
+  "inconsistent identity cases": 0
+}

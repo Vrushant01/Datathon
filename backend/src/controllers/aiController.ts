@@ -2,9 +2,12 @@ import { Request, Response } from 'express';
 import * as aiService from '../services/aiService';
 import PDFDocument from 'pdfkit';
 
+import { RepositoryFactory } from '../repositories/RepositoryFactory';
+
 export const getDashboard = async (req: Request, res: Response) => {
   try {
-    const dashboardData = await aiService.getDashboardData();
+    const db = RepositoryFactory.getRepository(req);
+    const dashboardData = await aiService.getDashboardData(db);
     res.json(dashboardData);
   } catch (error) {
     console.error('Error generating AI dashboard data:', error);
@@ -14,7 +17,8 @@ export const getDashboard = async (req: Request, res: Response) => {
 
 export const generatePdfReport = async (req: Request, res: Response) => {
   try {
-    const dashboardData = await aiService.getDashboardData();
+    const db = RepositoryFactory.getRepository(req);
+    const dashboardData = await aiService.getDashboardData(db);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=AI_Intelligence_Report_${Date.now()}.pdf`);

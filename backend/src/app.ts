@@ -59,28 +59,103 @@ const PORT =
   Number(process.env.PORT) ||
   5000;
 
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  (req as any).metrics = { nosqlCalls: 0, cacheHits: 0, cacheMisses: 0, startTime: Date.now() };
+  
+  res.json = function (body) {
+    const totalTime = Date.now() - (req as any).metrics.startTime;
+    res.setHeader('x-timing-total', `${totalTime}ms`);
+    res.setHeader('x-timing-nosql-calls', `${(req as any).metrics.nosqlCalls}`);
+    res.setHeader('x-timing-cache-hits', `${(req as any).metrics.cacheHits}`);
+    res.setHeader('x-timing-cache-misses', `${(req as any).metrics.cacheMisses}`);
+    
+    // Forensic diagnostics
+    res.setHeader('x-db-provider-actual', (req.headers['x-mock-db-provider'] || process.env.DB_PROVIDER || 'mongo') as string);
+    res.setHeader('x-data-source', (req as any).metrics.nosqlCalls > 0 ? 'nosql' : ((req as any).metrics.cacheHits > 0 ? 'memory-cache' : 'mongo'));
+    res.setHeader('x-cache-state', `hits:${(req as any).metrics.cacheHits},misses:${(req as any).metrics.cacheMisses}`);
+    
+    return originalJson.call(this, body);
+  };
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
 
 // Emergency live connection verification
 app.get('/api/health', (req, res) => {
   try {
+    const provider = process.env.DB_PROVIDER || 'mongo';
+    if (provider === 'cloudscale') {
+      res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale' });
+      return;
+    }
+
     const dbState = mongoose.connection.readyState;
     if (dbState === 1) {
-      res.json({ success: true, status: 'online', database: 'connected' });
+      res.json({ success: true, status: 'online', database: 'connected', provider: 'mongo' });
     } else {
-      res.status(503).json({ success: false, status: 'online', database: 'disconnected' });
+      res.status(503).json({ success: false, status: 'online', database: 'disconnected', provider: 'mongo' });
     }
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
   }
 });
 
 // REST ENDPOINTS FOR MONGO DB MIGRATION
 
+
+// Forensic Endpoint
+app.get('/api/forensic', async (req, res) => {
+  try {
+    const catalyst = require('zcatalyst-sdk-node');
+    const catalystApp = catalyst.initialize(req);
+    const datastore = catalystApp.datastore();
+    
+    const results: any[] = [];
+    
+    async function checkRecord(tableName: string, keyName: string, keyValue: number) {
+      try {
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const nosql = catalystApp.nosql();
+        const table = nosql.table(tableName);
+        const keyItem = new NoSQLItem().addNumber(keyName, keyValue);
+        const paged = await table.fetchItem({ keys: [keyItem] });
+        const raw = (paged as any).get || [];
+        const itemFound = raw.length > 0 ? raw[0].item : null;
+        results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Raw: itemFound ? (typeof itemFound.toJSON === 'function' ? itemFound.toJSON() : itemFound) : null });
+      } catch (err: any) {
+        results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: 'ERROR', Raw: err.message });
+      }
+    }
+
+    await checkRecord('districts', 'DistrictID', 1);
+    await checkRecord('units', 'UnitID', 1);
+    await checkRecord('employees', 'EmployeeID', 30001);
+    await checkRecord('casemasters', 'CaseMasterID', 100001);
+    await checkRecord('accuseds', 'CaseMasterID', 100001);
+    await checkRecord('victims', 'CaseMasterID', 100001);
+
+    const projectDetails = { error: "Not supported in this SDK version" };
+
+    res.json({
+      projectDetails: projectDetails,
+      forensicResults: results,
+      dbProvider: process.env.DB_PROVIDER || 'mongo',
+    });
+
+  } catch (error: any) {
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
+import { RepositoryFactory } from './repositories/RepositoryFactory';
+
 app.get('/api/districts', async (req, res) => {
   try {
-    const data = await District.find();
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getDistricts();
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch districts' });
@@ -89,7 +164,8 @@ app.get('/api/districts', async (req, res) => {
 
 app.get('/api/units', async (req, res) => {
   try {
-    const data = await Unit.find();
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getUnits();
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch units' });
@@ -98,7 +174,8 @@ app.get('/api/units', async (req, res) => {
 
 app.get('/api/employees', async (req, res) => {
   try {
-    const data = await Employee.find();
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getEmployees();
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch employees' });
@@ -107,7 +184,8 @@ app.get('/api/employees', async (req, res) => {
 
 app.get('/api/cases', async (req, res) => {
   try {
-    const data = await CaseMaster.find(); // Fetch all 5000 cases
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getCases({});
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch cases' });
@@ -170,7 +248,8 @@ app.delete('/api/cases/:id', async (req, res) => {
 
 app.get('/api/victims', async (req, res) => {
   try {
-    const data = await Victim.find();
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getAllVictims();
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch victims' });
@@ -179,7 +258,8 @@ app.get('/api/victims', async (req, res) => {
 
 app.get('/api/accused', async (req, res) => {
   try {
-    const data = await Accused.find();
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getAllAccused();
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch accused' });
@@ -197,7 +277,8 @@ app.get('/api/customedges', async (req, res) => {
 
 app.get('/api/cases/officer/:officerId', async (req, res) => {
   try {
-    const data = await CaseMaster.find({ PolicePersonID: Number(req.params.officerId) });
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getCasesByOfficer(Number(req.params.officerId));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch officer cases' });
@@ -206,7 +287,8 @@ app.get('/api/cases/officer/:officerId', async (req, res) => {
 
 app.get('/api/cases/station/:stationId', async (req, res) => {
   try {
-    const data = await CaseMaster.find({ PoliceStationID: Number(req.params.stationId) });
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getCasesByStation(Number(req.params.stationId));
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch station cases' });

@@ -1,30 +1,28 @@
-import { CaseMaster, District, Unit } from '../../models';
+import { IDataRepository } from '../../repositories/IDataRepository';
 
-export const getDistrictIntelligence = async () => {
+export const getDistrictIntelligence = async (db: IDataRepository) => {
   // Aggregate cases by PoliceStationID
-  const pipeline = [
-    {
-      $group: {
-        _id: "$PoliceStationID",
-        totalCases: { $sum: 1 },
-        pendingCases: {
-          $sum: { $cond: [{ $eq: ["$CaseStatusID", 1] }, 1, 0] } // Assuming 1 is pending/active
-        },
-        violentCrime: {
-          $sum: { $cond: [{ $in: ["$GravityOffenceID", [1, 2]] }, 1, 0] } // Assuming 1, 2 are Heinous
-        },
-        economicCrime: {
-          $sum: { $cond: [{ $eq: ["$CaseCategoryID", 4] }, 1, 0] } // Mock category for Economic
-        }
-      }
+  // Using in-memory aggregation as per migration plan to ensure parity across databases
+  const allCases = await db.getCases({});
+  
+  const resultsMap = new Map();
+  allCases.forEach((c: any) => {
+    const sId = Number(c.PoliceStationID);
+    if (!resultsMap.has(sId)) {
+      resultsMap.set(sId, { _id: sId, totalCases: 0, pendingCases: 0, violentCrime: 0, economicCrime: 0 });
     }
-  ];
-
-  const results = await CaseMaster.aggregate(pipeline);
+    const record = resultsMap.get(sId);
+    record.totalCases += 1;
+    if (Number(c.CaseStatusID) === 1) record.pendingCases += 1;
+    if ([1, 2].includes(Number(c.GravityOffenceID))) record.violentCrime += 1;
+    if (Number(c.CaseCategoryID) === 4) record.economicCrime += 1;
+  });
+  
+  const results = Array.from(resultsMap.values());
   
   // Cache all Units and Districts to memory (Blazing fast compared to DB lookups)
-  const allUnits = await Unit.find().lean();
-  const allDistricts = await District.find().lean();
+  const allUnits = await db.getUnits();
+  const allDistricts = await db.getDistricts();
   
   const unitToDistrict = new Map();
   allUnits.forEach((u: any) => unitToDistrict.set(u.UnitID, u.DistrictID));

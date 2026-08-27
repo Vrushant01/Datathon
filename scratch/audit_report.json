@@ -1,0 +1,407 @@
+{
+  "summary": {
+    "total_excel_stations": 930,
+    "total_coords_entries": 929,
+    "missing_coords": 0,
+    "invalid_lat_lon": 0,
+    "duplicate_coords": 905,
+    "out_of_bounds": 0,
+    "mismatched_district": 0
+  },
+  "details": [
+    {
+      "Station": "Bengaluru South PS 1",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Extension PS 2",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Women PS 3",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Lake PS 4",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.957431987374,
+      "Lon": 77.576975988959,
+      "Reason": "Coordinate (12.9574, 77.577) shared by 9 stations"
+    },
+    {
+      "Station": "Bengaluru Women PS 5",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru East PS 6",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.94193401604,
+      "Lon": 77.572627038496,
+      "Reason": "Coordinate (12.9419, 77.5726) shared by 5 stations"
+    },
+    {
+      "Station": "Bengaluru West PS 7",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Traffic PS 8",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.941935985788,
+      "Lon": 77.572368959697,
+      "Reason": "Coordinate (12.9419, 77.5724) shared by 7 stations"
+    },
+    {
+      "Station": "Bengaluru South PS 9",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.941987618311,
+      "Lon": 77.572074503439,
+      "Reason": "Coordinate (12.942, 77.5721) shared by 6 stations"
+    },
+    {
+      "Station": "Bengaluru Market PS 10",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru New PS 11",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Highway PS 12",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.038271001092,
+      "Lon": 77.592747964707,
+      "Reason": "Coordinate (13.0383, 77.5927) shared by 13 stations"
+    },
+    {
+      "Station": "Bengaluru New PS 13",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.941943990505,
+      "Lon": 77.571657000841,
+      "Reason": "Coordinate (12.9419, 77.5717) shared by 13 stations"
+    },
+    {
+      "Station": "Bengaluru Traffic PS 14",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.985625985537,
+      "Lon": 77.565023981764,
+      "Reason": "Coordinate (12.9856, 77.565) shared by 17 stations"
+    },
+    {
+      "Station": "Bengaluru East PS 15",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.986801002634,
+      "Lon": 77.564946030064,
+      "Reason": "Coordinate (12.9868, 77.5649) shared by 14 stations"
+    },
+    {
+      "Station": "Bengaluru Extension PS 16",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Garden PS 17",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru South PS 18",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.942078100956,
+      "Lon": 77.570671289028,
+      "Reason": "Coordinate (12.9421, 77.5707) shared by 11 stations"
+    },
+    {
+      "Station": "Bengaluru North PS 19",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.941949983566,
+      "Lon": 77.570799029232,
+      "Reason": "Coordinate (12.9419, 77.5708) shared by 12 stations"
+    },
+    {
+      "Station": "Bengaluru North PS 20",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru South PS 21",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Old PS 22",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.98705501621,
+      "Lon": 77.564950975387,
+      "Reason": "Coordinate (12.9871, 77.565) shared by 11 stations"
+    },
+    {
+      "Station": "Bengaluru Central PS 23",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Garden PS 24",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 12.942070389605,
+      "Lon": 77.570813278468,
+      "Reason": "Coordinate (12.9421, 77.5708) shared by 12 stations"
+    },
+    {
+      "Station": "Bengaluru Traffic PS 25",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Lake PS 26",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Central PS 27",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Station PS 28",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.038605983853,
+      "Lon": 77.592651991915,
+      "Reason": "Coordinate (13.0386, 77.5927) shared by 14 stations"
+    },
+    {
+      "Station": "Bengaluru Lake PS 29",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Extension PS 30",
+      "District": "Bengaluru City",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Old PS 1",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Town PS 2",
+      "District": "Bengaluru Rural",
+      "Status": "Valid",
+      "Lat": 12.967983001363,
+      "Lon": 77.570770027847
+    },
+    {
+      "Station": "Bengaluru Lake PS 3",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru Circle PS 4",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.957431987374,
+      "Lon": 77.576975988959,
+      "Reason": "Coordinate (12.9574, 77.577) shared by 9 stations"
+    },
+    {
+      "Station": "Bengaluru West PS 5",
+      "District": "Bengaluru Rural",
+      "Status": "Valid",
+      "Lat": 12.967080018933,
+      "Lon": 77.57320497072
+    },
+    {
+      "Station": "Bengaluru Lake PS 6",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.94193401604,
+      "Lon": 77.572627038496,
+      "Reason": "Coordinate (12.9419, 77.5726) shared by 5 stations"
+    },
+    {
+      "Station": "Bengaluru Town PS 7",
+      "District": "Bengaluru Rural",
+      "Status": "Valid",
+      "Lat": 12.967116983126,
+      "Lon": 77.573105980443
+    },
+    {
+      "Station": "Bengaluru North PS 8",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.941935985788,
+      "Lon": 77.572368959697,
+      "Reason": "Coordinate (12.9419, 77.5724) shared by 7 stations"
+    },
+    {
+      "Station": "Bengaluru Rural PS 9",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.941987618311,
+      "Lon": 77.572074503439,
+      "Reason": "Coordinate (12.942, 77.5721) shared by 6 stations"
+    },
+    {
+      "Station": "Bengaluru Central PS 10",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    },
+    {
+      "Station": "Bengaluru East PS 11",
+      "District": "Bengaluru Rural",
+      "Status": "Valid",
+      "Lat": 12.967842311118,
+      "Lon": 77.570763909058
+    },
+    {
+      "Station": "Bengaluru West PS 12",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 13.038271001092,
+      "Lon": 77.592747964707,
+      "Reason": "Coordinate (13.0383, 77.5927) shared by 13 stations"
+    },
+    {
+      "Station": "Bengaluru New PS 13",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.941943990505,
+      "Lon": 77.571657000841,
+      "Reason": "Coordinate (12.9419, 77.5717) shared by 13 stations"
+    },
+    {
+      "Station": "Bengaluru Cyber PS 14",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.985625985537,
+      "Lon": 77.565023981764,
+      "Reason": "Coordinate (12.9856, 77.565) shared by 17 stations"
+    },
+    {
+      "Station": "Bengaluru North PS 15",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.986801002634,
+      "Lon": 77.564946030064,
+      "Reason": "Coordinate (12.9868, 77.5649) shared by 14 stations"
+    },
+    {
+      "Station": "Bengaluru North PS 16",
+      "District": "Bengaluru Rural",
+      "Status": "Valid",
+      "Lat": 12.966563987064,
+      "Lon": 77.573266996803
+    },
+    {
+      "Station": "Bengaluru North PS 17",
+      "District": "Bengaluru Rural",
+      "Status": "Valid",
+      "Lat": 12.966758992042,
+      "Lon": 77.573330028715
+    },
+    {
+      "Station": "Bengaluru Rural PS 18",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.942078100956,
+      "Lon": 77.570671289028,
+      "Reason": "Coordinate (12.9421, 77.5707) shared by 11 stations"
+    },
+    {
+      "Station": "Bengaluru West PS 19",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 12.941949983566,
+      "Lon": 77.570799029232,
+      "Reason": "Coordinate (12.9419, 77.5708) shared by 12 stations"
+    },
+    {
+      "Station": "Bengaluru Highway PS 20",
+      "District": "Bengaluru Rural",
+      "Status": "Duplicate",
+      "Lat": 13.012889967278,
+      "Lon": 77.537092050574,
+      "Reason": "Coordinate (13.0129, 77.5371) shared by 24 stations"
+    }
+  ]
+}

@@ -38,14 +38,18 @@ export const AdminGISMap: React.FC = () => {
   
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
 
+  // 0. Base Valid Cases (Single Source of Truth for valid coordinates)
+  const validBaseCases = useMemo(() => {
+    return cases.filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude));
+  }, [cases]);
+
   // 1. Base Filter (Ignores Viewport)
   const baseFilteredCases = useMemo(() => {
-    return cases.filter(c => {
+    return validBaseCases.filter(c => {
       const station = stations.find(s => s.UnitID === c.PoliceStationID);
       
-      if (selectedDistrict !== 'ALL') {
-         if (!station || station.DistrictID !== selectedDistrict) return false;
-      }
+      if (!station) return false;
+      if (selectedDistrict !== 'ALL' && station.DistrictID !== selectedDistrict) return false;
       
       if (selectedStation !== 'ALL' && c.PoliceStationID !== selectedStation) return false;
       if (selectedCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== selectedCrimeHead) return false;
@@ -63,7 +67,7 @@ export const AdminGISMap: React.FC = () => {
       
       return true;
     });
-  }, [cases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo, stations]);
+  }, [validBaseCases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo, stations]);
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
@@ -703,7 +707,7 @@ export const AdminGISMap: React.FC = () => {
           popupHtml: `<div style="font-family: sans-serif; font-size: 11px;">
             <b>🚨 ${h.riskLevel} HOTSPOT</b><br/>
             Risk Score: ${h.riskScore} / 100<br/>
-            ${h.count} incidents<br/>
+            ${hotspotCounts[h.clusterId] || 0} incidents<br/>
             Primary Crime: ${h.crimeName}<br/>
             Trend: ${h.trend === 'INCREASING' ? '↑' : (h.trend === 'DECREASING' ? '↓' : '→')} ${h.growthRate}%<br/>
             7-Day Outlook: ${h.forecast7DayLevel}<br/>
@@ -718,9 +722,7 @@ export const AdminGISMap: React.FC = () => {
     }
 
     // Construct GeoJSON Features for FIRs from single source of truth
-    const firFeatures = finalFilteredCases
-      .filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude))
-      .map(c => ({
+    const firFeatures = finalFilteredCases.map(c => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [c.longitude, c.latitude] },
         properties: {
@@ -743,6 +745,17 @@ export const AdminGISMap: React.FC = () => {
     const source = mapRef.current.getSource('hotspots') as maplibregl.GeoJSONSource;
     if (source) {
         source.setData({ type: 'FeatureCollection', features: hotspotFeatures });
+    }
+
+    // [GIS DEBUG] Output exactly as requested by user
+    if (selectedHotspot !== 'ALL') {
+       const selectedH = activeHotspots.find(h => h.clusterId === selectedHotspot);
+       if (selectedH) {
+           console.log(`[GIS DEBUG] dropdown hotspot count = ${hotspotCounts[selectedH.clusterId] || 0}`);
+           console.log(`[GIS DEBUG] rendered finalFilteredCases count = ${finalFilteredCases.length}`);
+           console.log(`[GIS DEBUG] dropdown case IDs = [${finalFilteredCases.map(c => c.CaseMasterID).join(', ')}]`);
+           console.log(`[GIS DEBUG] rendered case IDs = [${firFeatures.map(f => f.properties.id).join(', ')}]`);
+       }
     }
 
   }, [finalFilteredCases, activeHotspots, selectedHotspot, stations, selectedDistrict, selectedStation, crimeHeads, mapLoaded]);

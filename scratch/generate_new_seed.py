@@ -89,6 +89,15 @@ def generate_point_near(lat, lon, max_dist_km):
 
 # --- 3. Generate Entities ---
 df = pd.read_excel('Karnataka_Police_Stations_Synthetic.xlsx')
+
+# Data Corrections as requested
+df.loc[df['District'] == 'Bengaluru City', 'District'] = 'Bengaluru Urban'
+df.loc[df['District'] == 'Mangaluru', 'District'] = 'Dakshina Kannada'
+
+chit_idx = df[df['District'] == 'Chitradurga'].index
+df.loc[chit_idx[15:], 'District'] = 'Davanagere'
+df.loc[chit_idx[15:], 'Station Name'] = [f'Davanagere PS {i+1}' for i in range(len(chit_idx[15:]))]
+
 unique_districts = df['District'].unique()
 districts = []
 district_map = {}
@@ -262,25 +271,25 @@ ts_output = f"""// AUTO-GENERATED FILE. DO NOT EDIT BY HAND.
 // Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 // Total Cases: {len(cases)}
 // Total Stations: {len(units)}
-import {{ DistrictRow, UnitRow, CaseMasterRow, AccusedRow, VictimRow, EmployeeRow }} from '../models';
 
-export const SEED_DISTRICTS: DistrictRow[] = {json.dumps(districts, indent=2)};
+export const SEED_DISTRICTS = {json.dumps(districts, indent=2)};
 
-export const SEED_UNITS: UnitRow[] = {json.dumps(units, indent=2)};
+export const SEED_UNITS = {json.dumps(units, indent=2)};
 
-export const SEED_EMPLOYEES: EmployeeRow[] = {json.dumps(employees, indent=2)};
+export const SEED_EMPLOYEES = {json.dumps(employees, indent=2)};
 
-export const SEED_CASES: CaseMasterRow[] = {json.dumps(cases, indent=2)};
+export const SEED_CASES = {json.dumps(cases, indent=2)};
 
-export const SEED_ACCUSED: AccusedRow[] = {json.dumps(accused_rows, indent=2)};
+export const SEED_ACCUSED = {json.dumps(accused_rows, indent=2)};
 
-export const SEED_VICTIMS: VictimRow[] = {json.dumps(victim_rows, indent=2)};
+export const SEED_VICTIMS = {json.dumps(victim_rows, indent=2)};
 """
 
-with open('scratch/temp_seedData.ts', 'w', encoding='utf-8') as f:
+os.makedirs('backend/scripts/generated', exist_ok=True)
+with open('backend/scripts/generated/seedData.ts', 'w', encoding='utf-8') as f:
     f.write(ts_output)
 
-print("Generated temp_seedData.ts")
+print("Generated backend/scripts/generated/seedData.ts")
 
 # --- Validation Report ---
 report = {}
