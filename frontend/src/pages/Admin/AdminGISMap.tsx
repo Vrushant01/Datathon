@@ -167,7 +167,7 @@ export const AdminGISMap: React.FC = () => {
              lat: h.center.lat,
              lng: h.center.lng,
              count: h.incidentCount,
-             crimeMajorHeadID: h.crimeMajorHeadId,
+             crimeMajorHeadID: h.crimeMajorHeadID,
              crimeName: Object.keys(h.crimeCategories || {}).sort((a,b) => (h.crimeCategories[b] - h.crimeCategories[a]))[0] || 'Multiple Crimes',
              radiusKm: h.radiusKm,
              riskScore: h.riskScore,
@@ -527,8 +527,30 @@ export const AdminGISMap: React.FC = () => {
              // If we clicked on a cluster, point, or hotspot, don't reset district
              if (clusterFeatures.length > 0) return;
              
-             // If we clicked on empty space (outside Karnataka district-fill), reset
-             if (districtFeatures.length === 0) {
+             // If we clicked on a district, select it
+             if (districtFeatures.length > 0) {
+                const feature = districtFeatures[0];
+                const properties = feature.properties;
+                const mappings: { [key: string]: string } = { 'bengaluruurban': 'bangalore' };
+                const districtName = properties?._dbDistrictName || '';
+                const matchedDistrict = districts.find(d => {
+                    const normalized = d.DistrictName.toLowerCase().replace(/\s/g, '');
+                    return normalized === districtName.toLowerCase().replace(/\s/g, '') || mappings[normalized] === districtName.toLowerCase().replace(/\s/g, '');
+                });
+
+                if (matchedDistrict) {
+                    if (matchedDistrict.DistrictName.toLowerCase().includes('bengaluru') && matchedDistrict.DistrictName.toLowerCase().includes('urban')) {
+                        console.log(`[GIS DEBUG] Bengaluru Urban click fired = true`);
+                        console.log(`[GIS DEBUG] Bengaluru Urban feature = ${JSON.stringify(feature)}`);
+                        console.log(`[GIS DEBUG] Bengaluru Urban properties = ${JSON.stringify(properties)}`);
+                        console.log(`[GIS DEBUG] Bengaluru Urban geometry type = ${feature.geometry.type}`);
+                        console.log(`[GIS DEBUG] Bengaluru Urban DistrictID = ${matchedDistrict.DistrictID}`);
+                    }
+                    setSelectedDistrict(matchedDistrict.DistrictID);
+                    setSelectedStation('ALL');
+                }
+             } else {
+                 // If we clicked on empty space (outside Karnataka district-fill), reset
                  setSelectedDistrict('ALL');
                  setSelectedStation('ALL');
                  
@@ -612,11 +634,19 @@ export const AdminGISMap: React.FC = () => {
            mapRef.current.flyTo({ center: [station.longitude, station.latitude], zoom: 14, duration: 1500 });
        }
     } else if (selectedDistrict !== 'ALL') {
-       const district = districts.find(d => d.DistrictID === selectedDistrict);
-       if (district) {
-           const f = features.find((f: any) => getMappedGeoJsonFeature(district.DistrictName, { features: [f] }) !== undefined);
+       // Camera animation for District selection
+       const districtObj = districts.find(d => d.DistrictID === selectedDistrict);
+       if (districtObj) {
+           const f = features.find((f: any) => getMappedGeoJsonFeature(districtObj.DistrictName, { features: [f] }) !== undefined);
            if (f) {
                const bbox = getBoundingBox(f);
+               
+               if (districtObj.DistrictName.toLowerCase().includes('bengaluru') && districtObj.DistrictName.toLowerCase().includes('urban')) {
+                   console.log(`[GIS DEBUG] Bengaluru Urban dropdown selected = true`);
+                   console.log(`[GIS DEBUG] Bengaluru Urban bounds = ${JSON.stringify(bbox)}`);
+                   console.log(`[GIS DEBUG] Bengaluru Urban camera animation = true`);
+               }
+
                if (bbox) {
                    mapRef.current.fitBounds(bbox, { padding: 80, duration: 1500 });
                }
