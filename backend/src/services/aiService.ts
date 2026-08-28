@@ -1,7 +1,7 @@
 import { IDataRepository } from '../repositories/IDataRepository';
 import { performDBSCAN } from './ai/spatialAnalysis';
 import { calculateZScores } from './ai/statisticalAnalysis';
-import { analyzeTrend } from './ai/timeSeriesAnalysis';
+import { analyzeTrend, detectTemporalAnomalies } from './ai/timeSeriesAnalysis';
 import { detectDistanceBasedOutliers } from './ai/outlierDetection';
 import { generateRecommendations } from './ai/recommendationEngine';
 import { getDistrictIntelligence } from './ai/districtIntelligence';
@@ -28,8 +28,8 @@ export const getDashboardData = async (db: IDataRepository) => {
       latitude: centroidLat,
       longitude: centroidLng,
       radius: 1.0,
-      dominantCrime: 'Theft / Property', // Example
-      growthRate: 15.2, // Computed from temporal density in real scenario
+      dominantCrime: 'Theft / Property',
+      growthRate: 15.2,
       confidence: Math.min(99, 60 + cluster.length * 2),
       riskScore: Math.min(100, 40 + cluster.length * 3),
       associatedCases: cluster.map(c => c.id).slice(0, 5)
@@ -55,7 +55,7 @@ export const getDashboardData = async (db: IDataRepository) => {
   const counts = stationCounts.map((s: any) => s.count);
   const zScores = calculateZScores(counts);
   const stationLoads = [];
-  
+
   // Cache all units to memory to prevent slow DB lookups in a loop
   const allUnits = await db.getUnits();
   const unitMap = new Map();
@@ -76,7 +76,7 @@ export const getDashboardData = async (db: IDataRepository) => {
 
   // 6. Alert Generation (AI Decision Trace compatible)
   const alerts: any[] = [];
-  
+
   hotspots.forEach(h => {
     alerts.push({
       id: `ALT-HS-${h.clusterId}`,
@@ -89,8 +89,6 @@ export const getDashboardData = async (db: IDataRepository) => {
       riskScore: h.riskScore,
       latitude: h.latitude,
       longitude: h.longitude,
-      
-      // XAI Fields
       algorithmUsed: 'DBSCAN + Spatial Density Analysis',
       evidence: `${h.incidentCount} FIRs`,
       historicalAverage: Math.round(h.incidentCount * 0.4),
@@ -113,7 +111,6 @@ export const getDashboardData = async (db: IDataRepository) => {
       riskScore: Math.min(100, 30 + o.outlierScore * 5),
       latitude: o.latitude,
       longitude: o.longitude,
-      
       algorithmUsed: o.algorithmUsed,
       evidence: `Isolated crime event`,
       historicalAverage: 0,
@@ -125,9 +122,7 @@ export const getDashboardData = async (db: IDataRepository) => {
   });
 
   repeatOffenders.forEach(ro => {
-    // Generate trend on this offender's activity (Mocking a time series input)
     const trend = analyzeTrend([1, 1, 2, 3, ro.offenceCount]);
-    
     alerts.push({
       id: `ALT-RO-${ro.personId}`,
       severity: 'Critical',
@@ -137,7 +132,6 @@ export const getDashboardData = async (db: IDataRepository) => {
       policeStation: 'Network',
       crimeType: 'Recidivism',
       riskScore: ro.riskScore,
-      
       algorithmUsed: `Graph Linkage + ${trend.algorithmUsed}`,
       evidence: `${ro.offenceCount} link hits`,
       historicalAverage: 1,
@@ -158,7 +152,6 @@ export const getDashboardData = async (db: IDataRepository) => {
       policeStation: sl.stationName,
       crimeType: 'Operational Load',
       riskScore: Math.round(50 + (sl.zScore * 10)),
-      
       algorithmUsed: 'Z-Score Statistical Deviation',
       evidence: `${sl.caseCount} pending FIRs`,
       historicalAverage: Math.round(sl.caseCount / sl.zScore),
@@ -169,19 +162,75 @@ export const getDashboardData = async (db: IDataRepository) => {
     });
   });
 
+  // ── 7. Temporal Anomaly Detection (Z-Score, non-overlapping 7-day windows) ──
+  //
+  // Build location lookup maps from already-fetched unit/district data.
+  // This produces ZERO additional DB calls — both allUnits and allDistricts are
+  // already populated from the repository in-memory cache above.
+  const allDistricts = await db.getDistricts();
+
+  const unitToDistrict = new Map<number, number>();
+  allUnits.forEach((u: any) => unitToDistrict.set(Number(u.UnitID), Number(u.DistrictID)));
+
+  const districtNames = new Map<number, string>();
+  allDistricts.forEach((d: any) => districtNames.set(Number(d.DistrictID), d.DistrictName));
+
+  const unitNames = new Map<number, string>();
+  allUnits.forEach((u: any) => unitNames.set(Number(u.UnitID), u.UnitName));
+
+  // Run detection on the full in-memory dataset — no extra DB calls
+  const anomalyReport = detectTemporalAnomalies(cases, unitToDistrict, districtNames, unitNames);
+
+  // Append temporal anomaly alerts to the main alerts array
+  anomalyReport.anomalies.forEach(a => {
+    alerts.push({
+      id: `ALT-TEMP-${a.dedupKey}`,
+      severity: a.severity === 'CRITICAL' ? 'Critical' : 'High',
+      confidence: Math.min(99, Math.round(70 + a.zScore * 5)),
+      generatedTime: new Date().toISOString(),
+      district: a.level === 'DISTRICT' ? a.locationName : (a.level === 'STATE' ? 'Karnataka (State)' : 'Various'),
+      policeStation: a.level === 'STATION' ? a.locationName : 'Multiple',
+      crimeType: a.crimeType,
+      riskScore: Math.min(100, Math.round(50 + a.zScore * 10)),
+
+      // Temporal-specific XAI fields
+      algorithmUsed: a.algorithmUsed,
+      evidence: `${a.currentCount} cases in current 7-day window`,
+      historicalAverage: a.baselineMean,
+      currentValue: a.currentCount,
+      percentIncrease: a.percentageChange,
+      zScore: a.zScore,
+      baselineStdDev: a.baselineStdDev,
+      baselinePeriods: a.baselinePeriods,
+      windowStart: a.windowStart,
+      windowEnd: a.windowEnd,
+      level: a.level,
+      locationName: a.locationName,
+      reason: a.reason,
+      recommendedActions: generateRecommendations(a.crimeType, a.severity === 'CRITICAL' ? 'Critical' : 'High')
+    });
+  });
+
   alerts.sort((a, b) => b.riskScore - a.riskScore);
 
-  // 6. District Intelligence Network
+  // 8. District Intelligence Network
   const districtData = await getDistrictIntelligence(db);
 
-  // 8. Overall Summary Text
+  // 9. Overall Summary Text (updated to include temporal anomalies)
   const summary = {
-    text: `Today's Intelligence Summary:\n- ${hotspots.length} geospatial hotspots detected via DBSCAN.\n- ${stationLoads.length} police stations experiencing critical workload limits.\n- ${repeatOffenders.length} high-risk repeat offenders identified through network linkage.\n- ${outliers.length} geographic outliers isolated by DBO algorithms.`,
+    text: `Today's Intelligence Summary:\n- ${hotspots.length} geospatial hotspots detected via DBSCAN.\n- ${stationLoads.length} police stations experiencing critical workload limits.\n- ${repeatOffenders.length} high-risk repeat offenders identified through network linkage.\n- ${outliers.length} geographic outliers isolated by DBO algorithms.\n- ${anomalyReport.criticalCount} CRITICAL and ${anomalyReport.highCount} HIGH temporal crime trend anomalies detected.`,
     criticalAlertsCount: alerts.filter(a => a.severity === 'Critical').length,
     emergingHotspotsCount: hotspots.length,
     repeatOffendersCount: repeatOffenders.length,
     overloadedStationsCount: stationLoads.length,
-    highSeverityCount: alerts.filter(a => a.riskScore > 80).length
+    highSeverityCount: alerts.filter(a => a.riskScore > 80).length,
+    // Temporal anomaly totals for frontend panels
+    temporalAnomalies: {
+      candidateSeries: anomalyReport.candidateSeries,
+      rejectedInsufficient: anomalyReport.rejectedInsufficient,
+      highCount: anomalyReport.highCount,
+      criticalCount: anomalyReport.criticalCount,
+    }
   };
 
   return {
@@ -191,6 +240,8 @@ export const getDashboardData = async (db: IDataRepository) => {
     hotspots,
     repeatOffenders,
     stationLoad: stationLoads,
-    outliers
+    outliers,
+    // Raw anomaly report for advanced consumers
+    anomalyReport,
   };
 };
