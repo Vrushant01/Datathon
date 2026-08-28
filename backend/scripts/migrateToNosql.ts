@@ -117,12 +117,12 @@ async function runMigration() {
     const app = catalyst.initialize(undefined as any);
     console.log('[Migrate] Connected to Catalyst CloudScale.');
 
-    await migrateCollection(app, District, 'District');
-    await migrateCollection(app, Unit, 'Unit');
-    await migrateCollection(app, Employee, 'Employee');
+    // await migrateCollection(app, District, 'District');
+    // await migrateCollection(app, Unit, 'Unit');
+    // await migrateCollection(app, Employee, 'Employee');
     await migrateCollection(app, CaseMaster, 'CaseMaster');
-    await migrateCollection(app, Accused, 'Accused');
-    await migrateCollection(app, Victim, 'Victim');
+    // await migrateCollection(app, Accused, 'Accused');
+    // await migrateCollection(app, Victim, 'Victim');
 
     console.log('\n[Migrate] Migration script completed successfully.');
     process.exit(0);

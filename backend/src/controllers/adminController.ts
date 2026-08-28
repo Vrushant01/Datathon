@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { District, Unit, Employee, CaseMaster, Accused, Victim } from '../models';
 import catalyst from 'zcatalyst-sdk-node';
 import mongoose from 'mongoose';
-import { SEED_CASES } from '../utils/seedData';
 
 const BATCH_SIZE = 25;
 
@@ -38,46 +37,43 @@ async function writeBatchWithRetry(app: any, tableName: string, batch: any[], at
   }
 }
 
-async function clearTable(app: any, tableName: string) {
-  migrationState.message = `Clearing existing rows in ${tableName}`;
-  try {
-    let nextToken: string | undefined = undefined;
-    let rowIds: string[] = [];
-    do {
-      const page: any = await app.nosql().table(tableName).getPagedRows({ next_token: nextToken, max_rows: 100 });
-      if (page.data && page.data.length > 0) {
-        rowIds = rowIds.concat(page.data.map((r: any) => r[tableName].ROWID));
-      }
-      nextToken = page.next_token;
-    } while (nextToken);
-
-    if (rowIds.length > 0) {
-      for (let i = 0; i < rowIds.length; i += 100) {
-        const batch = rowIds.slice(i, i + 100);
-        await app.nosql().table(tableName).deleteRows(batch);
-      }
-    }
-  } catch (err: any) {
-    if (err.message && !err.message.includes('No rows found')) {
-       console.error(`[Migrate] Error checking ${tableName}:`, err.message);
-    }
-  }
-}
-
 async function migrateCollection(app: any, model: any, tableName: string) {
   migrationState.currentTable = tableName;
   migrationState.message = `Preparing to migrate ${tableName}`;
   
-  await clearTable(app, tableName);
+  if (tableName === 'casemasters') {
+    migrationState.message = `Clearing existing ${tableName} before migration...`;
+    const nosql = app.nosql();
+    const table = nosql.table(tableName);
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    
+    // Clear potentially old records up to 115000 (just in case there were 15k records)
+    let deleteBatch: any[] = [];
+    for (let i = 100001; i <= 115000; i++) {
+        deleteBatch.push(new NoSQLItem().addNumber('CaseMasterID', i));
+        if (deleteBatch.length === 25) {
+            try { await table.deleteItems({ keys: deleteBatch }); } catch(e) {}
+            deleteBatch = [];
+        }
+    }
+    if (deleteBatch.length > 0) {
+        try { await table.deleteItems({ keys: deleteBatch }); } catch(e) {}
+    }
+    migrationState.message = `Cleared ${tableName}.`;
+  }
   
-  const total = SEED_CASES.length;
+  const total = await model.countDocuments();
   migrationState.total = total;
   migrationState.progress = 0;
 
+  const cursor = model.find().lean().cursor();
   let batch: any[] = [];
   let migratedCount = 0;
 
-  for (const doc of SEED_CASES) {
+  for await (const doc of cursor) {
+    delete doc._id;
+    delete doc.__v;
+
     batch.push(doc);
 
     if (batch.length === BATCH_SIZE) {
