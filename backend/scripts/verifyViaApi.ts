@@ -1,13 +1,11 @@
-import axios from 'axios';
-
 const API_BASE = 'https://backend-50044295489.development.catalystappsail.in/api';
 
 async function runVerification() {
   console.log('Starting verification through AppSail API...');
   
   try {
-    const res = await axios.get(`${API_BASE}/cases`);
-    const cases = res.data;
+    const res = await fetch(`${API_BASE}/cases`);
+    const cases = (await res.json()) as any[];
     console.log(`Total cases returned from /api/cases: ${cases.length}`);
     
     // The API might not return all 5000 if it paginates or limits for dashboard, 

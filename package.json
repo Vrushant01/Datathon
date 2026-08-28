@@ -1,0 +1,15 @@
+{
+  "name": "datathon2-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "data:generate": "cd backend && npx tsx scripts/dataGenerate.ts",
+    "data:validate": "cd backend && npx tsx scripts/dataValidate.ts",
+    "data:migrate": "cd backend && npx tsx scripts/dataMigrate.ts",
+    "data:migrate:dry": "cd backend && npx tsx scripts/dataMigrate.ts --dry-run",
+    "deploy": "echo \"Deploying application...\" && npm run deploy:backend && npm run deploy:frontend",
+    "deploy:backend": "cd backend && npm run build && catalyst deploy --only appsail",
+    "deploy:frontend": "cd frontend && npm run build && catalyst deploy --only client",
+    "deploy:data": "npm run data:generate && npm run data:validate && npm run data:migrate && npm run deploy"
+  }
+}
