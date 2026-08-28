@@ -254,6 +254,75 @@ export const AdminDashboard: React.FC = () => {
 
       </div>
 
+      {/* Main Charts area */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Chart 1: Monthly Trend */}
+        <div className="bg-white p-5 rounded-xl border shadow-sm lg:col-span-2 flex flex-col">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <TrendingUp size={14} className="text-ksp-blue" /> {trendTitle}
+          </h3>
+          <div className="h-64 w-full text-xs">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Line type="monotone" dataKey="Cases" stroke="#00529B" strokeWidth={3} activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 2: Category Breakdown */}
+        <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <Shield size={14} className="text-ksp-gold-dark" /> Crime Category Distribution
+          </h3>
+          <div className="h-64 w-full text-xs relative flex items-center justify-center">
+            {categoryCounts.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryCounts}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {categoryCounts.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value} Cases`]} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <span className="text-slate-400">{isConnecting ? 'Loading...' : 'No category data'}</span>
+            )}
+            
+            {/* Center Summary Label */}
+            <div className="absolute text-center">
+              <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? '...' : totalFIR}</div>
+              <div className="text-[9px] uppercase tracking-wider font-bold text-slate-400">Cases</div>
+            </div>
+          </div>
+          {/* Custom Legends list */}
+          <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] font-bold text-slate-500">
+            {categoryCounts.map((item, idx) => (
+              <div key={idx} className="flex items-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
+                <span className="truncate">{item.name}: {item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
       {/* ── AI ANOMALY DETECTION TERMINAL ───────────────────────────────── */}
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         {/* Header */}
@@ -407,75 +476,6 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
       {/* ── END AI ANOMALY DETECTION TERMINAL ──────────────────────────── */}
-
-      {/* Main Charts area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Chart 1: Monthly Trend */}
-        <div className="bg-white p-5 rounded-xl border shadow-sm lg:col-span-2 flex flex-col">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <TrendingUp size={14} className="text-ksp-blue" /> {trendTitle}
-          </h3>
-          <div className="h-64 w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="Cases" stroke="#00529B" strokeWidth={3} activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Chart 2: Category Breakdown */}
-        <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <Shield size={14} className="text-ksp-gold-dark" /> Crime Category Distribution
-          </h3>
-          <div className="h-64 w-full text-xs relative flex items-center justify-center">
-            {categoryCounts.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categoryCounts}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {categoryCounts.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} Cases`]} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <span className="text-slate-400">{isConnecting ? 'Loading...' : 'No category data'}</span>
-            )}
-            
-            {/* Center Summary Label */}
-            <div className="absolute text-center">
-              <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? '...' : totalFIR}</div>
-              <div className="text-[9px] uppercase tracking-wider font-bold text-slate-400">Cases</div>
-            </div>
-          </div>
-          {/* Custom Legends list */}
-          <div className="mt-2 grid grid-cols-2 gap-1.5 text-[9px] font-bold text-slate-500">
-            {categoryCounts.map((item, idx) => (
-              <div key={idx} className="flex items-center gap-1.5 truncate">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                <span className="truncate">{item.name}: {item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
 
 
 
