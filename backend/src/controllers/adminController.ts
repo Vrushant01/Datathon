@@ -93,18 +93,18 @@ async function migrateCollection(app: any, model: any, tableName: string) {
   }
 }
 
-async function runMigrationBackground(app: any) {
+async function runMigrationBackground(app: any, requestedTables: string[]) {
   try {
     migrationState.status = 'running';
     migrationState.startTime = new Date();
     migrationState.endTime = null;
     
-    // await migrateCollection(app, District, 'districts');
-    // await migrateCollection(app, Unit, 'units');
-    // await migrateCollection(app, Employee, 'employees');
-    await migrateCollection(app, CaseMaster, 'casemasters');
-    // await migrateCollection(app, Accused, 'accuseds');
-    // await migrateCollection(app, Victim, 'victims');
+    if (requestedTables.includes('districts')) await migrateCollection(app, District, 'districts');
+    if (requestedTables.includes('units')) await migrateCollection(app, Unit, 'units');
+    if (requestedTables.includes('employees')) await migrateCollection(app, Employee, 'employees');
+    if (requestedTables.includes('casemasters')) await migrateCollection(app, CaseMaster, 'casemasters');
+    if (requestedTables.includes('accuseds')) await migrateCollection(app, Accused, 'accuseds');
+    if (requestedTables.includes('victims')) await migrateCollection(app, Victim, 'victims');
 
     migrationState.status = 'completed';
     migrationState.message = 'Migration successful';
@@ -121,6 +121,10 @@ export const startMigration = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Migration is already running' });
   }
 
+  if (!req.body.tables || !Array.isArray(req.body.tables)) {
+    return res.status(400).json({ error: 'tables array required in request body' });
+  }
+
   try {
     // Log version from package.json
     try {
@@ -128,6 +132,13 @@ export const startMigration = async (req: Request, res: Response) => {
       console.log(`[Diagnostic] zcatalyst-sdk-node version: ${pkg.version}`);
     } catch (e) {
       console.log(`[Diagnostic] Failed to read zcatalyst-sdk-node version.`);
+    }
+
+    if (req.body && req.body.mongoURI) {
+      if (mongoose.connection.readyState !== 1) {
+          console.log(`[Diagnostic] Connecting to MongoDB using provided URI...`);
+          await mongoose.connect(req.body.mongoURI);
+      }
     }
 
     // Attempt to initialize catalyst
@@ -151,7 +162,7 @@ export const startMigration = async (req: Request, res: Response) => {
     }
     
     // Start migration in background
-    runMigrationBackground(app);
+    runMigrationBackground(app, req.body.tables);
     res.json({ message: 'Migration started successfully', status: migrationState, migrationBuild: "cloudscale-migration-v2" });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to initialize Catalyst App context', details: error.message });
