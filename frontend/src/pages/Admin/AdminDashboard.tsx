@@ -90,7 +90,18 @@ export const AdminDashboard: React.FC = () => {
     // Convert to sorted array for Recharts
     return Object.entries(buckets)
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([name, count]) => ({ name, Cases: count }));
+      .map(([name, count]) => {
+         let displayName = name;
+         if (timeFilter !== '24H' && timeFilter !== '7D' && timeFilter !== '30D') {
+             // name is "YYYY-MM"
+             const parts = name.split('-');
+             if (parts.length === 2) {
+                 const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+                 displayName = d.toLocaleString('en-US', { month: 'short' });
+             }
+         }
+         return { name: displayName, Cases: count };
+      });
   }, [filteredCases, timeFilter]);
 
   const trendTitle = timeFilter === '24H' ? 'Last 24 Hours' : timeFilter === '7D' ? 'Last 7 Days' : timeFilter === '30D' ? 'Last 30 Days' : 'Historical Registration Trend';
