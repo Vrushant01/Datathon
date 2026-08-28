@@ -7,57 +7,13 @@ import {
 } from 'recharts';
 import { 
   BarChart3, PieChart as PieIcon, LineChart as LineIcon, Activity,
-  Brain, ShieldAlert, TrendingUp, Cpu, Search, FileText, CheckCircle, Clock
+  Brain, TrendingUp, Search, FileText, CheckCircle, Clock
 } from 'lucide-react';
 
+
 export const AdminAnalytics: React.FC = () => {
-  const [activeAnomalies, setActiveAnomalies] = React.useState([
-    {
-      caseId: "202600004",
-      crimeNo: "110012002202600004",
-      reason: "IT Act 66D fraud: Transaction value deviates by +240% above station baseline",
-      confidence: "94.2% Anomaly Index",
-      action: "Escalate to Cyber Crime Cell"
-    },
-    {
-      caseId: "202600003",
-      crimeNo: "110012001202600003",
-      reason: "NDPS seizure anomaly: Volume of contraband deviates from temporal norms",
-      confidence: "87.8% Anomaly Index",
-      action: "Trigger Inspector verification"
-    }
-  ]);
-  const [selectedAnomaly, setSelectedAnomaly] = React.useState<any>(null);
-  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
-  const [notification, setNotification] = React.useState<{ type: 'success' | 'error', text: string } | null>(null);
-  
   const [selectedDistrict, setSelectedDistrict] = React.useState<number | 'ALL'>('ALL');
   const [selectedStation, setSelectedStation] = React.useState<number | 'ALL'>('ALL');
-
-  const showToast = (type: 'success' | 'error', text: string) => {
-    setNotification({ type, text });
-    setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handleConfirmAction = () => {
-    if (!selectedAnomaly) return;
-    
-    // Add audit log entry
-    mockDb.addAuditLog(
-      selectedAnomaly.action === 'Escalate to Cyber Crime Cell' ? 'ESCALATE_CYBER_CELL' : 'TRIGGER_INSPECTOR_VERIFY',
-      'CaseMaster',
-      selectedAnomaly.caseId,
-      `AI Anomaly Triggered Action: ${selectedAnomaly.action} for Case No. ${selectedAnomaly.caseId}. Reason: ${selectedAnomaly.reason}`,
-      'admin@ksp.gov.in'
-    );
-
-    // Remove from activeAnomalies list
-    setActiveAnomalies(prev => prev.filter(anom => anom.caseId !== selectedAnomaly.caseId));
-
-    showToast('success', `Action "${selectedAnomaly.action}" executed successfully!`);
-    setShowConfirmModal(false);
-    setSelectedAnomaly(null);
-  };
 
   const cases = mockDb.getCases();
   const districts = mockDb.getDistricts();
@@ -232,7 +188,7 @@ export const AdminAnalytics: React.FC = () => {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border shadow-sm border-l-4 border-l-ksp-blue flex flex-col">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><FileText size={12}/> Total FIRs</span>
           <span className="text-2xl font-black text-ksp-navy mt-1">{totalCases}</span>
@@ -244,10 +200,6 @@ export const AdminAnalytics: React.FC = () => {
         <div className="bg-white p-4 rounded-xl border shadow-sm border-l-4 border-l-amber-500 flex flex-col">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Clock size={12}/> Active Cases</span>
           <span className="text-2xl font-black text-amber-600 mt-1">{activeCases}</span>
-        </div>
-        <div className="bg-white p-4 rounded-xl border shadow-sm border-l-4 border-l-red-500 flex flex-col">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><ShieldAlert size={12}/> AI Anomalies</span>
-          <span className="text-2xl font-black text-red-600 mt-1">{activeAnomalies.length}</span>
         </div>
       </div>
 
@@ -409,106 +361,7 @@ export const AdminAnalytics: React.FC = () => {
 
       </div>
 
-      {/* AI Anomaly Detection Console */}
-      <div className="bg-slate-900 text-slate-100 p-5 rounded-xl border border-red-500/20 shadow-md">
-        <div className="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
-          <Cpu className="text-red-500 animate-pulse" size={18} />
-          <div>
-            <h3 className="text-xs font-extrabold uppercase text-white tracking-wider m-0">AI Anomaly Detection Terminal</h3>
-            <p className="text-[9px] text-slate-400 m-0">Flags deviation from standard behavioral crime patterns</p>
-          </div>
-        </div>
 
-        <div className="space-y-3">
-          {activeAnomalies.length > 0 ? (
-            activeAnomalies.map((anom, i) => (
-              <div key={i} className="bg-slate-950/80 border border-slate-800 p-3 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-red-900/40 text-red-400 text-[8px] font-extrabold px-1.5 py-0.5 rounded border border-red-800/40 uppercase tracking-wide">
-                      {anom.confidence}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-300">FIR Case #{anom.caseId}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 m-0 italic">"{anom.reason}"</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    setSelectedAnomaly(anom);
-                    setShowConfirmModal(true);
-                  }}
-                  className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-[8px] uppercase tracking-wider px-3 py-1.5 rounded border border-slate-700 transition"
-                >
-                  {anom.action}
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-6 text-slate-500 text-xs font-semibold uppercase tracking-wider bg-slate-950/50 rounded-lg border border-slate-800 border-dashed">
-              🟢 No active anomalies detected. All flags resolved.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Action Confirmation Modal */}
-      {showConfirmModal && selectedAnomaly && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 !mt-0">
-          <div className="bg-white rounded-xl shadow-2xl border w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-slate-800">
-            <div className="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
-              <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                <ShieldAlert size={16} className="text-red-500" /> Confirm AI Action
-              </h3>
-              <button onClick={() => setShowConfirmModal(false)} className="text-white/70 hover:text-white text-lg font-bold">×</button>
-            </div>
-            
-            <div className="p-5 space-y-4">
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Target Case</div>
-                <div className="text-xs font-bold text-ksp-navy">FIR Case #{selectedAnomaly.caseId}</div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">AI Detection Reason</div>
-                <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100 italic">
-                  "{selectedAnomaly.reason}"
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Execution Action</div>
-                <div className="text-xs font-semibold text-red-600 uppercase tracking-wide">
-                  {selectedAnomaly.action}
-                </div>
-              </div>
-
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmModal(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2 rounded text-xs border"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmAction}
-                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded text-xs shadow"
-                >
-                  Execute Action
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Notification Toast */}
-      {notification && (
-        <div className="fixed bottom-4 right-4 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-lg text-xs font-bold flex items-center gap-2 animate-bounce">
-          <Cpu size={16} /> {notification.text}
-        </div>
-      )}
     </div>
   );
 };
