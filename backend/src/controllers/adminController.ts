@@ -37,9 +37,37 @@ async function writeBatchWithRetry(app: any, tableName: string, batch: any[], at
   }
 }
 
+async function clearTable(app: any, tableName: string) {
+  migrationState.message = `Clearing existing rows in ${tableName}`;
+  try {
+    let nextToken: string | undefined = undefined;
+    let rowIds: string[] = [];
+    do {
+      const page: any = await app.nosql().table(tableName).getPagedRows({ next_token: nextToken, max_rows: 100 });
+      if (page.data && page.data.length > 0) {
+        rowIds = rowIds.concat(page.data.map((r: any) => r[tableName].ROWID));
+      }
+      nextToken = page.next_token;
+    } while (nextToken);
+
+    if (rowIds.length > 0) {
+      for (let i = 0; i < rowIds.length; i += 100) {
+        const batch = rowIds.slice(i, i + 100);
+        await app.nosql().table(tableName).deleteRows(batch);
+      }
+    }
+  } catch (err: any) {
+    if (err.message && !err.message.includes('No rows found')) {
+       console.error(`[Migrate] Error checking ${tableName}:`, err.message);
+    }
+  }
+}
+
 async function migrateCollection(app: any, model: any, tableName: string) {
   migrationState.currentTable = tableName;
   migrationState.message = `Preparing to migrate ${tableName}`;
+  
+  await clearTable(app, tableName);
   
   const total = await model.countDocuments();
   migrationState.total = total;
