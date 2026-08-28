@@ -97,3 +97,310 @@ export const analyzeTrend = (values: number[]): TrendAnalysis => {
     };
   }
 };
+
+// ─── Temporal Anomaly Detection ──────────────────────────────────────────────
+
+/**
+ * Maps crime head IDs to human-readable names.
+ */
+const CRIME_HEAD_NAMES: Record<number, string> = {
+  100: 'Crimes Against Body',
+  200: 'Crimes Against Property',
+  300: 'Crimes Against Women',
+  400: 'Economic Offences',
+  500: 'Cyber Crimes',
+  600: 'Special & Local Laws',
+};
+
+export type AnomalyLevel = 'STATE' | 'DISTRICT' | 'STATION';
+export type AnomalySeverity = 'HIGH' | 'CRITICAL';
+
+export interface TemporalAnomaly {
+  /** Unique deduplication key: level|locationId|crimeHeadId|windowStart */
+  dedupKey: string;
+  severity: AnomalySeverity;
+  level: AnomalyLevel;
+  /** State-level: 'Karnataka'. District: district name. Station: station name */
+  locationName: string;
+  locationId: number | null;
+  crimeType: string;
+  crimeHeadId: number;
+  currentCount: number;
+  baselineMean: number;
+  baselineStdDev: number;
+  zScore: number;
+  percentageChange: number;
+  windowStart: string; // ISO date string (UTC)
+  windowEnd: string;   // ISO date string (UTC)
+  baselinePeriods: number;
+  algorithmUsed: string;
+  reason: string;
+}
+
+export interface AnomalyDetectionReport {
+  candidateSeries: number;
+  rejectedInsufficient: number;
+  anomalies: TemporalAnomaly[];
+  highCount: number;
+  criticalCount: number;
+}
+
+/** Configuration knobs */
+interface DetectionConfig {
+  /** Number of complete 7-day windows used as historical baseline (exclusive of current) */
+  baselineWindowCount: number;
+  /** Min non-zero historical windows required to compute a valid baseline */
+  minHistoryWindows: number;
+  /** Z-score threshold for HIGH severity */
+  zHigh: number;
+  /** Z-score threshold for CRITICAL severity */
+  zCritical: number;
+  /** Max number of anomaly alerts returned (deduplicated, sorted by z-score desc) */
+  maxAlerts: number;
+}
+
+const DEFAULT_CONFIG: DetectionConfig = {
+  baselineWindowCount: 8,    // Use 8 prior 7-day windows (~8 weeks of history)
+  minHistoryWindows: 3,      // Need at least 3 non-trivial windows to form a useful baseline
+  zHigh: 2.0,
+  zCritical: 3.0,
+  maxAlerts: 20,
+};
+
+/**
+ * Normalise a CrimeRegisteredDateTime (ISO string) or CrimeRegisteredDate ("YYYY-MM-DD")
+ * to the number of complete UTC days since Unix epoch.
+ * Returns null for unparseable / future dates.
+ */
+function toDayIndex(raw: string | null | undefined, nowDayIndex: number): number | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return null;
+  // Truncate to UTC midnight
+  const dayIdx = Math.floor(d.getTime() / 86_400_000);
+  // Reject future dates (allows up to 1 day of clock skew)
+  if (dayIdx > nowDayIndex + 1) return null;
+  return dayIdx;
+}
+
+/**
+ * Core entry point. Runs Z-Score temporal anomaly detection across three scopes:
+ *   1. STATE  (all Karnataka) × crime head
+ *   2. DISTRICT               × crime head
+ *   3. STATION                × crime head
+ *
+ * Each scope is evaluated in independent 7-day complete windows. The CURRENT window
+ * is the most recent complete 7-day period (days D-7 to D-1 relative to today UTC).
+ * The BASELINE windows are the preceding `baselineWindowCount` complete periods,
+ * EXCLUDING the current window.
+ *
+ * @param cases  Full CaseMaster dataset already in memory
+ * @param unitToDistrict  Map of UnitID → DistrictID
+ * @param districtNames   Map of DistrictID → district name
+ * @param unitNames       Map of UnitID → station name
+ * @param config          Optional override of detection parameters
+ */
+export function detectTemporalAnomalies(
+  cases: any[],
+  unitToDistrict: Map<number, number>,
+  districtNames: Map<number, string>,
+  unitNames: Map<number, string>,
+  config: Partial<DetectionConfig> = {}
+): AnomalyDetectionReport {
+  const cfg: DetectionConfig = { ...DEFAULT_CONFIG, ...config };
+
+  // ── 1. Anchor time ──────────────────────────────────────────────────────────
+  // "Today" in UTC is the day that is currently in progress – we do NOT count it.
+  const nowMs = Date.now();
+  const todayDayIndex = Math.floor(nowMs / 86_400_000); // UTC day index
+
+  // Current window: days [todayDayIndex-7, todayDayIndex-1] inclusive
+  const currentWindowEnd = todayDayIndex - 1;
+  const currentWindowStart = todayDayIndex - 7;
+
+  // Baseline: windows from (currentWindowStart - baselineWindowCount*7) up to currentWindowStart-1
+  const baselineStart = currentWindowStart - cfg.baselineWindowCount * 7;
+
+  // ── 2. Parse and index each case ──────────────────────────────────────────
+  // Structure: dayIndex → stationId → crimeHeadId → count
+  const dayStationCrime = new Map<number, Map<number, Map<number, number>>>();
+
+  for (const c of cases) {
+    const dayIdx = toDayIndex(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate, todayDayIndex);
+    if (dayIdx === null) continue;
+
+    // Only index days within the analysis range
+    if (dayIdx < baselineStart || dayIdx > currentWindowEnd) continue;
+
+    const stationId = Number(c.PoliceStationID) || 0;
+    const crimeHeadId = Number(c.CrimeMajorHeadID) || 0;
+
+    if (!dayStationCrime.has(dayIdx)) dayStationCrime.set(dayIdx, new Map());
+    const byStation = dayStationCrime.get(dayIdx)!;
+    if (!byStation.has(stationId)) byStation.set(stationId, new Map());
+    const byCrime = byStation.get(stationId)!;
+    byCrime.set(crimeHeadId, (byCrime.get(crimeHeadId) || 0) + 1);
+  }
+
+  // ── 3. Build weekly aggregate for each scope × crime head combination ──────
+  //
+  // windowCounts[windowIndex][scopeKey] = count
+  // windowIndex 0 = current window; 1..baselineWindowCount = baseline (oldest last)
+  //
+  // scopeKey format:  "STATE|0|<crimeHead>" | "DIST|<distId>|<crimeHead>" | "STA|<staId>|<crimeHead>"
+
+  const totalWindows = 1 + cfg.baselineWindowCount; // current + baselines
+  // windowCounts[w][scopeKey]  w=0 is current
+  const windowCounts: Map<string, number>[] = Array.from({ length: totalWindows }, () => new Map());
+
+  for (const [dayIdx, byStation] of dayStationCrime) {
+    // Which window index does this day belong to?
+    const daysAgo = currentWindowEnd - dayIdx; // 0 = most recent day in current window
+    const windowIdx = Math.floor(daysAgo / 7); // 0 = current, 1..8 = baseline
+    if (windowIdx >= totalWindows) continue;
+
+    const wMap = windowCounts[windowIdx];
+
+    for (const [stationId, byCrime] of byStation) {
+      const districtId = unitToDistrict.get(stationId) ?? 0;
+
+      for (const [crimeHeadId, count] of byCrime) {
+        const stateKey   = `STATE|0|${crimeHeadId}`;
+        const distKey    = `DIST|${districtId}|${crimeHeadId}`;
+        const stationKey = `STA|${stationId}|${crimeHeadId}`;
+
+        wMap.set(stateKey,   (wMap.get(stateKey)   || 0) + count);
+        wMap.set(distKey,    (wMap.get(distKey)     || 0) + count);
+        wMap.set(stationKey, (wMap.get(stationKey)  || 0) + count);
+      }
+    }
+  }
+
+  // ── 4. Collect all distinct scope keys ───────────────────────────────────
+  const allKeys = new Set<string>();
+  for (const wMap of windowCounts) {
+    for (const k of wMap.keys()) allKeys.add(k);
+  }
+
+  // ── 5. Run Z-score detection per key ────────────────────────────────────
+  let candidateSeries = 0;
+  let rejectedInsufficient = 0;
+  const anomalies: TemporalAnomaly[] = [];
+  const seenDedupKeys = new Set<string>();
+
+  for (const key of allKeys) {
+    candidateSeries++;
+
+    const currentCount = windowCounts[0].get(key) || 0;
+
+    // Collect baseline window counts (indices 1..N), only those present
+    const baselineValues: number[] = [];
+    for (let w = 1; w < totalWindows; w++) {
+      const v = windowCounts[w].get(key);
+      if (v !== undefined) baselineValues.push(v);
+    }
+
+    // Reject if insufficient history
+    if (baselineValues.length < cfg.minHistoryWindows) {
+      rejectedInsufficient++;
+      continue;
+    }
+
+    // We only flag INCREASES (current > baseline), not drops
+    // Drops are handled differently (e.g. closures) and cause false positives
+    const baselineMean = baselineValues.reduce((a, b) => a + b, 0) / baselineValues.length;
+    if (currentCount <= baselineMean) continue; // Not an upward anomaly
+
+    // Standard deviation of baseline
+    const variance = baselineValues.reduce((a, b) => a + Math.pow(b - baselineMean, 2), 0) / baselineValues.length;
+    const baselineStdDev = Math.sqrt(variance);
+
+    let zScore: number;
+    if (baselineStdDev < 0.001) {
+      // Zero-variance baseline: all historical windows had the exact same count
+      // Use a soft rule: if current is meaningfully above, treat as high anomaly
+      if (currentCount > baselineMean * 1.5 && currentCount >= baselineMean + 3) {
+        zScore = 2.5; // Assign a synthetic z-score indicating notable deviation
+      } else {
+        continue;
+      }
+    } else {
+      zScore = (currentCount - baselineMean) / baselineStdDev;
+    }
+
+    // Guard against NaN / Infinity
+    if (!isFinite(zScore)) continue;
+    if (zScore < cfg.zHigh) continue;
+
+    const severity: AnomalySeverity = zScore >= cfg.zCritical ? 'CRITICAL' : 'HIGH';
+
+    // Decode key
+    const parts = key.split('|');
+    const scope = parts[0] as string; // raw prefix: 'STATE' | 'DIST' | 'STA'
+    const locationIdRaw = parseInt(parts[1]);
+    const crimeHeadId = parseInt(parts[2]);
+
+
+    let level: AnomalyLevel;
+    let locationName: string;
+    let locationId: number | null;
+
+    if (scope === 'STATE') {
+      level = 'STATE';
+      locationName = 'Karnataka';
+      locationId = null;
+    } else if (scope === 'DIST') {
+      level = 'DISTRICT';
+      locationId = locationIdRaw;
+      locationName = districtNames.get(locationIdRaw) || `District ${locationIdRaw}`;
+    } else {
+      level = 'STATION';
+      locationId = locationIdRaw;
+      locationName = unitNames.get(locationIdRaw) || `Station ${locationIdRaw}`;
+    }
+
+    const crimeType = CRIME_HEAD_NAMES[crimeHeadId] || `Crime Category ${crimeHeadId}`;
+    const percentageChange = baselineMean > 0
+      ? Math.round(((currentCount - baselineMean) / baselineMean) * 1000) / 10
+      : 100;
+
+    const windowStartDate = new Date((currentWindowStart) * 86_400_000).toISOString().split('T')[0];
+    const windowEndDate   = new Date((currentWindowEnd)   * 86_400_000).toISOString().split('T')[0];
+
+    const dedupKey = `${level}|${locationId ?? 'STATE'}|${crimeHeadId}|${windowStartDate}`;
+    if (seenDedupKeys.has(dedupKey)) continue;
+    seenDedupKeys.add(dedupKey);
+
+    anomalies.push({
+      dedupKey,
+      severity,
+      level,
+      locationName,
+      locationId,
+      crimeType,
+      crimeHeadId,
+      currentCount,
+      baselineMean: Math.round(baselineMean * 10) / 10,
+      baselineStdDev: Math.round(baselineStdDev * 100) / 100,
+      zScore: Math.round(zScore * 100) / 100,
+      percentageChange,
+      windowStart: windowStartDate,
+      windowEnd: windowEndDate,
+      baselinePeriods: baselineValues.length,
+      algorithmUsed: 'Z-Score Temporal Deviation (Non-Overlapping Windows)',
+      reason: `${crimeType} registrations in ${locationName} were ${percentageChange}% above the ${baselineValues.length}-week historical baseline (z=${zScore.toFixed(2)}).`,
+    });
+  }
+
+  // Sort by z-score descending, take top N
+  anomalies.sort((a, b) => b.zScore - a.zScore);
+  const finalAnomalies = anomalies.slice(0, cfg.maxAlerts);
+
+  return {
+    candidateSeries,
+    rejectedInsufficient,
+    anomalies: finalAnomalies,
+    highCount:     finalAnomalies.filter(a => a.severity === 'HIGH').length,
+    criticalCount: finalAnomalies.filter(a => a.severity === 'CRITICAL').length,
+  };
+}
