@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { District, Unit, Employee, CaseMaster, Accused, Victim } from '../models';
 import catalyst from 'zcatalyst-sdk-node';
 import mongoose from 'mongoose';
-import { SEED_CASES } from '../../scripts/generated/seedData';
+import { SEED_CASES } from '../utils/seedData';
 
 const BATCH_SIZE = 25;
 
