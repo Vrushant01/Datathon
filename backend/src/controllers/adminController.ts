@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { District, Unit, Employee, CaseMaster, Accused, Victim } from '../models';
 import catalyst from 'zcatalyst-sdk-node';
 import mongoose from 'mongoose';
+import { SEED_CASES } from '../../scripts/generated/seedData';
 
 const BATCH_SIZE = 25;
 
@@ -69,18 +70,14 @@ async function migrateCollection(app: any, model: any, tableName: string) {
   
   await clearTable(app, tableName);
   
-  const total = await model.countDocuments();
+  const total = SEED_CASES.length;
   migrationState.total = total;
   migrationState.progress = 0;
 
-  const cursor = model.find().lean().cursor();
   let batch: any[] = [];
   let migratedCount = 0;
 
-  for await (const doc of cursor) {
-    delete doc._id;
-    delete doc.__v;
-
+  for (const doc of SEED_CASES) {
     batch.push(doc);
 
     if (batch.length === BATCH_SIZE) {
