@@ -71,7 +71,6 @@ export const AdminGISMap: React.FC = () => {
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
-  const [isMapTransitioning, setIsMapTransitioning] = useState<boolean>(false);
 
   // Parent-Child Filter Cascades
   useEffect(() => {
@@ -112,34 +111,6 @@ export const AdminGISMap: React.FC = () => {
       return distKm <= h.radiusKm;
     });
   }, [baseFilteredCases, selectedHotspot, activeHotspots]);
-
-  // Handle map transitions to hide old data while camera moves
-  useEffect(() => {
-    setIsMapTransitioning(true);
-    const timer = setTimeout(() => setIsMapTransitioning(false), 800);
-    return () => clearTimeout(timer);
-  }, [selectedDistrict, selectedStation]);
-
-  useEffect(() => {
-    if (!mapRef.current || !mapLoaded) return;
-    const opacity = isMapTransitioning ? 0 : 1;
-    
-    // Attempt to set opacities safely
-    try {
-        mapRef.current.setPaintProperty('clusters', 'circle-opacity', opacity);
-        mapRef.current.setPaintProperty('clusters', 'circle-stroke-opacity', opacity);
-        mapRef.current.setPaintProperty('cluster-count', 'text-opacity', opacity);
-        
-        mapRef.current.setPaintProperty('unclustered-point', 'circle-opacity', opacity);
-        mapRef.current.setPaintProperty('unclustered-point', 'circle-stroke-opacity', opacity);
-        
-        const hotspotOpacity = isMapTransitioning ? 0 : 0.2;
-        mapRef.current.setPaintProperty('hotspots-fill', 'fill-opacity', hotspotOpacity);
-        mapRef.current.setPaintProperty('hotspots-line', 'line-opacity', opacity);
-    } catch (e) {
-        // Layers might not be initialized yet
-    }
-  }, [isMapTransitioning, mapLoaded]);
 
   // Compute hotspots from backend
   useEffect(() => {
@@ -246,7 +217,8 @@ export const AdminGISMap: React.FC = () => {
         center: [76.5, 15.0],
         zoom: 6,
         maxBounds: [[68.0, 6.0], [98.0, 36.0]],
-        doubleClickZoom: false
+        doubleClickZoom: false,
+        antialias: true
       });
       mapRef.current = map;
       
@@ -259,12 +231,16 @@ export const AdminGISMap: React.FC = () => {
          if (mapContainerRef.current) resizeObserver.observe(mapContainerRef.current);
          map.addSource('karnataka-districts', {
              type: 'geojson',
-             data: { type: 'FeatureCollection', features: [] }
+             data: { type: 'FeatureCollection', features: [] },
+             buffer: 512,
+             tolerance: 0.5
          });
          
          map.addSource('hotspots', {
              type: 'geojson',
-             data: { type: 'FeatureCollection', features: [] }
+             data: { type: 'FeatureCollection', features: [] },
+             buffer: 512,
+             tolerance: 0.5
          });
          
          map.addSource('fir-cases', {
@@ -272,7 +248,9 @@ export const AdminGISMap: React.FC = () => {
              data: { type: 'FeatureCollection', features: [] },
              cluster: true,
              clusterMaxZoom: 14,
-             clusterRadius: 50
+             clusterRadius: 50,
+             buffer: 512,
+             tolerance: 0.5
          });
 
          let insertBeforeId: string | undefined;
@@ -317,6 +295,10 @@ export const AdminGISMap: React.FC = () => {
              id: 'district-line',
              type: 'line',
              source: 'karnataka-districts',
+             layout: {
+                 'line-join': 'round',
+                 'line-cap': 'round'
+             },
              paint: {
                  'line-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#d4af37', ['boolean', ['feature-state', 'hover'], false], '#d4af37', '#0b2240'],
                  'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 2.5, 1],
@@ -347,6 +329,10 @@ export const AdminGISMap: React.FC = () => {
              id: 'hotspots-line',
              type: 'line',
              source: 'hotspots',
+             layout: {
+                 'line-join': 'round',
+                 'line-cap': 'round'
+             },
              paint: {
                  'line-color': '#ef4444',
                  'line-width': 1,
@@ -560,7 +546,7 @@ export const AdminGISMap: React.FC = () => {
                  setSelectedStation('ALL');
                  
                  // Force the zoom out animation in case state was already ALL but user manually panned
-                 map.flyTo({ center: [76.5, 15.0], zoom: 6, duration: 1500, essential: true });
+                 map.flyTo({ center: [76.5, 15.0], zoom: 6, duration: 1000, essential: true });
              }
          });
 
@@ -631,12 +617,12 @@ export const AdminGISMap: React.FC = () => {
              [selectedH.lng - radiusInDegrees, selectedH.lat - radiusInDegrees],
              [selectedH.lng + radiusInDegrees, selectedH.lat + radiusInDegrees]
            ] as maplibregl.LngLatBoundsLike;
-           mapRef.current.fitBounds(bbox, { padding: 100, duration: 1500 });
+           mapRef.current.fitBounds(bbox, { padding: 100, duration: 1000 });
        }
     } else if (selectedStation !== 'ALL') {
        const station = stations.find(s => s.UnitID === selectedStation);
        if (station && typeof station.longitude === 'number' && typeof station.latitude === 'number') {
-           mapRef.current.flyTo({ center: [station.longitude, station.latitude], zoom: 14, duration: 1500 });
+           mapRef.current.flyTo({ center: [station.longitude, station.latitude], zoom: 14, duration: 1000 });
        }
     } else if (selectedDistrict !== 'ALL') {
        // Camera animation for District selection
@@ -653,7 +639,7 @@ export const AdminGISMap: React.FC = () => {
                }
 
                if (bbox) {
-                   mapRef.current.fitBounds(bbox, { padding: 80, duration: 1500 });
+                   mapRef.current.fitBounds(bbox, { padding: 80, duration: 1000 });
                }
            }
        }
@@ -662,7 +648,7 @@ export const AdminGISMap: React.FC = () => {
        mapRef.current.flyTo({
            center: [76.5, 15.0],
            zoom: 6,
-           duration: 1500,
+           duration: 1000,
            essential: true
        });
     }
