@@ -66,8 +66,9 @@ export const Home: React.FC = () => {
               className="bg-white/10 hover:bg-white/15 text-white font-bold p-5 rounded-xl border border-white/20 hover:border-white/30 flex items-center justify-between transition-all duration-300 shadow group"
             >
               <div className="text-left pr-2">
-                <span className="text-xs uppercase text-slate-300 font-semibold tracking-wider block mb-2">Case Operations</span>
-                <span className="text-base md:text-lg text-white font-bold block leading-tight">Investigating Officers (IO) & Station Writers</span>
+                <span className="text-[11px] uppercase text-slate-300 font-bold tracking-widest block mb-1.5">Case Operations</span>
+                <span className="text-lg text-white font-bold block leading-tight mb-0.5">Investigating Officers (IO)</span>
+                <span className="text-xs text-slate-300 font-medium block leading-tight">& Station Writers</span>
               </div>
               <ChevronRight className="text-ksp-gold group-hover:translate-x-1.5 transition shrink-0 ml-2" />
             </Link>
@@ -77,8 +78,9 @@ export const Home: React.FC = () => {
               className="bg-white/10 hover:bg-white/15 text-white font-bold p-5 rounded-xl border border-white/20 hover:border-white/30 flex items-center justify-between transition-all duration-300 shadow group"
             >
               <div className="text-left pr-2">
-                <span className="text-xs uppercase text-slate-300 font-semibold tracking-wider block mb-2">Stationary Control</span>
-                <span className="text-base md:text-lg text-white font-bold block leading-tight">Police Station Heads (SHO / Inspector)</span>
+                <span className="text-[11px] uppercase text-slate-300 font-bold tracking-widest block mb-1.5">Stationary Control</span>
+                <span className="text-lg text-white font-bold block leading-tight mb-0.5">Police Station Heads</span>
+                <span className="text-xs text-slate-300 font-medium block leading-tight">(SHO / Inspector)</span>
               </div>
               <BarChart3 className="text-ksp-gold group-hover:scale-110 transition shrink-0 ml-2" />
             </Link>
@@ -88,8 +90,9 @@ export const Home: React.FC = () => {
               className="bg-ksp-gold hover:bg-ksp-gold-light text-ksp-navy-dark font-bold p-5 rounded-xl flex items-center justify-between transition-all duration-300 shadow-lg group border border-ksp-gold/35"
             >
               <div className="text-left pr-2">
-                <span className="text-xs uppercase text-ksp-navy-dark/75 font-bold tracking-wider block mb-2">State Executive</span>
-                <span className="text-base md:text-lg text-ksp-navy-dark font-extrabold block leading-tight">State Senior Officers (DG-IGP / Range IGPs / SPs)</span>
+                <span className="text-[11px] uppercase text-ksp-navy-dark/80 font-bold tracking-widest block mb-1.5">State Executive</span>
+                <span className="text-lg text-ksp-navy-dark font-extrabold block leading-tight mb-0.5">State Senior Officers</span>
+                <span className="text-xs text-ksp-navy-dark/80 font-bold block leading-tight">(DG-IGP / Range IGPs / SPs)</span>
               </div>
               <Lock className="text-ksp-navy-dark/70 group-hover:scale-110 transition shrink-0 ml-2" />
             </Link>
