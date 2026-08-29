@@ -217,8 +217,7 @@ export const AdminGISMap: React.FC = () => {
         center: [76.5, 15.0],
         zoom: 6,
         maxBounds: [[68.0, 6.0], [98.0, 36.0]],
-        doubleClickZoom: false,
-        antialias: true
+        doubleClickZoom: false
       });
       mapRef.current = map;
       
@@ -966,3 +965,4 @@ export const AdminGISMap: React.FC = () => {
     </div>
   );
 };
+

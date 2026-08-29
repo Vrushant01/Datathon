@@ -361,9 +361,9 @@ const VICTIMS: VictimRow[] = [];
 const ACCUSED: AccusedRow[] = [];
 const CASE_ACTS: ActSectionAssociationRow[] = [];
 const ARREST_SURRENDERS: ArrestSurrenderRow[] = [];
-const CS_RECORDS: CSRow[] = [];
+const CS_RECORDS: ChargesheetRow[] = [];
 const CUSTOM_EDGES: CustomEdgeRow[] = [];
-const CASE_NOTES: CaseNoteRow[] = [];
+const CASE_NOTES: TimelineNoteRow[] = [];
 
 const AUDIT_LOGS: AuditLogRow[] = [
   { LogID: 1, user_email: 'admin@ksp.gov.in', action: 'CREATE_OFFICER', table_name: 'Employee', record_id: '9002', timestamp: '2026-01-10T10:00:00', details: 'Added new Police Officer Vrushant Patil' },
@@ -1364,9 +1364,9 @@ export const mockDb = {
     const entity: CaseEntityRow = {
       EntityID: Date.now(),
       CaseMasterID: caseId,
-      EntityType: type,
-      EntityValue: value,
-      Description: desc
+      type: type as any,
+      value: value,
+      description: desc
     };
     // No explicit backend table for these generic entities in our mock yet, but we'll try to POST if supported
     try {
@@ -1433,9 +1433,9 @@ export const mockDb = {
     const newEdge: CustomEdgeRow = {
       EdgeID: `edge-${Date.now()}`,
       CaseMasterID: caseId,
-      SourceEntityID: sourceId,
-      TargetEntityID: targetId,
-      RelationshipLabel: label
+      source: sourceId,
+      target: targetId,
+      label: label
     };
     try {
       await fetch(`/api/network/edges`, {

@@ -65,7 +65,8 @@ export const CaseDetail: React.FC = () => {
       event_type: eventType,
       event_title: eventTitle,
       description: eventDesc,
-      created_by: user?.firstName || 'Officer'
+      created_by: user?.firstName || 'Officer',
+      created_at: new Date().toISOString()
     });
 
     showNotification('success', 'Investigation event logged in timeline.');
