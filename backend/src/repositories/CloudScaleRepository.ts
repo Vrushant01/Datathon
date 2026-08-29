@@ -134,6 +134,7 @@ export class CloudScaleRepository implements IDataRepository {
         }
 
         const allItems: any[] = [];
+        let batchErrors = 0;
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         
         // Fetch in batches of 25 (max supported by fetchItem)
@@ -154,17 +155,29 @@ export class CloudScaleRepository implements IDataRepository {
                         return typeof item.toJSON === 'function' ? item.toJSON() : item;
                     }).filter(Boolean);
                     allItems.push(...items);
-                } catch (e) {
-                    // Ignore missing
+                } catch (e: any) {
+                    batchErrors++;
+                    console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
                 }
             });
         }
 
-        // Run fetchPromises in chunks of 15 concurrency to avoid rate limits
-        const CONCURRENCY = 15;
+        // Run fetchPromises in controlled concurrency batches.
+        // CONCURRENCY=4: safe against CloudScale rate limits while still being ~4x faster than sequential.
+        // 400 batches / 4 concurrent = 100 rounds * ~150ms avg = ~15 seconds for casemasters (cold start).
+        // After first load, 5-minute cache makes all subsequent calls instant.
+
+        const CONCURRENCY = 4;
         for (let i = 0; i < fetchPromises.length; i += CONCURRENCY) {
             const chunk = fetchPromises.slice(i, i + CONCURRENCY);
             await Promise.all(chunk.map(fn => fn()));
+            // Small delay between rounds to stay well within CloudScale rate limits
+            if (i + CONCURRENCY < fetchPromises.length) {
+                await new Promise(r => setTimeout(r, 50));
+            }
+        }
+        if (batchErrors > 0) {
+            console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
         }
         
         const cleaned = allItems.map(item => {
