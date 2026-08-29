@@ -1,4 +1,3 @@
-import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES } from './seedData';
 import { API_BASE_URL } from '../config/api';
 // KSP Mock Database and Client-Side State Manager
 // Implements the exact ER Schema of the Karnataka Police Department
@@ -62,6 +61,19 @@ export interface CaseMasterRow {
   latitude: number;
   longitude: number;
   BriefFacts: string;
+  GDEntryNumber?: string;
+  GDEntryTimestamp?: string;
+  DelayInReporting?: boolean;
+  DelayReason?: string;
+  BNSApplicable?: boolean;
+  CrimeSceneLocation?: string;
+  DistanceDirection?: string;
+  JurisdictionFlag?: 'Inside' | 'Outside';
+  StolenProperty?: string;
+  InformantSignature?: string;
+  RecordingOfficerRank?: string;
+  DispatchCopyHanded?: boolean;
+  DispatchCopyDate?: string;
 }
 
 export interface CaseEntityRow {
@@ -90,6 +102,10 @@ export interface ComplainantRow {
   ReligionID: number;
   CasteID: number;
   GenderID: number;
+  FatherSpouseName?: string;
+  Phone?: string;
+  PermanentAddress?: string;
+  IdentityProof?: string;
 }
 
 export interface VictimRow {
@@ -100,6 +116,7 @@ export interface VictimRow {
   GenderID: number;
   VictimPolice: string; // "1" or "0"
   PersonID: string;
+  RelationshipToComplainant?: string;
 }
 
 export interface AccusedRow {
@@ -109,6 +126,11 @@ export interface AccusedRow {
   AgeYear: number;
   GenderID: number;
   PersonID: string; // A1, A2, etc.
+  FatherSpouseName?: string;
+  Address?: string;
+  Aliases?: string;
+  PhysicalDescription?: string;
+  Status?: 'Known' | 'Unknown';
 }
 
 export interface ActSectionAssociationRow {
@@ -324,162 +346,24 @@ const CRIME_SUB_HEADS: CrimeSubHeadRow[] = [
   { CrimeSubHeadID: 601, CrimeHeadID: 600, CrimeHeadName: 'NDPS Act (Drug Trafficking)', SeqID: 1 }
 ];
 
-const ACTS: ActRow[] = [
-  { ActCode: 'IPC', ActDescription: 'Indian Penal Code, 1860', ShortName: 'IPC', Active: true },
-  { ActCode: 'BNS', ActDescription: 'Bharatiya Nyaya Sanhita, 2023', ShortName: 'BNS', Active: true },
-  { ActCode: 'NDPS', ActDescription: 'Narcotic Drugs and Psychotropic Substances Act, 1985', ShortName: 'NDPS Act', Active: true },
-  { ActCode: 'IT_ACT', ActDescription: 'Information Technology Act, 2000', ShortName: 'IT Act', Active: true },
-  { ActCode: 'KPA', ActDescription: 'Karnataka Police Act, 1963', ShortName: 'KPA', Active: true }
-];
+// Cleared out master data arrays
+const ACTS: ActRow[] = [];
 
-const SECTIONS: SectionRow[] = [
-  { ActCode: 'IPC', SectionCode: '302', SectionDescription: 'Punishment for murder', Active: true },
-  { ActCode: 'IPC', SectionCode: '307', SectionDescription: 'Attempt to murder', Active: true },
-  { ActCode: 'IPC', SectionCode: '379', SectionDescription: 'Punishment for theft', Active: true },
-  { ActCode: 'IPC', SectionCode: '392', SectionDescription: 'Punishment for robbery', Active: true },
-  { ActCode: 'IPC', SectionCode: '420', SectionDescription: 'Cheating and dishonestly inducing delivery of property', Active: true },
-  { ActCode: 'IPC', SectionCode: '498A', SectionDescription: 'Husband or relative of husband of a woman subjecting her to cruelty', Active: true },
-  { ActCode: 'BNS', SectionCode: '103', SectionDescription: 'Punishment for murder (under BNS)', Active: true },
-  { ActCode: 'BNS', SectionCode: '109', SectionDescription: 'Attempt to murder (under BNS)', Active: true },
-  { ActCode: 'NDPS', SectionCode: '20', SectionDescription: 'Punishment for contravention in relation to cannabis plant and cannabis', Active: true },
-  { ActCode: 'IT_ACT', SectionCode: '66D', SectionDescription: 'Punishment for cheating by personation by using computer resource', Active: true }
-];
+const SECTIONS: SectionRow[] = [];
 
-const CRIME_HEAD_ACT_SECTIONS: CrimeHeadActSectionRow[] = [
-  { CrimeHeadID: 100, ActCode: 'IPC', SectionCode: '302' },
-  { CrimeHeadID: 100, ActCode: 'IPC', SectionCode: '307' },
-  { CrimeHeadID: 100, ActCode: 'BNS', SectionCode: '103' },
-  { CrimeHeadID: 100, ActCode: 'BNS', SectionCode: '109' },
-  { CrimeHeadID: 200, ActCode: 'IPC', SectionCode: '379' },
-  { CrimeHeadID: 200, ActCode: 'IPC', SectionCode: '392' },
-  { CrimeHeadID: 300, ActCode: 'IPC', SectionCode: '498A' },
-  { CrimeHeadID: 400, ActCode: 'IPC', SectionCode: '420' },
-  { CrimeHeadID: 500, ActCode: 'IT_ACT', SectionCode: '66D' },
-  { CrimeHeadID: 600, ActCode: 'NDPS', SectionCode: '20' }
-];
+const CRIME_HEAD_ACT_SECTIONS: CrimeHeadActSectionRow[] = [];
 
-const EMPLOYEES: EmployeeRow[] = [
-  {
-    EmployeeID: 9001, DistrictID: 1001, UnitID: 2001, RankID: 5, DesignationID: 102,
-    KGID: 'KGID883492', FirstName: 'Venkatesh Prasad', EmployeeDOB: '1978-05-12',
-    GenderID: 1, BloodGroupID: 3, PhysicallyChallenged: false, AppointmentDate: '2002-06-01',
-    email: 'admin@ksp.gov.in', status: 'Active', contact: '+91 94408 20192'
-  },
-  {
-    EmployeeID: 9002, DistrictID: 1001, UnitID: 2002, RankID: 4, DesignationID: 101,
-    KGID: 'KGID901234', FirstName: 'Vrushant Patil', EmployeeDOB: '1985-08-20',
-    GenderID: 1, BloodGroupID: 2, PhysicallyChallenged: false, AppointmentDate: '2010-09-15',
-    email: '9002@ksp.gov.in', status: 'Active', contact: '+91 98450 12345'
-  },
-  {
-    EmployeeID: 9003, DistrictID: 1001, UnitID: 2002, RankID: 1, DesignationID: 103,
-    KGID: 'KGID920199', FirstName: 'Shivani Gowda', EmployeeDOB: '1992-11-03',
-    GenderID: 2, BloodGroupID: 1, PhysicallyChallenged: false, AppointmentDate: '2016-04-10',
-    email: '9003@ksp.gov.in', status: 'Active', contact: '+91 99001 88765'
-  }
-];
+const EMPLOYEES: EmployeeRow[] = [];
+const CASES: CaseMasterRow[] = [];
+const COMPLAINANTS: ComplainantRow[] = [];
 
-const CASES: CaseMasterRow[] = [
-  {
-    CaseMasterID: 50001, CrimeNo: '110012002202600001', CaseNo: '202600001', CrimeRegisteredDate: '2026-03-10',
-    PolicePersonID: 9002, PoliceStationID: 2002, CaseCategoryID: 1, GravityOffenceID: 1,
-    CrimeMajorHeadID: 100, CrimeMinorHeadID: 101, CaseStatusID: 1, CourtID: 3001,
-    IncidentFromDate: '2026-03-09T23:30:00', IncidentToDate: '2026-03-10T01:00:00', InfoReceivedPSDate: '2026-03-10T03:15:00',
-    latitude: 12.935242, longitude: 77.624478,
-    BriefFacts: 'A severe altercation broke out in Koramangala 5th Block during a commercial dispute, leading to physical assault with a sharp weapon. The victim sustained critical neck injuries. Suspect fled the scene.'
-  },
-  {
-    CaseMasterID: 50002, CrimeNo: '110012002202600002', CaseNo: '202600002', CrimeRegisteredDate: '2026-04-02',
-    PolicePersonID: 9002, PoliceStationID: 2002, CaseCategoryID: 1, GravityOffenceID: 2,
-    CrimeMajorHeadID: 200, CrimeMinorHeadID: 202, CaseStatusID: 1, CourtID: 3001,
-    IncidentFromDate: '2026-04-01T20:15:00', IncidentToDate: '2026-04-01T21:00:00', InfoReceivedPSDate: '2026-04-02T08:30:00',
-    latitude: 12.927923, longitude: 77.618032,
-    BriefFacts: 'Robbery of a luxury gold chain worth 1.5 Lakhs at gunpoint from a resident walking near Koramangala park. Suspects were on a Pulsar motorcycle (no plate).'
-  },
-  {
-    CaseMasterID: 50003, CrimeNo: '110012001202600003', CaseNo: '202600003', CrimeRegisteredDate: '2026-05-15',
-    PolicePersonID: 9001, PoliceStationID: 2001, CaseCategoryID: 1, GravityOffenceID: 1,
-    CrimeMajorHeadID: 600, CrimeMinorHeadID: 601, CaseStatusID: 2, CourtID: 3002,
-    IncidentFromDate: '2026-05-15T14:00:00', IncidentToDate: '2026-05-15T15:30:00', InfoReceivedPSDate: '2026-05-15T16:00:00',
-    latitude: 12.976378, longitude: 77.592837,
-    BriefFacts: 'Based on credible intelligence, a raid was conducted near Cubbon Park metro station, resulting in the seizure of 2.4 kilograms of high-grade Ganja. Two offenders arrested.'
-  },
-  {
-    CaseMasterID: 50004, CrimeNo: '110012002202600004', CaseNo: '202600004', CrimeRegisteredDate: '2026-06-18',
-    PolicePersonID: 9002, PoliceStationID: 2002, CaseCategoryID: 1, GravityOffenceID: 3,
-    CrimeMajorHeadID: 500, CrimeMinorHeadID: 501, CaseStatusID: 1, CourtID: 3001,
-    IncidentFromDate: '2026-06-15T09:00:00', IncidentToDate: '2026-06-17T18:00:00', InfoReceivedPSDate: '2026-06-18T10:00:00',
-    latitude: 12.931252, longitude: 77.632120,
-    BriefFacts: 'Victim received phishing calls purporting to be from KSP Cyber Cell, inducing him to share Aadhaar and banking OTPs. Total fraud amount: 80,000 INR.'
-  }
-];
-
-const COMPLAINANTS: ComplainantRow[] = [
-  { ComplainantID: 60001, CaseMasterID: 50001, ComplainantName: 'Rajesh Kumar Gowda', AgeYear: 42, OccupationID: 2, ReligionID: 1, CasteID: 3, GenderID: 1 },
-  { ComplainantID: 60002, CaseMasterID: 50002, ComplainantName: 'Priya Shastry', AgeYear: 29, OccupationID: 3, ReligionID: 1, CasteID: 1, GenderID: 2 },
-  { ComplainantID: 60003, CaseMasterID: 50003, ComplainantName: 'Venkatesh Prasad', AgeYear: 48, OccupationID: 4, ReligionID: 1, CasteID: 1, GenderID: 1 },
-  { ComplainantID: 60004, CaseMasterID: 50004, ComplainantName: 'Amit Nair', AgeYear: 34, OccupationID: 3, ReligionID: 1, CasteID: 1, GenderID: 1 }
-];
-
-const VICTIMS: VictimRow[] = [
-  { VictimMasterID: 70001, CaseMasterID: 50001, VictimName: 'Suresh Kumar Gowda', AgeYear: 38, GenderID: 1, VictimPolice: '0', PersonID: 'V1' },
-  { VictimMasterID: 70002, CaseMasterID: 50002, VictimName: 'Priya Shastry', AgeYear: 29, GenderID: 2, VictimPolice: '0', PersonID: 'V2' },
-  { VictimMasterID: 70003, CaseMasterID: 50003, VictimName: 'State of Karnataka', AgeYear: 0, GenderID: 1, VictimPolice: '1', PersonID: 'V3' },
-  { VictimMasterID: 70004, CaseMasterID: 50004, VictimName: 'Amit Nair', AgeYear: 34, GenderID: 1, VictimPolice: '0', PersonID: 'V4' }
-];
-
-const ACCUSED: AccusedRow[] = [
-  { AccusedMasterID: 80001, CaseMasterID: 50001, AccusedName: 'Harish Murthy alias "Kariya"', AgeYear: 35, GenderID: 1, PersonID: 'A1' },
-  { AccusedMasterID: 80002, CaseMasterID: 50002, AccusedName: 'Unknown Motorcyclists', AgeYear: 25, GenderID: 1, PersonID: 'A1' },
-  { AccusedMasterID: 80003, CaseMasterID: 50003, AccusedName: 'Imran Khan', AgeYear: 28, GenderID: 1, PersonID: 'A1' },
-  { AccusedMasterID: 80004, CaseMasterID: 50003, AccusedName: 'Rahman Shaikh', AgeYear: 30, GenderID: 1, PersonID: 'A2' },
-  { AccusedMasterID: 80005, CaseMasterID: 50004, AccusedName: 'Manoj Kumar (Phishing caller ID)', AgeYear: 30, GenderID: 1, PersonID: 'A1' },
-  { AccusedMasterID: 80006, CaseMasterID: 50002, AccusedName: 'Harish Murthy alias "Kariya"', AgeYear: 35, GenderID: 1, PersonID: 'A2' },
-  { AccusedMasterID: 80007, CaseMasterID: 50004, AccusedName: 'Imran Khan', AgeYear: 28, GenderID: 1, PersonID: 'A2' }
-];
-
-const ACT_SECTIONS: ActSectionAssociationRow[] = [
-  { CaseMasterID: 50001, ActID: 'IPC', SectionID: '307', ActOrderID: 1, SectionOrderID: 1 },
-  { CaseMasterID: 50002, ActID: 'IPC', SectionID: '392', ActOrderID: 1, SectionOrderID: 1 },
-  { CaseMasterID: 50003, ActID: 'NDPS', SectionID: '20', ActOrderID: 1, SectionOrderID: 1 },
-  { CaseMasterID: 50004, ActID: 'IT_ACT', SectionID: '66D', ActOrderID: 1, SectionOrderID: 1 }
-];
-
-const ARREST_SURRENDERS: ArrestSurrenderRow[] = [
-  {
-    ArrestSurrenderID: 40001, CaseMasterID: 50003, ArrestSurrenderTypeID: 1, ArrestSurrenderDate: '2026-05-15',
-    ArrestSurrenderStateId: 1, ArrestSurrenderDistrictId: 1001, PoliceStationID: 2001, IOID: 9001,
-    CourtID: 3002, AccusedMasterID: 80003, IsAccused: true, IsComplainantAccused: false
-  },
-  {
-    ArrestSurrenderID: 40002, CaseMasterID: 50003, ArrestSurrenderTypeID: 1, ArrestSurrenderDate: '2026-05-15',
-    ArrestSurrenderStateId: 1, ArrestSurrenderDistrictId: 1001, PoliceStationID: 2001, IOID: 9001,
-    CourtID: 3002, AccusedMasterID: 80004, IsAccused: true, IsComplainantAccused: false
-  }
-];
-
-const CHARGESHEETS: ChargesheetRow[] = [
-  { CSID: 1, CaseMasterID: 50003, csdate: '2026-06-05T11:00:00', cstype: 'A', PolicePersonID: 9001 }
-];
-
-const CASE_ENTITIES: CaseEntityRow[] = [
-  { EntityID: 1, CaseMasterID: 50001, type: 'Weapon', value: 'Sharp carving knife' },
-  { EntityID: 2, CaseMasterID: 50001, type: 'Location', value: 'Koramangala Safehouse' },
-  { EntityID: 3, CaseMasterID: 50002, type: 'Vehicle', value: 'Black SUV (KA-03-MM-9999)' },
-  { EntityID: 4, CaseMasterID: 50002, type: 'Bank', value: 'SBI Acc...4112' },
-  { EntityID: 5, CaseMasterID: 50003, type: 'Location', value: 'Mangaluru Port' },
-  { EntityID: 6, CaseMasterID: 50003, type: 'Vehicle', value: 'Truck (KA-19-F-4321)' },
-  { EntityID: 7, CaseMasterID: 50004, type: 'Phone', value: '+91-9988776655' },
-  { EntityID: 8, CaseMasterID: 50004, type: 'Bank', value: 'HDFC Acc...9081' }
-];
-
-const TIMELINE_NOTES: TimelineNoteRow[] = [
-  { NoteID: 1001, CaseMasterID: 50001, event_type: 'FIR Registered', event_title: 'FIR Registered Successfully', description: 'FIR registered based on the statement given by Rajesh Kumar Gowda at 03:15 AM on 2026-03-10.', created_by: 'System', created_at: '2026-03-10T03:30:00' },
-  { NoteID: 1002, CaseMasterID: 50001, event_type: 'Note Added', event_title: 'Spot Mahazar Conducted', description: 'Visiting the scene of crime in Koramangala 5th block. Spot sketch drawn. Confiscated broken glass fragments and hair samples for forensic review.', created_by: 'Vrushant Patil', created_at: '2026-03-10T10:30:00' },
-  { NoteID: 1003, CaseMasterID: 50002, event_type: 'FIR Registered', event_title: 'FIR Registered', description: 'Case registered under IPC Section 392 (Robbery). CCTV footages of nearby commercial buildings collected.', created_by: 'System', created_at: '2026-04-02T09:00:00' },
-  { NoteID: 1004, CaseMasterID: 50003, event_type: 'FIR Registered', event_title: 'Narcotics Raid FIR Registered', description: 'Registered direct state case after metro station raid.', created_by: 'System', created_at: '2026-05-15T16:30:00' },
-  { NoteID: 1005, CaseMasterID: 50003, event_type: 'Status Changed', event_title: 'Chargesheet Prepared', description: 'Completed investigation, compiled forensic laboratory reports for seized Ganja, and prepared chargesheet for court submittal.', created_by: 'Venkatesh Prasad', created_at: '2026-06-04T15:00:00' }
-];
+const VICTIMS: VictimRow[] = [];
+const ACCUSED: AccusedRow[] = [];
+const CASE_ACTS: ActSectionAssociationRow[] = [];
+const ARREST_SURRENDERS: ArrestSurrenderRow[] = [];
+const CS_RECORDS: CSRow[] = [];
+const CUSTOM_EDGES: CustomEdgeRow[] = [];
+const CASE_NOTES: CaseNoteRow[] = [];
 
 const AUDIT_LOGS: AuditLogRow[] = [
   { LogID: 1, user_email: 'admin@ksp.gov.in', action: 'CREATE_OFFICER', table_name: 'Employee', record_id: '9002', timestamp: '2026-01-10T10:00:00', details: 'Added new Police Officer Vrushant Patil' },
@@ -580,14 +464,14 @@ const defaultState: DbState = {
   complainants: [],
   victims: [],
   accused: [],
-  actSections: ACT_SECTIONS,
-  arrestSurrenders: ARREST_SURRENDERS,
-  chargesheets: CHARGESHEETS,
-  evidenceFiles: EVIDENCE_FILES,
-  timelineNotes: TIMELINE_NOTES,
-  auditLogs: AUDIT_LOGS,
-  notifications: NOTIFICATIONS,
-  caseEntities: CASE_ENTITIES,
+  actSections: [],
+  arrestSurrenders: [],
+  chargesheets: [],
+  evidenceFiles: [],
+  timelineNotes: [],
+  auditLogs: [],
+  notifications: [],
+  caseEntities: [],
   customEdges: []
 };
 
@@ -684,7 +568,7 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutM
 let isSyncing = false;
 let pollingInterval: any = null;
 
-export const syncFromMongo = async (): Promise<void> => {
+export const syncData = async (): Promise<void> => {
   if (isSyncing) return;
   isSyncing = true;
   
@@ -736,14 +620,9 @@ export const syncFromMongo = async (): Promise<void> => {
     // 2. Fetch data (no longer blocks the connection status)
     console.log('[Dashboard] stats request started');
     const fetchTable = async (route: string) => {
-      try {
-        const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        return await res.json();
-      } catch (e: any) {
-        console.warn(`[Dashboard] stats failed to fetch ${route}:`, e.message || e);
-        return null;
-      }
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      return await res.json();
     };
 
     const [
@@ -753,7 +632,9 @@ export const syncFromMongo = async (): Promise<void> => {
       cases,
       victims,
       accused,
-      customEdges
+      customEdges,
+      complainants,
+      actSections
     ] = await Promise.all([
       fetchTable('districts'),
       fetchTable('units'),
@@ -761,7 +642,9 @@ export const syncFromMongo = async (): Promise<void> => {
       fetchTable('cases'),
       fetchTable('victims'),
       fetchTable('accused'),
-      fetchTable('customedges')
+      fetchTable('customedges'),
+      fetchTable('complainants'),
+      fetchTable('actsections')
     ]);
 
     console.log('[Dashboard] stats response: Data loaded successfully');
@@ -784,24 +667,18 @@ export const syncFromMongo = async (): Promise<void> => {
     if (cases && cases.length > 0) state.cases = cases;
     if (victims && victims.length > 0) state.victims = victims;
     if (accused && accused.length > 0) state.accused = accused;
+    if (complainants && complainants.length > 0) state.complainants = complainants;
+    if (actSections && actSections.length > 0) state.actSections = actSections;
     if (customEdges && customEdges.length > 0) state.customEdges = customEdges;
 
     saveDbState(state);
     
     // Notify that data is fully loaded
     setDbStatus('connected', null, true);
-    console.log('[MongoDB Sync] Complete. Local cache synchronized.');
+    console.log('[CloudScale Sync] Complete. In-memory cache synchronized.');
   } catch (err: any) {
     setDbStatus('error', err.message || err, false);
-    console.error('[MongoDB Sync Error] Failed to pull live data:', err.message || err);
-    
-    // Start background recovery polling every 30s
-    if (!pollingInterval) {
-      pollingInterval = setInterval(() => {
-        console.log('[MongoDB Sync] Background polling for recovery...');
-        syncFromMongo();
-      }, 30000);
-    }
+    console.error('[CloudScale Sync Error] Failed to pull live data:', err.message || err);
   } finally {
     isSyncing = false;
   }
@@ -811,16 +688,6 @@ let memoryDbState: DbState | null = null;
 
 export const loadDbState = (): DbState => {
   if (memoryDbState) return memoryDbState;
-  
-  // Clean up any old massive local storage states from previous versions to free quota
-  const keysToRemove = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('ksp_crime_platform_db_v')) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach(k => localStorage.removeItem(k));
   
   memoryDbState = defaultState;
   return memoryDbState;
@@ -838,11 +705,22 @@ export const mockDb = {
   // Provider-independent refresh
   refreshCases: async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/cases');
-      if (res.ok) {
-        const freshCases = await res.json();
+      const [casesRes, vicRes, accRes, compRes, actRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/cases`),
+        fetch(`${API_BASE_URL}/api/victims`),
+        fetch(`${API_BASE_URL}/api/accused`),
+        fetch(`${API_BASE_URL}/api/complainants`),
+        fetch(`${API_BASE_URL}/api/actsections`)
+      ]);
+
+      if (casesRes.ok) {
         const state = loadDbState();
-        state.cases = freshCases;
+        if (casesRes.ok) state.cases = await casesRes.json();
+        if (vicRes.ok) state.victims = await vicRes.json();
+        if (accRes.ok) state.accused = await accRes.json();
+        if (compRes.ok) state.complainants = await compRes.json();
+        if (actRes.ok) state.actSections = await actRes.json();
+        
         saveDbState(state);
         return true;
       }
@@ -1141,7 +1019,7 @@ export const mockDb = {
 
     saveDbState(state);
 
-    // Persist change to MongoDB
+    // Persist change to CloudScale
     
     try {
       fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
@@ -1155,99 +1033,84 @@ export const mockDb = {
   },
 
   // Timeline / Notes Queries
-  addTimelineNote: (caseId: number, note: Omit<TimelineNoteRow, 'NoteID' | 'CaseMasterID' | 'created_at'>) => {
-    const state = loadDbState();
-    const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
-    
-    const newNote: TimelineNoteRow = {
+  addTimelineNote: async (caseId: number, note: Omit<TimelineNoteRow, 'NoteID' | 'CaseMasterID'>) => {
+    const payload = {
       ...note,
-      NoteID: noteId,
-      CaseMasterID: caseId,
-      created_at: new Date().toISOString()
+      NoteID: Date.now(),
+      CaseMasterID: caseId
     };
-
-    state.timelineNotes.push(newNote);
+    try {
+      await fetch(`/api/cases/${caseId}/timeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch(e) { console.error('Failed to save timeline note to backend', e); }
+    const state = loadDbState();
+    state.timelineNotes.push(payload);
     saveDbState(state);
-    return newNote;
   },
 
   // Evidence Queries
-  uploadEvidence: (caseId: number, file_name: string, file_type: string, file_path: string, officerName: string) => {
-    const state = loadDbState();
-    const evId = state.evidenceFiles.length > 0 ? Math.max(...state.evidenceFiles.map(e => e.EvidenceID)) + 1 : 1;
-
-    const newEvidence: EvidenceFileRow = {
-      EvidenceID: evId,
+  uploadEvidence: async (caseId: number, file_name: string, file_type: string, file_path: string, uploaded_by: string, file?: File) => {
+    const payload: EvidenceFileRow = {
+      EvidenceID: Date.now(),
       CaseMasterID: caseId,
-      file_path: file_path,
-      file_name: file_name,
-      file_type: file_type,
-      uploaded_by: officerName,
+      file_path,
+      file_name,
+      file_type,
+      uploaded_by,
       uploaded_at: new Date().toISOString()
     };
-
-    state.evidenceFiles.push(newEvidence);
-
-    // Add Timeline Note
-    const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
-    state.timelineNotes.push({
-      NoteID: noteId,
-      CaseMasterID: caseId,
-      event_type: 'Evidence Uploaded',
-      event_title: `Evidence Added: ${file_name}`,
-      description: `Uploaded evidence attachment of type ${file_type}. File securely saved in KSP Locker.`,
-      created_by: officerName,
-      created_at: new Date().toISOString()
-    });
-
+    
+    try {
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('uploaded_by', uploaded_by);
+        const res = await fetch(`/api/cases/${caseId}/evidence`, { method: 'POST', body: formData });
+        const saved = await res.json();
+        if (saved && saved.file_path) payload.file_path = saved.file_path;
+      } else {
+        await fetch(`/api/cases/${caseId}/evidence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
+    } catch (e) { console.error('Evidence upload failed', e); }
+    
+    const state = loadDbState();
+    state.evidenceFiles.push(payload);
     saveDbState(state);
-    return newEvidence;
   },
 
   // Chargesheet Queries
-  submitChargesheet: (chargesheetData: Omit<ChargesheetRow, 'CSID'>, officerEmail: string) => {
+  submitChargesheet: async (cs: Omit<ChargesheetRow, 'CSID'>, officerEmail: string) => {
+    const payload = { ...cs, CSID: Date.now() };
+    try {
+      await fetch(`/api/cases/${cs.CaseMasterID}/chargesheet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch(e) { console.error('Failed to submit chargesheet', e); }
+    
     const state = loadDbState();
-    const csId = state.chargesheets.length > 0 ? Math.max(...state.chargesheets.map(c => c.CSID)) + 1 : 1;
+    state.chargesheets.push(payload);
 
-    const newCS: ChargesheetRow = {
-      ...chargesheetData,
-      CSID: csId
-    };
+    const c = state.cases.find(x => x.CaseMasterID === cs.CaseMasterID);
+    if (c) c.CaseStatusID = 2; // Charge sheeted
+    saveDbState(state);
 
-    state.chargesheets.push(newCS);
-
-    // Update case status to "Charge Sheeted" (CaseStatusID = 2)
-    const cIdx = state.cases.findIndex(c => c.CaseMasterID === chargesheetData.CaseMasterID);
-    if (cIdx !== -1) {
-      state.cases[cIdx].CaseStatusID = 2;
-    }
-
-    // Add Timeline Note
-    const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
-    state.timelineNotes.push({
-      NoteID: noteId,
-      CaseMasterID: chargesheetData.CaseMasterID,
-      event_type: 'Chargesheet Filed',
-      event_title: 'Chargesheet Filed in Court',
-      description: `Final Chargesheet (Report Type: ${chargesheetData.cstype === 'A' ? 'A (Chargesheet)' : chargesheetData.cstype === 'B' ? 'B (False Case)' : 'C (Undetected)'}) officially filed and dispatched to Court.`,
+    // Add timeline
+    mockDb.addTimelineNote(cs.CaseMasterID, {
+      event_type: 'CHARGESHEET_FILED',
+      event_title: 'Chargesheet Filed',
+      description: `Chargesheet filed in court by ${officerEmail}. Type: ${cs.cstype}`,
       created_by: officerEmail,
       created_at: new Date().toISOString()
     });
-
-    // Add Log
-    const logId = state.auditLogs.length > 0 ? Math.max(...state.auditLogs.map(l => l.LogID)) + 1 : 1;
-    state.auditLogs.push({
-      LogID: logId,
-      user_email: officerEmail,
-      action: 'FILE_CHARGESHEET',
-      table_name: 'ChargesheetDetails',
-      record_id: csId.toString(),
-      timestamp: new Date().toISOString(),
-      details: `Chargesheet filed for Case ID ${chargesheetData.CaseMasterID}`
-    });
-
-    saveDbState(state);
-    return newCS;
   },
 
   // Officer / Employee Management
@@ -1497,31 +1360,29 @@ export const mockDb = {
     const state = loadDbState();
     return (state.caseEntities || []).filter(e => e.CaseMasterID === caseId);
   },
-  addCaseEntity: (caseId: number, type: 'Vehicle' | 'Phone' | 'Weapon' | 'Evidence' | 'Bank' | 'Location', value: string, description: string | undefined, userEmail: string) => {
+  addCaseEntity: async (caseId: number, type: string, value: string, desc: string, officerEmail: string) => {
+    const entity: CaseEntityRow = {
+      EntityID: Date.now(),
+      CaseMasterID: caseId,
+      EntityType: type,
+      EntityValue: value,
+      Description: desc
+    };
+    // No explicit backend table for these generic entities in our mock yet, but we'll try to POST if supported
+    try {
+      await fetch(`/api/network/entities/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entity)
+      });
+    } catch(e) {}
     const state = loadDbState();
     if (!state.caseEntities) state.caseEntities = [];
-    const entId = state.caseEntities.length > 0 ? Math.max(...state.caseEntities.map(e => e.EntityID)) + 1 : 1;
-    const newEnt: CaseEntityRow = { EntityID: entId, CaseMasterID: caseId, type, value, description, added_date: new Date().toISOString() };
-    state.caseEntities.push(newEnt);
-    
-    const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
-    const timelineEntry = {
-      NoteID: noteId,
-      CaseMasterID: caseId,
-      event_type: 'Note Added',
-      event_title: `Entity Associated: ${type}`,
-      description: `Associated node "${value}" of type ${type} to case records.`,
-      created_by: null,
-      created_at: new Date().toISOString()
-    };
-    state.timelineNotes.push({
-      ...timelineEntry,
-      created_by: userEmail
-    });
-
+    state.caseEntities.push(entity);
     saveDbState(state);
-    return newEnt;
+    return entity;
   },
+
   deleteCaseEntity: (entityId: number, userEmail: string) => {
     const state = loadDbState();
     if (!state.caseEntities) return false;
@@ -1547,40 +1408,46 @@ export const mockDb = {
     saveDbState(state);
     return true;
   },
-  updateCaseEntity: (entityId: number, value: string, description: string, userEmail: string) => {
+  updateCaseEntity: async (entityId: number, value: string, desc: string, officerEmail: string) => {
     const state = loadDbState();
-    if (!state.caseEntities) return false;
-    const ent = state.caseEntities.find(e => e.EntityID === entityId);
-    if (!ent) return false;
-    ent.value = value;
-    ent.description = description;
-
-    const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
-    const timelineEntry = {
-      NoteID: noteId,
-      CaseMasterID: ent.CaseMasterID,
-      event_type: 'Note Added',
-      event_title: `Entity Updated: ${ent.type}`,
-      description: `Updated node "${ent.value}" of type ${ent.type}.`,
-      created_by: userEmail,
-      created_at: new Date().toISOString()
-    };
-    state.timelineNotes.push(timelineEntry);
-
-    saveDbState(state);
-    return true;
+    if (!state.caseEntities) return;
+    const e = state.caseEntities.find(x => x.EntityID === entityId);
+    if (e) {
+      e.value = value;
+      e.description = desc;
+      try {
+        await fetch(`/api/network/entities/${e.type}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ EntityID: e.EntityID, CaseMasterID: e.CaseMasterID, EntityType: e.type, EntityValue: e.value, Description: e.description })
+        });
+      } catch(err) {}
+      saveDbState(state);
+    }
   },
   getCustomEdges: (caseId: number) => {
     const state = loadDbState();
     return (state.customEdges || []).filter(e => e.CaseMasterID === caseId);
   },
-  addCustomEdge: (caseId: number, source: string, target: string, label: string) => {
+  addCustomEdge: async (caseId: number, sourceId: string, targetId: string, label: string) => {
+    const newEdge: CustomEdgeRow = {
+      EdgeID: `edge-${Date.now()}`,
+      CaseMasterID: caseId,
+      SourceEntityID: sourceId,
+      TargetEntityID: targetId,
+      RelationshipLabel: label
+    };
+    try {
+      await fetch(`/api/network/edges`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEdge)
+      });
+    } catch(e) { console.error('Failed to add custom edge', e); }
     const state = loadDbState();
     if (!state.customEdges) state.customEdges = [];
-    const newEdge = { EdgeID: `${source}-${target}-${Date.now()}`, CaseMasterID: caseId, source, target, label };
     state.customEdges.push(newEdge);
     saveDbState(state);
-    // Optionally push to supabase if needed
     return newEdge;
   },
   deleteCustomEdge: (edgeId: string) => {

@@ -6,16 +6,34 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 import { FileText, Users, AlertTriangle, CheckCircle } from 'lucide-react';
+import { predictStationRisk } from '../../services/aiService';
 
 export const AnalyticsDashboard: React.FC = () => {
   const { user } = useAuth();
   const unitId = user?.unitId;
+
+  const [riskLoading, setRiskLoading] = React.useState(false);
+  const [riskError, setRiskError] = React.useState<string | null>(null);
+  const [riskPrediction, setRiskPrediction] = React.useState<any | null>(null);
 
   if (!unitId) return <div>No Station Assigned</div>;
 
   const allFirs = mockDb.getCases().filter(c => c.PoliceStationID === unitId);
   const officers = mockDb.getEmployees().filter(e => e.UnitID === unitId);
   const statuses = mockDb.getCaseStatuses();
+
+  const runPrediction = async () => {
+    setRiskLoading(true);
+    setRiskError(null);
+    try {
+      const result = await predictStationRisk({ stationId: unitId });
+      setRiskPrediction(result);
+    } catch (err: any) {
+      setRiskError(err.message || 'Failed to predict station risk.');
+    } finally {
+      setRiskLoading(false);
+    }
+  };
 
   // Stats
   const totalFirs = allFirs.length;
@@ -116,19 +134,48 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-6">FIRs by Status (Bar)</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                <RechartsTooltip cursor={{ fill: '#f8fafc' }} />
-                <Bar dataKey="count" fill="#0B2240" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2">AI Station Risk Prediction</h3>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-4">
+              Predictive risk for {user?.stationName} (Next 7 Days)
+            </p>
           </div>
+          
+          {riskLoading ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-2 py-4">
+              <div className="w-6 h-6 border-2 border-ksp-gold border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Querying QuickML XGBoost...</span>
+            </div>
+          ) : riskError ? (
+            <div className="bg-red-50 text-red-600 p-4 rounded-lg text-xs font-bold border border-red-100 h-full flex items-center justify-center">
+              {riskError}
+            </div>
+          ) : riskPrediction ? (
+            <div className={`p-6 rounded-xl border flex flex-col items-center justify-center h-full ${
+              riskPrediction.risk === 1 
+                ? 'bg-red-50 border-red-200' 
+                : 'bg-emerald-50 border-emerald-200'
+            }`}>
+              <span className={`text-3xl font-black mb-2 ${
+                riskPrediction.risk === 1 ? 'text-red-600' : 'text-emerald-600'
+              }`}>
+                {riskPrediction.riskLabel} Risk
+              </span>
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Likelihood Score: {(riskPrediction.likelihoodScore * 100).toFixed(1)}%
+              </span>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <button 
+                onClick={runPrediction}
+                className="bg-ksp-navy hover:bg-ksp-navy-light text-white font-bold px-4 py-2 rounded-lg text-xs shadow w-full transition"
+              >
+                Run AI Risk Prediction
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

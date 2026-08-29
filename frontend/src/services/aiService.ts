@@ -32,3 +32,23 @@ export const getAIDashboard = async (): Promise<any | null> => {
 export const downloadAIReport = () => {
   window.open(`${API_BASE}/report/pdf`, '_blank');
 };
+
+export const predictStationRisk = async (features: any): Promise<any | null> => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/station-risk/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(features)
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || `HTTP ${res.status}`);
+    }
+    
+    return await res.json();
+  } catch (error: any) {
+    console.error('[aiService] predictStationRisk error:', error);
+    throw error;
+  }
+};

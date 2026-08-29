@@ -1,64 +1,92 @@
 {
-  "FIR count": 5000,
+  "FIR count": 9674,
   "station count": 930,
   "district count": 31,
-  "accused record count": 5000,
-  "unique accused count": 3111,
-  "victim record count": 5000,
+  "accused record count": 9674,
+  "unique accused count": 2495,
+  "victim record count": 9674,
   "unique victim count": 4020,
   "orphan PoliceStationIDs": 0,
   "orphan DistrictIDs": 0,
   "invalid coordinates": 0,
   "cases too far from assigned station": 0,
-  "average FIR -> station distance (km)": 1.49,
-  "max FIR -> station distance (km)": 3.0,
-  "cases per district (min/max/avg)": "100 / 221 / 161.3",
-  "cases per station (min/max/avg)": "0 / 29 / 5.4",
-  "stations with 0 cases": 88,
-  "stations with 1-5 cases": 503,
-  "stations with 6-25 cases": 336,
-  "stations with 26-60 cases": 3,
-  "stations with 61+ cases": 0,
+  "average FIR -> station distance (km)": 1.47,
+  "max FIR -> station distance (km)": 3.01,
+  "cases per district (min/max/avg)": "161 / 418 / 312.1",
+  "cases per station (min/max/avg)": "0 / 86 / 10.4",
+  "stations with 0 cases": 67,
+  "stations with 1-5 cases": 404,
+  "stations with 6-25 cases": 329,
+  "stations with 26-60 cases": 127,
+  "stations with 61+ cases": 3,
   "unique coordinate pairs": 930,
   "duplicate coordinate groups": 0,
   "largest duplicate group size": 0,
   "unique accused distribution": {
-    "exactly 1 FIR": 2318,
-    "2-3 FIRs": 628,
-    "4+ FIRs": 165
+    "exactly 1 FIR": 1312,
+    "2-3 FIRs": 931,
+    "4+ FIRs": 252
   },
   "FIR assignment distribution": {
-    "first-time offenders": "46.4%",
-    "2-3 case offenders": "31.1%",
-    "4+ case offenders": "22.6%"
+    "first-time offenders": "13.6%",
+    "2-3 case offenders": "21.4%",
+    "4+ case offenders": "65.1%"
   },
   "top 20 repeat offenders": [
     [
-      "A-2120",
-      10
+      "",
+      4815
+    ],
+    [
+      "A-3879",
+      14
+    ],
+    [
+      "A-1624",
+      14
+    ],
+    [
+      "A-3796",
+      13
+    ],
+    [
+      "A-3864",
+      13
+    ],
+    [
+      "A-1818",
+      13
     ],
     [
       "A-3571",
-      10
+      12
     ],
     [
-      "A-1605",
-      10
+      "A-1602",
+      12
     ],
     [
-      "A-1535",
-      10
+      "A-2263",
+      11
     ],
     [
       "A-1539",
+      11
+    ],
+    [
+      "A-2027",
+      11
+    ],
+    [
+      "A-3218",
+      11
+    ],
+    [
+      "A-3049",
       10
     ],
     [
-      "A-1702",
-      10
-    ],
-    [
-      "A-2081",
+      "A-1688",
       10
     ],
     [
@@ -66,31 +94,11 @@
       10
     ],
     [
-      "A-2916",
+      "A-2449",
       10
     ],
     [
-      "A-3879",
-      10
-    ],
-    [
-      "A-3796",
-      10
-    ],
-    [
-      "A-1624",
-      10
-    ],
-    [
-      "A-3864",
-      10
-    ],
-    [
-      "A-3841",
-      10
-    ],
-    [
-      "A-3218",
+      "A-1678",
       10
     ],
     [
@@ -98,105 +106,97 @@
       10
     ],
     [
-      "A-2832",
+      "A-1986",
       10
     ],
     [
-      "A-3068",
-      10
-    ],
-    [
-      "A-1818",
-      10
-    ],
-    [
-      "A-1602",
+      "A-2026",
       10
     ]
   ],
-  "first-time victim count": 3609,
-  "2-3 case victim count": 328,
-  "4+ case victim count": 83,
+  "first-time victim count": 239,
+  "2-3 case victim count": 3391,
+  "4+ case victim count": 390,
   "top 20 repeat victims": [
     [
       "V-4584",
-      10
+      20
     ],
     [
       "V-3838",
-      10
-    ],
-    [
-      "V-4822",
-      10
+      20
     ],
     [
       "V-2391",
-      10
+      20
     ],
     [
       "V-4723",
-      10
-    ],
-    [
-      "V-4031",
-      10
+      20
     ],
     [
       "V-2036",
-      10
+      20
     ],
     [
       "V-3787",
-      10
+      20
+    ],
+    [
+      "V-4822",
+      19
     ],
     [
       "V-2480",
-      10
-    ],
-    [
-      "V-3941",
-      9
-    ],
-    [
-      "V-2961",
-      9
+      19
     ],
     [
       "V-4381",
-      9
+      18
+    ],
+    [
+      "V-4031",
+      18
+    ],
+    [
+      "V-2961",
+      17
     ],
     [
       "V-2887",
-      9
+      17
     ],
     [
       "V-4755",
-      9
-    ],
-    [
-      "V-1192",
-      9
-    ],
-    [
-      "V-3102",
-      9
+      17
     ],
     [
       "V-2258",
-      8
+      16
     ],
     [
       "V-3648",
-      8
+      16
     ],
     [
       "V-3088",
-      8
+      16
     ],
     [
       "V-1834",
-      8
+      16
+    ],
+    [
+      "V-2300",
+      16
+    ],
+    [
+      "V-3145",
+      16
+    ],
+    [
+      "V-4107",
+      16
     ]
   ],
   "inconsistent identity cases": 0
