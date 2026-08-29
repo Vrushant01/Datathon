@@ -18,7 +18,7 @@ export const getMappedGeoJsonFeature = (districtName: string, geoJsonData: any) 
         'bengaluruurban': 'bangalore',
         'bengalururural': 'bangalorerural',
         'mysuru': 'mysore',
-        'mangaluru': 'dakshinakannada',
+        'davanagere': 'davanagere',
         'dakshinakannada': 'dakshinakannada',
         'belagavi': 'belgaum',
         'kalaburagi': 'gulbarga',

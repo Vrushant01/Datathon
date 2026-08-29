@@ -103,7 +103,7 @@ export const AdminAnalytics: React.FC = () => {
       return [
         { name: 'Bengaluru', CrimeRate: 4.8, LiteracyRate: 88, UnemploymentRate: 4.2, Urbanization: 95 },
         { name: 'Mysuru', CrimeRate: 2.1, LiteracyRate: 82, UnemploymentRate: 5.1, Urbanization: 75 },
-        { name: 'Mangaluru', CrimeRate: 3.2, LiteracyRate: 90, UnemploymentRate: 3.8, Urbanization: 80 },
+        { name: 'Davanagere', CrimeRate: 3.2, LiteracyRate: 90, UnemploymentRate: 3.8, Urbanization: 80 },
         { name: 'Belagavi', CrimeRate: 1.5, LiteracyRate: 74, UnemploymentRate: 6.2, Urbanization: 60 },
         { name: 'Hubballi', CrimeRate: 2.8, LiteracyRate: 80, UnemploymentRate: 5.8, Urbanization: 70 },
         { name: 'Udupi', CrimeRate: 1.2, LiteracyRate: 86, UnemploymentRate: 4.0, Urbanization: 50 }
