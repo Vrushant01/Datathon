@@ -66,10 +66,15 @@ export const AnalyticsGISMap: React.FC = () => {
     return counts;
   }, [baseFilteredCases, activeHotspots]);
 
+  // Only include hotspots with 4 or more cases for the Red Zone logic
+  const validHotspots = React.useMemo(() => {
+    return activeHotspots.filter(h => (hotspotCounts[h.clusterId] || 0) >= 4);
+  }, [activeHotspots, hotspotCounts]);
+
   // Single Source of Truth for all GIS UI
   const finalFilteredCases = React.useMemo(() => {
     if (selectedHotspot === 'ALL') return baseFilteredCases;
-    const h = activeHotspots.find(h => h.clusterId === selectedHotspot);
+    const h = validHotspots.find(h => h.clusterId === selectedHotspot);
     if (!h) return baseFilteredCases;
     return baseFilteredCases.filter(c => {
       if (h.crimeMajorHeadID && c.CrimeMajorHeadID !== h.crimeMajorHeadID) return false;
@@ -228,16 +233,16 @@ export const AnalyticsGISMap: React.FC = () => {
                 'circle-color': [
                     'step',
                     ['get', 'point_count'],
-                    '#2563eb', // Blue for 1-2
-                    3,
-                    '#f59e0b', // Amber for 3
-                    4,
-                    '#ef4444'  // Red for 4+
+                    '#2563eb', // Blue for 1-9
+                    10,
+                    '#f59e0b', // Amber for 10-49
+                    50,
+                    '#ef4444'  // Red for 50+
                 ],
                 'circle-radius': [
                     'step',
                     ['get', 'point_count'],
-                     15, 3, 20, 4, 25
+                     15, 10, 20, 50, 25
                 ],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#ffffff',
@@ -386,7 +391,7 @@ export const AnalyticsGISMap: React.FC = () => {
     let centerLng = station?.longitude || 77.5946;
 
     const hotspotFeatures: any[] = [];
-    activeHotspots.forEach(h => {
+    validHotspots.forEach(h => {
       if (selectedHotspot !== 'ALL' && selectedHotspot !== h.clusterId) return;
 
       // Cap radius to 10km to prevent giant screen-covering blobs from data outliers
@@ -429,7 +434,7 @@ export const AnalyticsGISMap: React.FC = () => {
     }
 
     if (selectedHotspot !== 'ALL') {
-         const selectedH = activeHotspots.find(h => h.clusterId === selectedHotspot);
+         const selectedH = validHotspots.find(h => h.clusterId === selectedHotspot);
          if (selectedH) {
            const radiusInDegrees = (selectedH.radiusKm / 111.32);
            const bbox = [
@@ -444,7 +449,7 @@ export const AnalyticsGISMap: React.FC = () => {
 
     // [GIS DEBUG] Output exactly as requested by user
     if (selectedHotspot !== 'ALL') {
-       const selectedH = activeHotspots.find(h => h.clusterId === selectedHotspot);
+       const selectedH = validHotspots.find(h => h.clusterId === selectedHotspot);
        if (selectedH) {
            console.log(`[GIS DEBUG] dropdown hotspot count = ${hotspotCounts[selectedH.clusterId] || 0}`);
            console.log(`[GIS DEBUG] rendered finalFilteredCases count = ${finalFilteredCases.length}`);
@@ -532,7 +537,7 @@ export const AnalyticsGISMap: React.FC = () => {
             </select>
           </div>
 
-          <div className={activeHotspots.length === 0 ? 'opacity-50' : ''}>
+          <div className={validHotspots.length === 0 ? 'opacity-50' : ''}>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Active Red Zones</label>
             <select 
               value={selectedHotspot}
@@ -540,11 +545,11 @@ export const AnalyticsGISMap: React.FC = () => {
                 const val = e.target.value;
                 setSelectedHotspot(val);
               }}
-              disabled={activeHotspots.length === 0}
+              disabled={validHotspots.length === 0}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
             >
-              <option value="ALL">All Active Hotspots ({activeHotspots.length})</option>
-              {activeHotspots.map((h, i) => (
+              <option value="ALL">All Active Hotspots ({validHotspots.length})</option>
+              {validHotspots.map((h, i) => (
                 <option key={i} value={h.clusterId}>
                   {h.crimeName} ({hotspotCounts[h.clusterId] || 0} Cases)
                 </option>
