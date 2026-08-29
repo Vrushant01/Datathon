@@ -159,8 +159,7 @@ export const AnalyticsGISMap: React.FC = () => {
       center: [77.5946, 12.9716],
       zoom: 12,
       maxBounds: [[68.0, 6.0], [98.0, 36.0]], // India bounds
-      doubleClickZoom: false,
-      antialias: true
+      doubleClickZoom: false
     });
     
     mapRef.current = map;
@@ -583,3 +582,4 @@ export const AnalyticsGISMap: React.FC = () => {
     </div>
   );
 };
+
