@@ -7,6 +7,84 @@ import os
 
 random.seed(42)  # Deterministic seed
 
+
+# --- District socio-economic profiles (informs crime-type mix + case volume) ---
+# urbanization_score: 0-100, population_density: low/medium/high
+DISTRICT_URBANIZATION = {
+    "Bengaluru City":     {"urbanization_score": 95, "population_density": "high"},
+    "Bengaluru Rural":    {"urbanization_score": 55, "population_density": "medium"},
+    "Mysuru":             {"urbanization_score": 68, "population_density": "high"},
+    "Mangaluru":          {"urbanization_score": 72, "population_density": "high"},
+    "Dakshina Kannada":   {"urbanization_score": 65, "population_density": "medium"},
+    "Udupi":              {"urbanization_score": 60, "population_density": "medium"},
+    "Dharwad":            {"urbanization_score": 62, "population_density": "medium"},
+    "Belagavi":           {"urbanization_score": 50, "population_density": "medium"},
+    "Ballari":            {"urbanization_score": 48, "population_density": "medium"},
+    "Vijayanagara":       {"urbanization_score": 40, "population_density": "medium"},
+    "Vijayapura":         {"urbanization_score": 42, "population_density": "medium"},
+    "Kalaburagi":         {"urbanization_score": 45, "population_density": "medium"},
+    "Bidar":              {"urbanization_score": 38, "population_density": "low"},
+    "Yadgir":             {"urbanization_score": 25, "population_density": "low"},
+    "Raichur":            {"urbanization_score": 30, "population_density": "low"},
+    "Koppal":             {"urbanization_score": 28, "population_density": "low"},
+    "Bagalkot":           {"urbanization_score": 35, "population_density": "low"},
+    "Chitradurga":        {"urbanization_score": 38, "population_density": "medium"},
+    "Tumakuru":           {"urbanization_score": 45, "population_density": "medium"},
+    "Kolar":              {"urbanization_score": 40, "population_density": "medium"},
+    "Chikkaballapur":     {"urbanization_score": 38, "population_density": "medium"},
+    "Ramanagara":         {"urbanization_score": 42, "population_density": "medium"},
+    "Mandya":             {"urbanization_score": 40, "population_density": "medium"},
+    "Hassan":             {"urbanization_score": 42, "population_density": "medium"},
+    "Chikkamagaluru":     {"urbanization_score": 35, "population_density": "low"},
+    "Kodagu":             {"urbanization_score": 30, "population_density": "low"},
+    "Shivamogga":         {"urbanization_score": 45, "population_density": "medium"},
+    "Haveri":             {"urbanization_score": 35, "population_density": "low"},
+    "Gadag":              {"urbanization_score": 33, "population_density": "low"},
+    "Uttara Kannada":     {"urbanization_score": 32, "population_density": "low"},
+    "Chamarajanagar":     {"urbanization_score": 28, "population_density": "low"},
+}
+
+# --- Crime-type weight tiers, keyed by urbanization bracket ---
+# Same 10 categories used across the codebase.
+TIER_CRIME_WEIGHTS = {
+    "metro": {   # urbanization_score >= 85
+        "Cyber Crime": 22, "Fraud": 18, "Theft": 15, "Assault": 10,
+        "Extortion": 8, "Public Nuisance": 10, "Burglary": 8,
+        "Narcotics": 5, "Kidnapping": 2, "Homicide": 2,
+    },
+    "high": {    # 60 <= score < 85
+        "Cyber Crime": 15, "Fraud": 15, "Theft": 18, "Burglary": 12,
+        "Assault": 12, "Extortion": 6, "Public Nuisance": 10,
+        "Narcotics": 6, "Kidnapping": 3, "Homicide": 3,
+    },
+    "medium": {  # 40 <= score < 60
+        "Theft": 20, "Burglary": 16, "Assault": 15, "Cyber Crime": 8,
+        "Fraud": 10, "Extortion": 5, "Public Nuisance": 10,
+        "Narcotics": 8, "Kidnapping": 4, "Homicide": 4,
+    },
+    "low": {     # score < 40
+        "Theft": 18, "Burglary": 14, "Assault": 18, "Cyber Crime": 4,
+        "Fraud": 6, "Extortion": 4, "Public Nuisance": 8,
+        "Narcotics": 10, "Kidnapping": 6, "Homicide": 6,
+    },
+}
+
+def _tier_for(score: int) -> str:
+    if score >= 85: return "metro"
+    if score >= 60: return "high"
+    if score >= 40: return "medium"
+    return "low"
+
+DISTRICT_PROFILES = {
+    name: {
+        **info,
+        "crime_type_weights": TIER_CRIME_WEIGHTS[_tier_for(info["urbanization_score"])],
+    }
+    for name, info in DISTRICT_URBANIZATION.items()
+}
+
+
+
 # --- 1. Point in Polygon (Ray Casting) ---
 def point_in_polygon(point, polygon):
     x, y = point  # x=lon, y=lat
@@ -199,34 +277,104 @@ total_weight = sum(station_case_weights.values())
 station_ids_list = list(station_case_weights.keys())
 station_weights_list = list(station_case_weights.values())
 
-for i in range(5000):
-    cid = 100001 + i
+# --- SCENARIO GENERATION ---
+num_scenarios = 200
+scenarios = []
+scenario_types = ["short_spike", "sustained_spike", "gradual_increase", "repeat_offender", "night_concentration"]
+
+for i in range(num_scenarios):
+    s_type = random.choice(scenario_types)
+    uid = random.choice(station_ids_list)
+    ch = random.choice([100, 200, 300, 400, 500, 600])
+    days_ago_start = random.uniform(30, 350)
     
-    # Weighted choice for station
+    if s_type == "short_spike":
+        days_ago_end = days_ago_start - 7
+        count = int(random.uniform(8, 20))
+    elif s_type == "sustained_spike":
+        days_ago_end = days_ago_start - 14
+        count = int(random.uniform(15, 30))
+    elif s_type == "gradual_increase":
+        days_ago_end = days_ago_start - 21
+        count = int(random.uniform(20, 35))
+    elif s_type == "repeat_offender":
+        days_ago_end = days_ago_start - 7
+        count = int(random.uniform(10, 22))
+        ch = 100 
+    elif s_type == "night_concentration":
+        days_ago_end = days_ago_start - 7
+        count = int(random.uniform(12, 25))
+        ch = 200 
+    
+    scenarios.append({
+        "scenario_id": f"SCN-{i+1}",
+        "scenario_type": s_type,
+        "station_id": uid,
+        "crime_head": ch,
+        "days_ago_start": days_ago_start,
+        "days_ago_end": days_ago_end,
+        "count": count
+    })
+
+# Build all case parameters
+case_params = []
+
+# 1. Add background cases
+for _ in range(5000):
     uid = random.choices(station_ids_list, weights=station_weights_list, k=1)[0]
+    r = random.random()
+    if r < 0.05: days_ago = random.uniform(0, 1)
+    elif r < 0.30: days_ago = random.uniform(1, 7)
+    elif r < 0.60: days_ago = random.uniform(7, 30)
+    else: days_ago = random.uniform(30, 730)
+    case_params.append({
+        "uid": uid,
+        "major_head_id": random.choice([100, 200, 300, 400, 500, 600]),
+        "days_ago": days_ago,
+        "scenario": None
+    })
+
+# 2. Add scenario cases AND baseline support cases
+for scn in scenarios:
+    # Inject baseline support cases (4 weeks before the spike) to satisfy minHistoryWindows
+    for w in range(1, 5):
+        d_ago = scn["days_ago_start"] + (w * 7) + random.uniform(0, 6)
+        case_params.append({
+            "uid": scn["station_id"],
+            "major_head_id": scn["crime_head"],
+            "days_ago": d_ago,
+            "scenario": None
+        })
+        
+    for _ in range(scn["count"]):
+        d_ago = random.uniform(scn["days_ago_end"], scn["days_ago_start"])
+        case_params.append({
+            "uid": scn["station_id"],
+            "major_head_id": scn["crime_head"],
+            "days_ago": d_ago,
+            "scenario": scn
+        })
+
+random.shuffle(case_params)
+
+yearly_serials = {}
+
+for i, p in enumerate(case_params):
+    cid = 100001 + i
+    uid = p["uid"]
     station = next(u for u in units if u["UnitID"] == uid)
-    
-    # Crime category
+    major_head_id = p["major_head_id"]
     cat_id = random.randint(1, 3)
     gravity_id = random.randint(1, 3)
-    major_head_id = random.choice([100, 200, 300, 400, 500, 600])
     minor_head_id = random.randint(1, 5)
+    days_ago = p["days_ago"]
+    scn = p["scenario"]
     
-    # Generate timestamp using density rule
-    r = random.random()
-    if r < 0.05: # 5% in last 24H
-        days_ago = random.uniform(0, 1)
-    elif r < 0.30: # 25% in last 7D
-        days_ago = random.uniform(1, 7)
-    elif r < 0.60: # 30% in last 30D
-        days_ago = random.uniform(7, 30)
-    else: # 40% in last 24 months
-        days_ago = random.uniform(30, 730)
-        
     date_part = NOW - timedelta(days=days_ago)
     
-    # Synthetic time-of-day by crime category
-    if major_head_id in [100, 200, 500, 600]:
+    if scn and scn["scenario_type"] == "night_concentration":
+        hour = random.choice(list(range(18, 24)) + list(range(0, 5)))
+    elif major_head_id in [100, 200, 500, 600]:
         hour = random.choice(list(range(18, 24)) + list(range(0, 5)))
     else:
         hour = random.choice(list(range(9, 18)))
@@ -238,16 +386,45 @@ for i in range(5000):
     crime_date_str = final_dt.strftime("%Y-%m-%d")
     crime_datetime_str = final_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     
-    # Cases within 3km of station
     c_lat, c_lon = generate_point_near(station["latitude"], station["longitude"], 3.0)
     
-    # Pick IO from station
     station_officers = [e["EmployeeID"] for e in employees if e["UnitID"] == station["UnitID"]]
     io = station_officers[0] if station_officers else 10001
     
+    # NEW FIELDS LOGIC
+    gd_entry = f"GD-{random.randint(100, 999)}/{final_dt.strftime('%y')}"
+    gd_time = (final_dt - timedelta(hours=random.randint(0, 5))).strftime("%Y-%m-%dT%H:%M:%SZ")
+    delay = random.choice([True, False, False])
+    delay_reason = "Busy with other duties/delayed by complainant" if delay else ""
+    bns_applicable = final_dt >= datetime(2024, 7, 1)
+    
+    # Plausible crime scene
+    landmarks = ['Main Road', 'Market', 'Metro Station', 'Temple', 'Residential Layout', 'Bus Stand', 'Park', 'Commercial Complex']
+    crime_scene_loc = f"Near {random.choice(landmarks)}, {station['UnitName']} Area"
+    dist_dir = f"{random.uniform(0.5, 8.5):.1f} km {random.choice(['North', 'South', 'East', 'West', 'North-East', 'South-West', 'North-West', 'South-East'])}"
+    stolen_prop = "Gold chain and mobile phone" if major_head_id in [200, 300] else ""
+    
+    # Generate Case-specific narrative
+    narratives = [
+        f"Station received information about an incident at {crime_scene_loc}. The complainant appeared at the station and reported the occurrence. Preliminary enquiry was conducted at the spot which is {dist_dir} from the PS. Scene was visited, sketch and photographs were taken. Investigation is currently ongoing to trace the suspects.",
+        f"Complainant arrived at the PS to file a grievance regarding an incident at {crime_scene_loc}. After recording the statement, officers visited the location, approx {dist_dir} from the station. Evidence was collected and witness statements are being recorded. Case registered and investigation initiated.",
+        f"Control room dispatched officers to {crime_scene_loc} ({dist_dir} from PS) following a distress call. Upon arrival, the situation was brought under control. The complainant formally lodged a complaint later at the station. Initial spot inspection is complete and suspects are being interrogated."
+    ]
+    brief_facts = random.choice(narratives)
+    if scn:
+        brief_facts += f" [Scenario: {scn['scenario_id']}]"
+
+    # New FIR format [4-digit Serial]/[4-digit Year] e.g. 0124/2026
+    year = final_dt.year
+    if year not in yearly_serials:
+        yearly_serials[year] = 0
+    yearly_serials[year] += 1
+    serial_num = yearly_serials[year]
+    crime_no = f"{serial_num:04d}/{year}"
+    
     cases.append({
         "CaseMasterID": cid,
-        "CrimeNo": f"CR/{cid}/{final_dt.year}",
+        "CrimeNo": crime_no,
         "CaseNo": f"FIR-{cid}",
         "CrimeRegisteredDate": crime_date_str,
         "CrimeRegisteredDateTime": crime_datetime_str,
@@ -259,27 +436,46 @@ for i in range(5000):
         "CrimeMinorHeadID": minor_head_id,
         "CaseStatusID": random.choices([1, 2, 3, 4, 5], weights=[40, 20, 20, 10, 10])[0],
         "CourtID": 1,
-        "IncidentFromDate": (final_dt - timedelta(days=random.randint(0, 10))).strftime("%Y-%m-%d"),
+        "IncidentFromDate": (final_dt - timedelta(days=random.randint(0, 10), hours=random.randint(0,23), minutes=random.randint(0,59))).strftime("%d-%m-%Y %I:%M %p"),
         "IncidentToDate": crime_date_str,
         "InfoReceivedPSDate": crime_date_str,
         "latitude": c_lat,
         "longitude": c_lon,
-        "BriefFacts": "Generated synthetic crime incident."
+        "BriefFacts": brief_facts,
+        "GDEntryNumber": gd_entry,
+        "GDEntryTimestamp": gd_time,
+        "DelayInReporting": delay,
+        "DelayReason": delay_reason,
+        "BNSApplicable": bns_applicable,
+        "CrimeSceneLocation": crime_scene_loc,
+        "DistanceDirection": dist_dir,
+        "JurisdictionFlag": random.choice(["Inside", "Inside", "Outside"]),
+        "StolenProperty": stolen_prop,
+        "InformantSignature": "Signed",
+        "RecordingOfficerRank": "Inspector",
+        "DispatchCopyHanded": True,
+        "DispatchCopyDate": crime_date_str
     })
     
     # Accused
-    acc = accused_assignments[i]
+    acc = accused_assignments[i % len(accused_assignments)]
+    acc_status = random.choice(["Known", "Unknown"])
     accused_rows.append({
         "AccusedMasterID": 80001 + len(accused_rows),
         "CaseMasterID": cid,
-        "AccusedName": acc["Name"],
-        "AgeYear": acc["Age"],
-        "GenderID": acc["GenderID"],
-        "PersonID": acc["PersonID"]
+        "AccusedName": acc["Name"] if acc_status == "Known" else "Unknown",
+        "AgeYear": acc["Age"] if acc_status == "Known" else 0,
+        "GenderID": acc["GenderID"] if acc_status == "Known" else 0,
+        "PersonID": acc["PersonID"] if acc_status == "Known" else "",
+        "FatherSpouseName": f"{random.choice(first_names_male)} {random.choice(last_names)}" if acc_status == "Known" else "Unknown",
+        "Address": f"No {random.randint(1, 100)}, {random.choice(['Main Road', 'Cross', 'Street'])}, {station['UnitName']} Area" if acc_status == "Known" else "Unknown",
+        "Aliases": f"{acc['Name'].split()[0][:3]} alias" if acc_status == "Known" else "Unknown",
+        "PhysicalDescription": f"Height {random.randint(150, 190)}cm, {random.choice(['Fair', 'Dark', 'Wheatish'])} complexion" if acc_status == "Known" else "Not recorded",
+        "Status": acc_status
     })
     
     # Victim
-    vic = victim_assignments[i]
+    vic = victim_assignments[i % len(victim_assignments)]
     victim_rows.append({
         "VictimMasterID": 70001 + len(victim_rows),
         "CaseMasterID": cid,
@@ -287,14 +483,87 @@ for i in range(5000):
         "AgeYear": vic["Age"],
         "GenderID": vic["GenderID"],
         "VictimPolice": "0",
-        "PersonID": vic["PersonID"]
+        "PersonID": vic["PersonID"],
+        "RelationshipToComplainant": random.choice(["Self", "Father", "Son", "Spouse", "None"])
     })
+
+# Add Complainant generation (mocking 1 complainant per case)
+complainant_rows = []
+for idx, c in enumerate(cases):
+    gender_id = random.choice([1, 2])
+    fname = random.choice(first_names_male) if gender_id == 1 else random.choice(["Anjali", "Priya", "Kavitha", "Sneha", "Geetha"])
+    lname = random.choice(last_names)
+    complainant_rows.append({
+        "ComplainantID": 60001 + idx,
+        "CaseMasterID": c["CaseMasterID"],
+        "ComplainantName": f"{fname} {lname}",
+        "AgeYear": random.randint(20, 65),
+        "OccupationID": random.randint(1, 5),
+        "ReligionID": random.randint(1, 4),
+        "CasteID": random.randint(1, 4),
+        "GenderID": gender_id,
+        "FatherSpouseName": f"{random.choice(first_names_male)} {random.choice(last_names)}",
+        "Phone": f"+91-{random.randint(9000000000, 9999999999)}",
+        "PermanentAddress": f"No {random.randint(100, 999)}, Local Layout",
+        "IdentityProof": f"Aadhaar ****{random.randint(1000, 9999)}"
+    })
+
+# Add Act & Section generation
+act_section_rows = []
+act_mapping = {
+    100: [{"ActID": "IPC", "SectionID": "302"}, {"ActID": "IPC", "SectionID": "307"}], # Murder/Attempt
+    200: [{"ActID": "IPC", "SectionID": "379"}], # Theft
+    300: [{"ActID": "IPC", "SectionID": "392"}], # Robbery
+    400: [{"ActID": "IPC", "SectionID": "376"}], # Rape
+    500: [{"ActID": "IPC", "SectionID": "420"}], # Fraud
+    600: [{"ActID": "IT Act", "SectionID": "66C"}], # Cyber
+    700: [{"ActID": "NDPS Act", "SectionID": "20(b)"}], # Narcotics
+    800: [{"ActID": "IPC", "SectionID": "323"}], # Assault
+    900: [{"ActID": "IPC", "SectionID": "363"}], # Kidnapping
+    1000: [{"ActID": "IPC", "SectionID": "384"}], # Extortion
+}
+
+for c in cases:
+    major_head = c["CrimeMajorHeadID"]
+    acts = act_mapping.get(major_head, [{"ActID": "IPC", "SectionID": "323"}])
+    for act in acts:
+        act_section_rows.append({
+            "CaseMasterID": c["CaseMasterID"],
+            "Act_Section": f"{act['ActID']}_{act['SectionID']}",
+            "ActID": act["ActID"],
+            "SectionID": act["SectionID"]
+        })
+
+import uuid
+custom_edges = []
+edge_types = ["Accomplice", "Victim", "Informant", "Related Case", "Family"]
+
+for i in range(10000):
+    c = random.choice(cases)
+    a = random.choice(accused_rows)
+    v = random.choice(victim_rows)
+    
+    custom_edges.append({
+        "EdgeID": str(uuid.uuid4()),
+        "CaseMasterID": c["CaseMasterID"],
+        "source": str(a["PersonID"]) if random.random() > 0.5 else str(c["CrimeNo"]),
+        "target": str(v["PersonID"]) if random.random() > 0.5 else f"Station_{c['PoliceStationID']}",
+        "label": random.choice(edge_types)
+    })
+
+# Dump scenarios metadata for validation
+import os
+os.makedirs('scratch', exist_ok=True)
+with open('scratch/scenario_metadata.json', 'w') as f:
+    json.dump(scenarios, f, indent=2)
 
 ts_output = f"""// AUTO-GENERATED FILE. DO NOT EDIT BY HAND.
 // Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 // Total Cases: {len(cases)}
 // Total Stations: {len(units)}
-import {{ DistrictRow, UnitRow, CaseMasterRow, AccusedRow, VictimRow, EmployeeRow }} from '../models';
+// Total Edges: {len(custom_edges)}
+import {{ DistrictRow, UnitRow, CaseMasterRow, AccusedRow, VictimRow, EmployeeRow, ComplainantRow, ActSectionAssociationRow }} from '../models';
+import {{ CustomEdgeRow }} from './mockDb';
 
 export const SEED_DISTRICTS: DistrictRow[] = {json.dumps(districts, indent=2)};
 
@@ -307,12 +576,35 @@ export const SEED_CASES: CaseMasterRow[] = {json.dumps(cases, indent=2)};
 export const SEED_ACCUSED: AccusedRow[] = {json.dumps(accused_rows, indent=2)};
 
 export const SEED_VICTIMS: VictimRow[] = {json.dumps(victim_rows, indent=2)};
+
+export const SEED_COMPLAINANTS: ComplainantRow[] = {json.dumps(complainant_rows, indent=2)};
+
+export const SEED_ACT_SECTIONS: ActSectionAssociationRow[] = {json.dumps(act_section_rows, indent=2)};
+
+export const SEED_CUSTOM_EDGES: CustomEdgeRow[] = {json.dumps(custom_edges, indent=2)};
 """
 
-with open('scratch/temp_seedData.ts', 'w', encoding='utf-8') as f:
+with open('frontend/src/utils/seedData.ts', 'w', encoding='utf-8') as f:
     f.write(ts_output)
 
-print("Generated temp_seedData.ts")
+print("Generated frontend/src/utils/seedData.ts")
+
+# Write to backend directly to bypass TS rootDir issues
+backend_json = {
+    "SEED_DISTRICTS": districts,
+    "SEED_UNITS": units,
+    "SEED_EMPLOYEES": employees,
+    "SEED_CASES": cases,
+    "SEED_ACCUSED": accused_rows,
+    "SEED_VICTIMS": victim_rows,
+    "SEED_COMPLAINANTS": complainant_rows,
+    "SEED_ACT_SECTIONS": act_section_rows,
+    "SEED_CUSTOM_EDGES": custom_edges
+}
+with open('backend/src/seedData.json', 'w', encoding='utf-8') as f:
+    json.dump(backend_json, f, indent=2)
+
+print("Generated backend/src/seedData.json")
 
 # --- Validation Report ---
 report = {}

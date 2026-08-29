@@ -8,6 +8,7 @@ import {
   Download, Printer, AlertCircle, FileCheck
 } from 'lucide-react';
 import { TransparentLogo } from '../../components/TransparentLogo';
+import { FIRDocument } from '../../components/FIRDocument';
 
 export const CaseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -475,91 +476,7 @@ export const CaseDetail: React.FC = () => {
               </div>
 
               {/* FIR Printable Canvas */}
-              <div className="bg-white border-2 border-double border-slate-300 p-8 rounded-lg max-w-4xl mx-auto shadow-sm printable-fir-document">
-                
-                {/* Letter Head Banner */}
-                <div className="text-center border-b-2 border-ksp-navy pb-4 mb-6 space-y-1 relative">
-                  <div className="absolute left-0 top-0 h-16 w-16 opacity-80">
-                    <TransparentLogo 
-                      src="/ksp-logo-new.png" 
-                      alt="emblem" 
-                      className="h-full object-contain" 
-                    />
-                  </div>
-
-                  <h1 className="text-lg md:text-2xl font-extrabold text-ksp-navy tracking-tight m-0 uppercase">KARNATAKA STATE POLICE</h1>
-                  <h2 className="text-xs md:text-sm font-bold text-ksp-gold-dark m-0 uppercase tracking-widest">FIRST INFORMATION REPORT (Under Section 154 Cr.P.C.)</h2>
-                  <p className="text-[10px] text-slate-500 font-bold m-0 mt-1 uppercase">DISTRICT: {user?.districtName} • STATION: {stationName}</p>
-                </div>
-
-                {/* Main Table Structure */}
-                <div className="space-y-5 text-xs text-slate-800">
-                  
-                  <div className="grid grid-cols-2 border-b pb-2.5">
-                    <div><strong>1. Case ID:</strong> {cDetails.CaseNo}</div>
-                    <div className="text-right"><strong>2. Crime FIR Number:</strong> <span className="font-mono">{cDetails.CrimeNo}</span></div>
-                  </div>
-
-                  <div className="grid grid-cols-2 border-b pb-2.5">
-                    <div><strong>3. Registered Date:</strong> {cDetails.CrimeRegisteredDate}</div>
-                    <div className="text-right"><strong>4. Act Book Applied:</strong> {categoryName}</div>
-                  </div>
-
-                  <div className="border-b pb-2.5">
-                    <strong>5. Act & Section Codes:</strong>
-                    <div className="mt-1 pl-4 space-y-1">
-                      {cDetails.Acts.map((a: any, i: number) => (
-                        <p key={i} className="m-0">• {a.ActID} Section {a.SectionID}</p>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-b pb-2.5">
-                    <strong>6. Time of Incident:</strong>
-                    <p className="m-0 pl-4 mt-1">From: {cDetails.IncidentFromDate.replace('T', ' ')} To: {cDetails.IncidentToDate.replace('T', ' ')}</p>
-                    <p className="m-0 pl-4">Report Received: {cDetails.InfoReceivedPSDate.replace('T', ' ')}</p>
-                  </div>
-
-                  <div className="border-b pb-2.5">
-                    <strong>7. Complainant Name & Profile:</strong>
-                    {cDetails.Complainant ? (
-                      <p className="m-0 pl-4 mt-1">
-                        Name: {cDetails.Complainant.ComplainantName} | Age: {cDetails.Complainant.AgeYear} Years | Occupation: {mockDb.getOccupations().find(o => o.OccupationID === cDetails.Complainant.OccupationID)?.OccupationName}
-                      </p>
-                    ) : (
-                      <p className="m-0 pl-4 text-slate-400 italic">No complainant listed</p>
-                    )}
-                  </div>
-
-                  <div className="border-b pb-2.5">
-                    <strong>8. List of Accused / Suspects:</strong>
-                    <div className="mt-1 pl-4 space-y-1">
-                      {cDetails.Accused.map((ac: any, i: number) => (
-                        <p key={i} className="m-0">• {ac.AccusedName} (Age: {ac.AgeYear} Years) [Mapped ID: {ac.PersonID}]</p>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-b pb-3">
-                    <strong>9. Brief Facts of Case Filed:</strong>
-                    <p className="mt-1 pl-4 leading-relaxed text-slate-600 italic">"{cDetails.BriefFacts}"</p>
-                  </div>
-
-                  {/* Signatures */}
-                  <div className="pt-8 grid grid-cols-2 text-center select-none font-bold uppercase tracking-wider text-[10px]">
-                    <div>
-                      <div className="h-10"></div>
-                      <p className="border-t border-slate-300 pt-2 w-48 mx-auto m-0">Complainant signature</p>
-                    </div>
-                    <div>
-                      <div className="h-10"></div>
-                      <p className="border-t border-slate-300 pt-2 w-48 mx-auto m-0">Station House Officer (SHO)</p>
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
+              <FIRDocument cDetails={cDetails} user={user} />
 
             </div>
           )}

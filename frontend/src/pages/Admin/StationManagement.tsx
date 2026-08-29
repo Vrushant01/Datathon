@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, UnitRow } from '../../utils/mockDb';
 import { 
@@ -45,6 +46,18 @@ export const StationManagement: React.FC = () => {
       }
     }
   }, [location.state]);
+
+  // Prevent background scrolling when any modal is open
+  useEffect(() => {
+    if (modalOpen || notifyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [modalOpen, notifyModalOpen]);
 
   const showNotification = (type: 'success' | 'error', text: string) => {
     setNotification({ type, text });
@@ -109,12 +122,13 @@ export const StationManagement: React.FC = () => {
         </button>
       </div>
 
-      {notification && (
-        <div className={`p-4 rounded-lg text-xs font-bold shadow-md border ${
+      {notification && typeof document !== 'undefined' && createPortal(
+        <div className={`fixed top-4 right-4 z-[9999] p-4 rounded-lg text-xs font-bold shadow-lg border ${
           notification.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'
         }`}>
           {notification.text}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Controls */}

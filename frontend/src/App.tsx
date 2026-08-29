@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { syncFromMongo } from './utils/mockDb';
+import { syncData } from './utils/mockDb';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 
@@ -47,7 +47,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Initial data sync
-    syncFromMongo().then(() => {
+    syncData().then(() => {
       setDataLoaded(true);
       setSyncKey(k => k + 1);
     });

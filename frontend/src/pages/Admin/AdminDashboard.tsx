@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockDb, syncFromMongo } from '../../utils/mockDb';
+import { mockDb, syncData } from '../../utils/mockDb';
 import { useDbConnection } from '../../hooks/useDbConnection';
 import { getAIDashboard } from '../../services/aiService';
 import { 
@@ -71,7 +71,7 @@ export const AdminDashboard: React.FC = () => {
     const now = Date.now();
     const boundary = now - (timeFilter === '24H' ? 24 * 3600000 : timeFilter === '7D' ? 7 * 86400000 : 30 * 86400000);
     return cases.filter(c => {
-      const ts = c.CrimeRegisteredDateTime ? new Date(c.CrimeRegisteredDateTime).getTime() : new Date(c.CrimeRegisteredDate).getTime();
+      const ts = new Date(c.CrimeRegisteredDate).getTime();
       return ts >= boundary && ts <= now;
     });
   }, [cases, timeFilter]);
@@ -94,7 +94,7 @@ export const AdminDashboard: React.FC = () => {
         buckets[`${d.getHours().toString().padStart(2, '0')}:00`] = 0;
       }
       filteredCases.forEach(c => {
-        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
+        const d = new Date(c.CrimeRegisteredDate);
         buckets[`${d.getHours().toString().padStart(2, '0')}:00`] = (buckets[`${d.getHours().toString().padStart(2, '0')}:00`] || 0) + 1;
       });
     } else if (timeFilter === '7D' || timeFilter === '30D') {
@@ -105,7 +105,7 @@ export const AdminDashboard: React.FC = () => {
         buckets[`${d.getMonth()+1}/${d.getDate()}`] = 0;
       }
       filteredCases.forEach(c => {
-        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
+        const d = new Date(c.CrimeRegisteredDate);
         buckets[`${d.getMonth()+1}/${d.getDate()}`] = (buckets[`${d.getMonth()+1}/${d.getDate()}`] || 0) + 1;
       });
     } else {
@@ -117,7 +117,7 @@ export const AdminDashboard: React.FC = () => {
       }
       const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1).getTime();
       filteredCases.forEach(c => {
-        const d = new Date(c.CrimeRegisteredDateTime || c.CrimeRegisteredDate);
+        const d = new Date(c.CrimeRegisteredDate);
         if (d.getTime() >= sixMonthsAgo) {
           const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
           if (buckets[key] !== undefined) {

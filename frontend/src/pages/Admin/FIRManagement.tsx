@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { mockDb, CaseMasterRow, EmployeeRow } from '../../utils/mockDb';
+import { API_BASE_URL } from '../../config/api';
 import { 
   FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X,
   AlertTriangle, MapPin, User, Calendar, ShieldCheck 
 } from 'lucide-react';
+import { FIRDocument } from '../../components/FIRDocument';
 
 export const FIRManagement: React.FC = () => {
   const [cases, setCases] = useState<CaseMasterRow[]>(mockDb.getCases());
@@ -37,6 +40,8 @@ export const FIRManagement: React.FC = () => {
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<CaseMasterRow | null>(null);
   const [transferOfficerId, setTransferOfficerId] = useState<number>(employees[0]?.EmployeeID || 9002);
+  const [viewFirModalOpen, setViewFirModalOpen] = useState(false);
+  const [selectedFirDetails, setSelectedFirDetails] = useState<any>(null);
 
   // Form states (Register FIR Wizard)
   const [step, setStep] = useState(1);
@@ -73,6 +78,29 @@ export const FIRManagement: React.FC = () => {
   const [accusedAge, setAccusedAge] = useState(30);
   const [accusedGender, setAccusedGender] = useState(1);
 
+  // New detailed FIR fields state
+  const [compFatherSpouse, setCompFatherSpouse] = useState('');
+  const [compPhone, setCompPhone] = useState('');
+  const [compAddress, setCompAddress] = useState('');
+  const [compIdentityProof, setCompIdentityProof] = useState('');
+  
+  const [victimRelationship, setVictimRelationship] = useState('');
+  
+  const [accusedFatherSpouse, setAccusedFatherSpouse] = useState('');
+  const [accusedAddress, setAccusedAddress] = useState('');
+  const [accusedAliases, setAccusedAliases] = useState('');
+  const [accusedPhysicalDesc, setAccusedPhysicalDesc] = useState('');
+  const [accusedStatus, setAccusedStatus] = useState<'Known' | 'Unknown'>('Known');
+  
+  const [gdEntryNumber, setGdEntryNumber] = useState('');
+  const [delayInReporting, setDelayInReporting] = useState(false);
+  const [delayReason, setDelayReason] = useState('');
+  const [bnsApplicable, setBnsApplicable] = useState(true);
+  const [crimeSceneLocation, setCrimeSceneLocation] = useState('');
+  const [distanceDirection, setDistanceDirection] = useState('');
+  const [jurisdictionFlag, setJurisdictionFlag] = useState<'Inside' | 'Outside'>('Inside');
+  const [stolenProperty, setStolenProperty] = useState('');
+
   // Act & Section
   const [selectedAct, setSelectedAct] = useState('IPC');
   const [selectedSection, setSelectedSection] = useState('307');
@@ -90,6 +118,19 @@ export const FIRManagement: React.FC = () => {
       setAssignedOfficer(stationOfficers[0].EmployeeID);
     }
   }, [stationId, employees]);
+
+  // Bug 2: Prevent background scrolling when any modal is open
+  useEffect(() => {
+    if (modalOpen || transferModalOpen || viewFirModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [modalOpen, transferModalOpen, viewFirModalOpen]);
 
   const handleOpenAdd = () => {
     setStep(1);
@@ -123,14 +164,33 @@ export const FIRManagement: React.FC = () => {
     setAccusedAge(30);
     setAccusedGender(1);
 
+    setCompFatherSpouse('');
+    setCompPhone('');
+    setCompAddress('');
+    setCompIdentityProof('');
+    setVictimRelationship('');
+    setAccusedFatherSpouse('');
+    setAccusedAddress('');
+    setAccusedAliases('');
+    setAccusedPhysicalDesc('');
+    setAccusedStatus('Known');
+    setGdEntryNumber('');
+    setDelayInReporting(false);
+    setDelayReason('');
+    setBnsApplicable(true);
+    setCrimeSceneLocation('');
+    setDistanceDirection('');
+    setJurisdictionFlag('Inside');
+    setStolenProperty('');
+
     setSelectedAct('IPC');
     setSelectedSection('307');
     setModalOpen(true);
   };
 
   const handleRegisterFIR = async () => {
-    if (!briefFacts || !compName || !victimName || !accusedName) {
-      showNotification('error', 'All wizard tabs must be completed.');
+    if (!gdEntryNumber || !crimeSceneLocation || !compName || !compPhone || !compAddress || !compFatherSpouse || !compIdentityProof || !briefFacts || !victimName || (accusedStatus === 'Known' && (!accusedName || !accusedFatherSpouse || !accusedAddress || !accusedPhysicalDesc))) {
+      showNotification('error', 'Please fill all mandatory fields including GD Entry, Crime Scene, complete Complainant and Accused details.');
       return;
     }
 
@@ -150,10 +210,62 @@ export const FIRManagement: React.FC = () => {
           InfoReceivedPSDate: infoReceived,
           latitude: Number(latitude),
           longitude: Number(longitude),
-          BriefFacts: briefFacts
+          BriefFacts: briefFacts,
+          
+          // Detailed FIR fields
+          GDEntryNumber: gdEntryNumber,
+          GDEntryTimestamp: gdEntryNumber ? new Date().toISOString() : undefined,
+          DelayInReporting: delayInReporting,
+          DelayReason: delayReason,
+          BNSApplicable: bnsApplicable,
+          CrimeSceneLocation: crimeSceneLocation,
+          DistanceDirection: distanceDirection,
+          JurisdictionFlag: jurisdictionFlag,
+          StolenProperty: stolenProperty,
+          InformantSignature: 'Signed',
+          RecordingOfficerRank: 'SHO',
+          DispatchCopyHanded: true,
+          DispatchCopyDate: new Date().toISOString(),
+
+          // Additional Parties Data (We must send this up so backend mock can save it)
+          Complainant: {
+            ComplainantName: compName,
+            AgeYear: compAge,
+            GenderID: compGender,
+            OccupationID: compOccupation,
+            ReligionID: compReligion,
+            CasteID: compCaste,
+            FatherSpouseName: compFatherSpouse,
+            Phone: compPhone,
+            PermanentAddress: compAddress,
+            IdentityProof: compIdentityProof
+          },
+          Victim: {
+            VictimName: victimName,
+            AgeYear: victimAge,
+            GenderID: victimGender,
+            VictimPolice: victimPolice,
+            RelationshipToComplainant: victimRelationship
+          },
+          Accused: {
+            AccusedName: accusedName,
+            AgeYear: accusedAge,
+            GenderID: accusedGender,
+            FatherSpouseName: accusedFatherSpouse,
+            Address: accusedAddress,
+            Aliases: accusedAliases,
+            PhysicalDescription: accusedPhysicalDesc,
+            Status: accusedStatus
+          },
+          Acts: [{
+            ActID: selectedAct,
+            SectionID: selectedSection,
+            ActOrderID: 1,
+            SectionOrderID: 1
+          }]
       };
 
-      const res = await fetch('http://localhost:5000/api/cases', {
+      const res = await fetch(`${API_BASE_URL}/api/cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(casePayload)
@@ -241,12 +353,14 @@ export const FIRManagement: React.FC = () => {
         </button>
       </div>
 
-      {notification && (
-        <div className={`p-4 rounded-lg text-xs font-bold shadow border ${
+      {/* Bug 1: Fixed Notification with High Z-Index, rendered via Portal */}
+      {notification && typeof document !== 'undefined' && createPortal(
+        <div className={`fixed top-4 right-4 z-[9999] p-4 rounded-lg text-xs font-bold shadow-lg border ${
           notification.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'
         }`}>
           {notification.text}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Search and Filters */}
@@ -351,6 +465,16 @@ export const FIRManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2 justify-center">
+                      <button 
+                        onClick={() => {
+                          setSelectedFirDetails(mockDb.getCaseDetails(c.CaseMasterID));
+                          setViewFirModalOpen(true);
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 border rounded transition"
+                        title="View FIR"
+                      >
+                        <FileText size={14} />
+                      </button>
                       <button 
                         onClick={() => handleOpenTransfer(c)}
                         className="p-1.5 text-slate-500 hover:text-amber-600 bg-slate-100 hover:bg-amber-50 border rounded transition"
@@ -582,6 +706,54 @@ export const FIRManagement: React.FC = () => {
                       />
                     </div>
                   </div>
+
+                  <div className="border-t pt-4 mt-2">
+                    <h4 className="text-[10px] font-bold text-ksp-navy uppercase tracking-wide mb-3 flex items-center gap-1.5"><MapPin size={12} /> Detailed Crime Scene Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">General Diary Entry Number</label>
+                        <input type="text" value={gdEntryNumber} onChange={(e) => setGdEntryNumber(e.target.value)} placeholder="GD-123/26" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">BNS Applicable?</label>
+                        <select value={bnsApplicable ? "1" : "0"} onChange={(e) => setBnsApplicable(e.target.value === "1")} className="w-full p-2 bg-white border rounded text-xs">
+                          <option value="1">Yes</option>
+                          <option value="0">No (IPC)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Delay In Reporting?</label>
+                        <select value={delayInReporting ? "1" : "0"} onChange={(e) => setDelayInReporting(e.target.value === "1")} className="w-full p-2 bg-white border rounded text-xs">
+                          <option value="1">Yes</option>
+                          <option value="0">No</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Delay Reason</label>
+                        <input type="text" value={delayReason} onChange={(e) => setDelayReason(e.target.value)} disabled={!delayInReporting} placeholder="Reason for delay..." className="w-full p-2 bg-white border rounded text-xs disabled:opacity-50" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Crime Scene Location Description</label>
+                        <input type="text" value={crimeSceneLocation} onChange={(e) => setCrimeSceneLocation(e.target.value)} placeholder="e.g. Near Metro Station" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Distance & Direction from PS</label>
+                        <input type="text" value={distanceDirection} onChange={(e) => setDistanceDirection(e.target.value)} placeholder="e.g. 2 km North" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Jurisdiction</label>
+                        <select value={jurisdictionFlag} onChange={(e) => setJurisdictionFlag(e.target.value as any)} className="w-full p-2 bg-white border rounded text-xs">
+                          <option value="Inside">Inside Station Limits</option>
+                          <option value="Outside">Outside Station Limits</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               )}
 
@@ -591,11 +763,21 @@ export const FIRManagement: React.FC = () => {
                   {/* Complainant */}
                   <div className="border p-4 rounded-lg bg-slate-50/50">
                     <h4 className="text-xs font-bold text-ksp-navy mb-3 flex items-center gap-1.5"><User size={14} /> Complainant Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Full Name</label>
                         <input type="text" value={compName} onChange={(e) => setCompName(e.target.value)} placeholder="Rajesh Kumar" className="w-full p-2 bg-white border rounded text-xs" />
                       </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Father/Spouse Name</label>
+                        <input type="text" value={compFatherSpouse} onChange={(e) => setCompFatherSpouse(e.target.value)} placeholder="Suresh" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Contact Phone</label>
+                        <input type="text" value={compPhone} onChange={(e) => setCompPhone(e.target.value)} placeholder="+91 9999999999" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Age (Years)</label>
                         <input type="number" value={compAge} onChange={(e) => setCompAge(Number(e.target.value))} className="w-full p-2 bg-white border rounded text-xs" />
@@ -606,13 +788,21 @@ export const FIRManagement: React.FC = () => {
                           {occupations.map(o => <option key={o.OccupationID} value={o.OccupationID}>{o.OccupationName}</option>)}
                         </select>
                       </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Identity Proof</label>
+                        <input type="text" value={compIdentityProof} onChange={(e) => setCompIdentityProof(e.target.value)} placeholder="Aadhaar ****1234" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 block mb-1">Permanent Address</label>
+                      <input type="text" value={compAddress} onChange={(e) => setCompAddress(e.target.value)} placeholder="House No, Street, City" className="w-full p-2 bg-white border rounded text-xs" />
                     </div>
                   </div>
 
                   {/* Victim */}
                   <div className="border p-4 rounded-lg bg-slate-50/50">
                     <h4 className="text-xs font-bold text-ksp-navy mb-3 flex items-center gap-1.5"><User size={14} /> Victim details</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Full Name</label>
                         <input type="text" value={victimName} onChange={(e) => setVictimName(e.target.value)} placeholder="Suresh Kumar" className="w-full p-2 bg-white border rounded text-xs" />
@@ -620,6 +810,10 @@ export const FIRManagement: React.FC = () => {
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Age</label>
                         <input type="number" value={victimAge} onChange={(e) => setVictimAge(Number(e.target.value))} className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Relationship to Complainant</label>
+                        <input type="text" value={victimRelationship} onChange={(e) => setVictimRelationship(e.target.value)} placeholder="Self / Son / None" className="w-full p-2 bg-white border rounded text-xs" />
                       </div>
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Is Police Officer?</label>
@@ -634,14 +828,41 @@ export const FIRManagement: React.FC = () => {
                   {/* Accused */}
                   <div className="border p-4 rounded-lg bg-slate-50/50">
                     <h4 className="text-xs font-bold text-ksp-navy mb-3 flex items-center gap-1.5"><User size={14} /> Primary Accused</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Accused Name</label>
-                        <input type="text" value={accusedName} onChange={(e) => setAccusedName(e.target.value)} placeholder="Harish alias Kariya" className="w-full p-2 bg-white border rounded text-xs" />
+                        <input type="text" value={accusedName} onChange={(e) => setAccusedName(e.target.value)} placeholder="Harish" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Aliases</label>
+                        <input type="text" value={accusedAliases} onChange={(e) => setAccusedAliases(e.target.value)} placeholder="Kariya" className="w-full p-2 bg-white border rounded text-xs" />
                       </div>
                       <div>
                         <label className="text-[9px] font-bold text-slate-400 block mb-1">Estimated Age</label>
                         <input type="number" value={accusedAge} onChange={(e) => setAccusedAge(Number(e.target.value))} className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Father/Spouse Name</label>
+                        <input type="text" value={accusedFatherSpouse} onChange={(e) => setAccusedFatherSpouse(e.target.value)} placeholder="Ramesh" className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Status</label>
+                        <select value={accusedStatus} onChange={(e) => setAccusedStatus(e.target.value as any)} className="w-full p-2 bg-white border rounded text-xs">
+                          <option value="Known">Known</option>
+                          <option value="Unknown">Unknown</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Address</label>
+                        <input type="text" value={accusedAddress} onChange={(e) => setAccusedAddress(e.target.value)} placeholder="Address..." className="w-full p-2 bg-white border rounded text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">Physical Description</label>
+                        <input type="text" value={accusedPhysicalDesc} onChange={(e) => setAccusedPhysicalDesc(e.target.value)} placeholder="e.g. Fair complexion, height 170cm" className="w-full p-2 bg-white border rounded text-xs" />
                       </div>
                     </div>
                   </div>
@@ -684,10 +905,21 @@ export const FIRManagement: React.FC = () => {
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Brief Facts of Occurrence</label>
                     <textarea 
-                      rows={4}
+                      rows={3}
                       value={briefFacts}
                       onChange={(e) => setBriefFacts(e.target.value)}
                       placeholder="Input comprehensive summary of findings, altercation, seized objects..."
+                      className="w-full p-2 bg-slate-50 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-ksp-navy"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Stolen/Involved Property Details (Optional)</label>
+                    <textarea 
+                      rows={2}
+                      value={stolenProperty}
+                      onChange={(e) => setStolenProperty(e.target.value)}
+                      placeholder="e.g. 1 Gold Chain (20g), Cash Rs 10000"
                       className="w-full p-2 bg-slate-50 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-ksp-navy"
                     />
                   </div>
@@ -740,6 +972,35 @@ export const FIRManagement: React.FC = () => {
         </div>
       )}
 
+      {/* View FIR Modal */}
+      {viewFirModalOpen && selectedFirDetails && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 overflow-y-auto backdrop-blur-sm !mt-0">
+          <div className="bg-slate-100 rounded-xl shadow-2xl border max-w-5xl w-full relative overflow-hidden my-8 h-[90vh] flex flex-col">
+            <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
+              <h3 className="text-sm font-extrabold text-ksp-navy uppercase">
+                View FIR Document
+              </h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => window.print()} 
+                  className="bg-white border hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"
+                >
+                  <FileText size={14} /> Print
+                </button>
+                <button onClick={() => setViewFirModalOpen(false)} className="text-slate-400 hover:text-slate-600 ml-2">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-200/50">
+              <FIRDocument cDetails={selectedFirDetails} />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+
