@@ -94,6 +94,25 @@ export const Home: React.FC = () => {
               <Lock className="text-ksp-navy-dark/70 group-hover:scale-110 transition" />
             </Link>
           </div>
+
+          {/* Access Roles Guide */}
+          <div className="mt-8 max-w-5xl mx-auto bg-white/5 border border-white/10 rounded-xl overflow-hidden backdrop-blur-sm text-left shadow-lg">
+            <div className="divide-y divide-white/10">
+              <div className="grid grid-cols-1 md:grid-cols-12 p-5 hover:bg-white/10 transition-colors items-center">
+                <div className="md:col-span-4 text-white font-bold text-base mb-1 md:mb-0">Case Operations</div>
+                <div className="md:col-span-8 text-slate-200 text-sm md:text-base font-semibold tracking-wide">Investigating Officers (IO) & Station Writers</div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 p-5 hover:bg-white/10 transition-colors items-center">
+                <div className="md:col-span-4 text-white font-bold text-base mb-1 md:mb-0">Stationary Control</div>
+                <div className="md:col-span-8 text-slate-200 text-sm md:text-base font-semibold tracking-wide">Police Station Heads (SHO / Inspector)</div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 p-5 hover:bg-white/10 transition-colors items-center">
+                <div className="md:col-span-4 text-white font-bold text-base mb-1 md:mb-0">State Executive</div>
+                <div className="md:col-span-8 text-slate-200 text-sm md:text-base font-semibold tracking-wide">State Senior Officers (DG-IGP / Range IGPs / SPs)</div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
