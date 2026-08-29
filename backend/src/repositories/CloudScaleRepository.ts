@@ -13,7 +13,10 @@ const GLOBAL_CACHE: Record<string, AppCacheState> = {
   employees: { data: null, promise: null, timestamp: 0 },
   casemasters: { data: null, promise: null, timestamp: 0 },
   accuseds: { data: null, promise: null, timestamp: 0 },
-  victims: { data: null, promise: null, timestamp: 0 }
+  victims: { data: null, promise: null, timestamp: 0 },
+  customedges: { data: null, promise: null, timestamp: 0 },
+  complainants: { data: null, promise: null, timestamp: 0 },
+  actsections: { data: null, promise: null, timestamp: 0 }
 };
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -23,15 +26,22 @@ export class CloudScaleRepository implements IDataRepository {
   private metrics: any;
 
   constructor(req: any) {
-    if (req) {
+    if (process.env.CATALYST_PROJECT_ID) {
+      // External standalone initialization
+      this.app = (catalyst as any).initialize();
+    } else if (req) {
       this.app = catalyst.initialize(req);
+    } else {
+      console.warn('[DB] CloudScale initialized without req!');
+      this.app = (catalyst as any).initialize();
+    }
+    
+    if (req) {
       if (!(req as any).metrics) {
           (req as any).metrics = { nosqlCalls: 0, cacheHits: 0, cacheMisses: 0, startTime: Date.now() };
       }
       this.metrics = (req as any).metrics;
     } else {
-      console.warn('[DB] CloudScale initialized without Request context.');
-      this.app = catalyst.initialize(undefined as any);
       this.metrics = { nosqlCalls: 0, cacheHits: 0, cacheMisses: 0, startTime: Date.now() };
     }
   }
@@ -48,6 +58,11 @@ export class CloudScaleRepository implements IDataRepository {
     const cacheEntry = GLOBAL_CACHE[actualTableName];
     if (!cacheEntry) throw new Error(`scanAll not supported for table: ${tableName}`);
 
+    // REASONING FOR 5-MINUTE CACHE (Operational Requirement):
+    // The Catalyst NoSQL 'fetchItem' API limits lookups to 25 keys per batch.
+    // Downloading 9,674 rows sequentially requires 400 API requests and takes ~80-100 seconds.
+    // ZCQL aggregation would be faster but requires AppSail context initialized securely.
+    // To ensure AI queries return within timeout windows, a 5-minute memory cache is mandatory.
     const now = Date.now();
     if (cacheEntry.data && (now - cacheEntry.timestamp < CACHE_TTL)) {
         this.metrics.cacheHits++;
@@ -69,11 +84,14 @@ export class CloudScaleRepository implements IDataRepository {
         let pkField = '';
         switch (actualTableName) {
             case 'districts': pkField = 'DistrictID'; for (let i = 1001; i <= 1031; i++) ids.push(i); break;
-            case 'units': pkField = 'UnitID'; for (let i = 2000; i <= 2929; i++) ids.push(i); break;
-            case 'employees': pkField = 'EmployeeID'; for (let i = 10001; i <= 10930; i++) ids.push(i); for (let i = 30001; i <= 30930; i++) ids.push(i); break;
-            case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 105000; i++) ids.push(i); break;
-            case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 85000; i++) ids.push(i); break;
-            case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 75000; i++) ids.push(i); break;
+            case 'units': pkField = 'UnitID'; for (let i = 2000; i <= 2930; i++) ids.push(i); break;
+            case 'employees': pkField = 'EmployeeID'; for (let i = 10001; i <= 11900; i++) ids.push(i); for (let i = 30001; i <= 30930; i++) ids.push(i); break;
+            // Range extended: MongoDB has 9,674 cases (100001–109674). Using 110000 ceiling with growth headroom.
+            case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110000; i++) ids.push(i); break;
+            // Range extended: MongoDB has 9,674 accused (80001–89674).
+            case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90000; i++) ids.push(i); break;
+            // Range extended: MongoDB has 9,674 victims (70001–79674).
+            case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80000; i++) ids.push(i); break;
         }
 
         const allItems: any[] = [];
@@ -206,6 +224,39 @@ export class CloudScaleRepository implements IDataRepository {
     return [];
   }
 
+  async getAllCustomEdges(): Promise<any[]> {
+    try {
+      const zcql = this.app.zcql();
+      const res = await zcql.executeZCQLQuery("SELECT * FROM customedges LIMIT 200");
+      return res.map((r: any) => r.customedges);
+    } catch(e: any) {
+      console.error('getAllCustomEdges ZCQL error:', e.message);
+      return [];
+    }
+  }
+
+  async getComplainants(): Promise<any[]> {
+    try {
+      const zcql = this.app.zcql();
+      const res = await zcql.executeZCQLQuery("SELECT * FROM complainants LIMIT 200");
+      return res.map((r: any) => r.complainants);
+    } catch(e: any) {
+      console.error('getComplainants ZCQL error:', e.message);
+      return [];
+    }
+  }
+
+  async getActSections(): Promise<any[]> {
+    try {
+      const zcql = this.app.zcql();
+      const res = await zcql.executeZCQLQuery("SELECT * FROM actsections LIMIT 200");
+      return res.map((r: any) => r.actsections);
+    } catch(e: any) {
+      console.error('getActSections ZCQL error:', e.message);
+      return [];
+    }
+  }
+
   async getRepeatOffenders(): Promise<any[]> {
     const allAccused = await this.scanAll('Accused');
     const personMap = new Map<string, any>();
@@ -250,9 +301,7 @@ export class CloudScaleRepository implements IDataRepository {
     return await this.scanAll('Victim');
   }
 
-  async getAllCustomEdges(): Promise<any[]> {
-    return [];
-  }
+
   
   async getCasesByOfficer(officerId: number): Promise<any[]> {
     const cases = await this.scanAll('CaseMaster');
@@ -262,5 +311,215 @@ export class CloudScaleRepository implements IDataRepository {
   async getCasesByStation(stationId: number): Promise<any[]> {
     const cases = await this.scanAll('CaseMaster');
     return cases.filter(c => Number(c.PoliceStationID) === stationId);
+  }
+
+  // --- Case Mutations ---
+  async updateCaseStatus(caseId: number, statusId: number, userEmail: string): Promise<boolean> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+    const table = nosql.table('casemasters');
+    try {
+      await table.updateItems({
+        keys: new NoSQLItem().addNumber('CaseMasterID', caseId),
+        update_attributes: [
+          {
+            operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+            update_value: NoSQLMarshall.make(statusId),
+            attribute_path: ['CaseStatusID']
+          }
+        ]
+      });
+      // Invalidate cache
+      GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+      return true;
+    } catch(e) {
+      console.error('updateCaseStatus error', e);
+      return false;
+    }
+  }
+
+  // --- Timeline, Evidence, Chargesheets ---
+  async addTimelineNote(note: any): Promise<any> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    // Ensure NoteID is present
+    if (!note.NoteID) note.NoteID = Date.now();
+    const item = NoSQLItem.from(note);
+    await nosql.table('timelinenotes').insertItems({ item });
+    return note;
+  }
+
+  async getTimelineNotesByCase(caseId: number): Promise<any[]> {
+    const nosql = this.app.nosql();
+    const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+    try {
+        const resp = await nosql.table('timelinenotes').queryTable({
+            key_condition: {
+                attribute: ['CaseMasterID'],
+                operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                value: NoSQLMarshall.makeNumber(caseId)
+            }
+        });
+        const raw = resp as any;
+        return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+    } catch(e: any) {
+        if(e.message?.includes('Table Not Found')) return [];
+        console.error('getTimelineNotesByCase error:', e);
+        return [];
+    }
+  }
+
+  async uploadEvidence(evidence: any): Promise<any> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    if (!evidence.EvidenceID) evidence.EvidenceID = Date.now();
+    const item = NoSQLItem.from(evidence);
+    await nosql.table('evidencefiles').insertItems({ item });
+    return evidence;
+  }
+
+  async getEvidenceFilesByCase(caseId: number): Promise<any[]> {
+    const nosql = this.app.nosql();
+    const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+    try {
+        const resp = await nosql.table('evidencefiles').queryTable({
+            key_condition: {
+                attribute: ['CaseMasterID'],
+                operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                value: NoSQLMarshall.makeNumber(caseId)
+            }
+        });
+        const raw = resp as any;
+        return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+    } catch(e) {
+        return [];
+    }
+  }
+
+  async submitChargesheet(cs: any): Promise<any> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    if (!cs.CSID) cs.CSID = Date.now();
+    const item = NoSQLItem.from(cs);
+    await nosql.table('chargesheets').insertItems({ item });
+    return cs;
+  }
+
+  async getChargesheetsByCase(caseId: number): Promise<any[]> {
+    const nosql = this.app.nosql();
+    const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+    try {
+        const resp = await nosql.table('chargesheets').queryTable({
+            key_condition: {
+                attribute: ['CaseMasterID'],
+                operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                value: NoSQLMarshall.makeNumber(caseId)
+            }
+        });
+        const raw = resp as any;
+        return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+    } catch(e) {
+        return [];
+    }
+  }
+
+  // --- Network Mutations ---
+  async addCustomEdge(edge: any): Promise<any> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    if (!edge.EdgeID) {
+      const crypto = require('crypto');
+      edge.EdgeID = crypto.randomUUID();
+    }
+    const item = NoSQLItem.from(edge);
+    await nosql.table('customedges').insertItems({ item });
+    return edge;
+  }
+
+  async addCaseEntity(entityType: string, entity: any): Promise<any> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+    
+    let table = 'accuseds';
+    if (entityType === 'Victim') table = 'victims';
+    if (entityType === 'Complainant') table = 'complainants';
+    
+    const item = NoSQLItem.from(entity);
+    await nosql.table(table).insertItems({ item });
+    GLOBAL_CACHE[table] = { data: null, promise: null, timestamp: 0 };
+    return entity;
+  }
+
+  async getCaseStatistics(metric: string, filters: { district?: number, station?: number, crime_category?: number }): Promise<any> {
+    const cases = await this.scanAll('CaseMaster');
+    
+    // Apply filters
+    const filteredCases = cases.filter(c => {
+      if (c.latitude == null || c.latitude === 0 || c.longitude == null || c.longitude === 0) return false;
+      if (filters.station && Number(c.PoliceStationID) !== filters.station) return false;
+      if (filters.crime_category && Number(c.CrimeMajorHeadID) !== filters.crime_category) return false;
+      // We assume station implies district. If district is provided without station, we'd ideally need a join,
+      // but for simplicity we rely on frontend/LLM sending the station IDs if needed, or if DistrictID exists on CaseMaster.
+      if (filters.district && c.DistrictID && Number(c.DistrictID) !== filters.district) return false;
+      return true;
+    });
+
+    switch (metric) {
+      case 'total_cases':
+        return { metric: 'total_cases', value: filteredCases.length, source: 'CloudScale' };
+      
+      case 'pending_cases': {
+        // MATCHING DASHBOARD LOGIC: Solved/Closed are StatusID 2, 3, or 4.
+        // Therefore Pending is total minus solved.
+        const solved = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+        const pending = filteredCases.length - solved;
+        return { metric: 'pending_cases', value: pending, source: 'CloudScale' };
+      }
+      
+      case 'solved_cases': {
+        // MATCHING DASHBOARD LOGIC: Solved/Closed are StatusID 2, 3, or 4.
+        const solved = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+        return { metric: 'solved_cases', value: solved, source: 'CloudScale' };
+      }
+      
+      case 'crime_category_breakdown': {
+        const counts: Record<number, number> = {};
+        filteredCases.forEach(c => {
+          const cat = Number(c.CrimeMajorHeadID);
+          counts[cat] = (counts[cat] || 0) + 1;
+        });
+        return { metric, breakdown: Object.entries(counts).map(([k, v]) => ({ crime_category: Number(k), count: v })), source: 'CloudScale' };
+      }
+      
+      case 'station_breakdown': {
+        const counts: Record<number, number> = {};
+        filteredCases.forEach(c => {
+          const st = Number(c.PoliceStationID);
+          counts[st] = (counts[st] || 0) + 1;
+        });
+        return { metric, breakdown: Object.entries(counts).map(([k, v]) => ({ station_id: Number(k), count: v })), source: 'CloudScale' };
+      }
+
+      case 'district_breakdown': {
+        const counts: Record<number, number> = {};
+        filteredCases.forEach(c => {
+          // If DistrictID is not populated on CaseMaster, we fallback to PoliceStationID as a proxy or 0
+          const dist = Number(c.DistrictID) || 0;
+          counts[dist] = (counts[dist] || 0) + 1;
+        });
+        return { metric, breakdown: Object.entries(counts).map(([k, v]) => ({ district_id: Number(k), count: v })), source: 'CloudScale' };
+      }
+
+      default:
+        throw new Error(`Metric '${metric}' is not supported.`);
+    }
+  }
+
+  async updateCaseEntity(entityType: string, entity: any): Promise<any> {
+    throw new Error('Update entity not fully implemented in CloudScale repo mock');
+  }
+
+  async deleteCaseEntity(entityType: string, entityId: number): Promise<boolean> {
+    throw new Error('Delete entity not fully implemented in CloudScale repo mock');
   }
 }

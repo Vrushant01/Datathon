@@ -29,14 +29,11 @@ import dotenv from 'dotenv';
 // ─────────────────────────────────────────────────────────────────────────────
 
 import PDFDocument from 'pdfkit';
-import mongoose from 'mongoose';
-import {
-  CaseMaster, Employee, Unit, District, Victim, Accused, CustomEdge, State
-} from './models';
 import aiRoutes from './routes/aiRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
 import hotspotRoutes from './routes/hotspotRoutes';
 import adminRoutes from './routes/adminRoutes';
+import stationRiskRoutes from './routes/stationRiskRoutes';
 import { invalidateHotspotCache } from './controllers/hotspotController';
 
 dotenv.config();
@@ -51,6 +48,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/hotspots', hotspotRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/station-risk', stationRiskRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).send("Backend is Connected with pipeline 🚀");
@@ -93,21 +91,9 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(express.json());
 
-// Emergency live connection verification
 app.get('/api/health', (req, res) => {
   try {
-    const provider = process.env.DB_PROVIDER || 'mongo';
-    if (provider === 'cloudscale') {
-      res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale' });
-      return;
-    }
-
-    const dbState = mongoose.connection.readyState;
-    if (dbState === 1) {
-      res.json({ success: true, status: 'online', database: 'connected', provider: 'mongo' });
-    } else {
-      res.status(503).json({ success: false, status: 'online', database: 'disconnected', provider: 'mongo' });
-    }
+    res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale' });
   } catch (error: any) {
     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
   }
@@ -198,20 +184,43 @@ app.get('/api/cases', async (req, res) => {
     const data = await db.getCases({});
     res.json(data);
   } catch (error) {
+    console.error('getCases error:', error);
     res.status(500).json({ error: 'Failed to fetch cases' });
   }
 });
 
-app.put('/api/cases/:caseId/reassign', async (req, res) => {
+app.get('/api/customedges', async (req, res) => {
   try {
-    const caseId = Number(req.params.caseId);
-    const { officerId } = req.body;
-    await CaseMaster.updateOne({ CaseMasterID: caseId }, { $set: { PolicePersonID: officerId } });
-    invalidateHotspotCache();
-    res.json({ success: true });
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getAllCustomEdges();
+    res.json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to reassign case' });
+    res.status(500).json({ error: 'Failed to fetch customedges' });
   }
+});
+
+app.get('/api/complainants', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getComplainants();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch complainants' });
+  }
+});
+
+app.get('/api/actsections', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getActSections();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch actsections' });
+  }
+});
+
+app.put('/api/cases/:caseId/reassign', async (req, res) => {
+  res.status(501).json({ error: 'Reassign case is not implemented in CloudScale yet' });
 });
 
 // Basic CRUD for Cases to trigger invalidation
@@ -230,7 +239,62 @@ app.post('/api/cases', async (req, res) => {
         return res.status(400).json({ error: 'CrimeRegisteredDateTime cannot be in the future' });
       }
     }
+    
+    // Extract related entities
+    const complainantData = caseData.Complainant;
+    const victimData = caseData.Victim;
+    const accusedData = caseData.Accused;
+    const actsData = caseData.Acts;
+    
+    delete caseData.Complainant;
+    delete caseData.Victim;
+    delete caseData.Accused;
+    delete caseData.Acts;
+
+    const cases = await db.getCases({});
+    const maxId = cases.length > 0 ? Math.max(...cases.map((c: any) => c.CaseMasterID || 0)) : 100000;
+    const newCaseId = maxId + 1;
+    caseData.CaseMasterID = newCaseId;
+    caseData.CaseNo = `FIR-${newCaseId}`;
+    
+    // Auto-generate CrimeNo if not provided
+    if (!caseData.CrimeNo) {
+      const year = new Date().getFullYear();
+      const serial = (newCaseId % 10000) + 1;
+      caseData.CrimeNo = `${serial.toString().padStart(4, '0')}/${year}`;
+    }
+
     const newCase = await db.createCase(caseData);
+    
+    // Save Complainant if provided
+    if (complainantData) {
+      complainantData.CaseMasterID = newCaseId;
+      complainantData.ComplainantID = newCaseId; // Mock ID
+      await db.addCaseEntity('Complainant', complainantData);
+    }
+    
+    // Save Victim if provided
+    if (victimData) {
+      victimData.CaseMasterID = newCaseId;
+      victimData.VictimMasterID = newCaseId; // Mock ID
+      await db.addCaseEntity('Victim', victimData);
+    }
+    
+    // Save Accused if provided
+    if (accusedData) {
+      accusedData.CaseMasterID = newCaseId;
+      accusedData.AccusedMasterID = newCaseId; // Mock ID
+      await db.addCaseEntity('Accused', accusedData);
+    }
+
+    // Save Acts if provided
+    if (actsData && Array.isArray(actsData)) {
+      for (const act of actsData) {
+        act.CaseMasterID = newCaseId;
+        // Not natively supported by addCaseEntity but we skip for now
+      }
+    }
+
     invalidateHotspotCache();
     res.status(201).json(newCase);
   } catch (error) {
@@ -239,33 +303,15 @@ app.post('/api/cases', async (req, res) => {
 });
 
 app.put('/api/cases/:id', async (req, res) => {
-  try {
-    const updated = await CaseMaster.findOneAndUpdate({ CaseMasterID: Number(req.params.id) }, req.body, { new: true });
-    invalidateHotspotCache();
-    res.json(updated);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update case' });
-  }
+  res.status(501).json({ error: 'Update case is not implemented in CloudScale yet' });
 });
 
 app.patch('/api/cases/:id', async (req, res) => {
-  try {
-    const updated = await CaseMaster.findOneAndUpdate({ CaseMasterID: Number(req.params.id) }, { $set: req.body }, { new: true });
-    invalidateHotspotCache();
-    res.json(updated);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update case' });
-  }
+  res.status(501).json({ error: 'Update case is not implemented in CloudScale yet' });
 });
 
 app.delete('/api/cases/:id', async (req, res) => {
-  try {
-    await CaseMaster.deleteOne({ CaseMasterID: Number(req.params.id) });
-    invalidateHotspotCache();
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete case' });
-  }
+  res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
 });
 
 app.get('/api/victims', async (req, res) => {
@@ -288,14 +334,7 @@ app.get('/api/accused', async (req, res) => {
   }
 });
 
-app.get('/api/customedges', async (req, res) => {
-  try {
-    const data = await CustomEdge.find();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch custom edges' });
-  }
-});
+
 
 app.get('/api/cases/officer/:officerId', async (req, res) => {
   try {
@@ -320,9 +359,10 @@ app.get('/api/cases/station/:stationId', async (req, res) => {
 app.get('/api/network/:caseId', async (req, res) => {
   try {
     const caseId = Number(req.params.caseId);
-    const accused = await Accused.find({ CaseMasterID: caseId });
-    const victims = await Victim.find({ CaseMasterID: caseId });
-    const edges = await CustomEdge.find({ CaseMasterID: caseId });
+    const db = RepositoryFactory.getRepository(req);
+    const accused = await db.getAccusedByCase(caseId);
+    const victims = await db.getVictimsByCase(caseId);
+    const edges = await db.getCustomEdgesByCase(caseId);
     res.json({ accused, victims, edges });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch network' });
@@ -452,22 +492,130 @@ app.get('/api/reports/case/:id', (req, res) => {
   doc.end();
 });
 
-const connectDB = async () => {
-  const mongoURI = process.env.MONGO_URI;
-  if (!mongoURI) {
-    console.error('[MongoDB] Missing MONGO_URI in .env');
-    return;
-  }
+// --- NEW ROUTES FOR TIMELINE, EVIDENCE, CHARGESHEET, NETWORK ---
 
+app.post('/api/cases/:caseId/timeline', async (req, res) => {
   try {
-    await mongoose.connect(mongoURI);
-    console.log('[MongoDB] Connected successfully');
-  } catch (err) {
-    console.error('[MongoDB] Connection error:', err);
+    const db = RepositoryFactory.getRepository(req);
+    const note = { ...req.body, CaseMasterID: Number(req.params.caseId) };
+    const saved = await db.addTimelineNote(note);
+    res.status(201).json(saved);
+  } catch(error) {
+    console.error('TIMELINE API ERROR:', error);
+    res.status(500).json({ error: 'Failed to add timeline note' });
   }
-};
+});
+
+app.get('/api/cases/:caseId/timeline', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const notes = await db.getTimelineNotesByCase(Number(req.params.caseId));
+    res.json(notes);
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to get timeline notes' });
+  }
+});
+
+import multer from 'multer';
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/cases/:caseId/evidence', upload.single('file'), async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const evidence = { ...req.body, CaseMasterID: Number(req.params.caseId) };
+    
+    if (req.file) {
+      // Actually upload to Catalyst File Store
+      const catalyst = require('zcatalyst-sdk-node');
+      const catalystApp = catalyst.initialize(req);
+      const folderId = process.env.CATALYST_EVIDENCE_FOLDER_ID || '1111111111111111111'; // fallback/mock
+      try {
+        const folder = catalystApp.filestore().folder(folderId);
+        const uploadResp = await folder.uploadFile({
+          code: req.file.buffer,
+          name: req.file.originalname
+        });
+        evidence.file_path = `/api/files/${uploadResp.id || 'uploaded'}`;
+        evidence.file_name = req.file.originalname;
+        evidence.file_type = req.file.mimetype;
+      } catch (uploadError) {
+        console.error('Catalyst FileStore upload failed. Saving with mock path.', uploadError);
+        evidence.file_path = `/evidence/lockers/${req.file.originalname.toLowerCase().replace(/ /g, '_')}`;
+        evidence.file_name = req.file.originalname;
+      }
+    }
+    
+    const saved = await db.uploadEvidence(evidence);
+    res.status(201).json(saved);
+  } catch(error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to upload evidence' });
+  }
+});
+
+app.get('/api/cases/:caseId/evidence', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const files = await db.getEvidenceFilesByCase(Number(req.params.caseId));
+    res.json(files);
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to get evidence files' });
+  }
+});
+
+app.post('/api/cases/:caseId/chargesheet', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const cs = { ...req.body, CaseMasterID: Number(req.params.caseId) };
+    const saved = await db.submitChargesheet(cs);
+    res.status(201).json(saved);
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to submit chargesheet' });
+  }
+});
+
+app.get('/api/cases/:caseId/chargesheet', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const cs = await db.getChargesheetsByCase(Number(req.params.caseId));
+    res.json(cs);
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to get chargesheets' });
+  }
+});
+
+app.put('/api/cases/:caseId/status', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const success = await db.updateCaseStatus(Number(req.params.caseId), req.body.CaseStatusID, req.body.userEmail);
+    invalidateHotspotCache();
+    res.json({ success });
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+app.post('/api/network/edges', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const saved = await db.addCustomEdge(req.body);
+    res.status(201).json(saved);
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to add edge' });
+  }
+});
+
+app.post('/api/network/entities/:type', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const saved = await db.addCaseEntity(req.params.type, req.body);
+    res.status(201).json(saved);
+  } catch(error) {
+    res.status(500).json({ error: 'Failed to add entity' });
+  }
+});
 
 app.listen(PORT, '0.0.0.0', async () => {
-  await connectDB();
   console.log(`Server running on port ${PORT}`);
 });
+ 

@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { RepositoryFactory } from '../repositories/RepositoryFactory';
-import { Unit } from '../models'; // keep for now if needed, or remove. wait, we should replace Unit.find too.
 import { performDBSCAN, generateHotspotsRiskAnalysis, FIRPoint } from '../services/ai/spatialAnalysis';
 
 const CRIME_HEADS: Record<number, string> = {

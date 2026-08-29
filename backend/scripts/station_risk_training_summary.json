@@ -1,0 +1,47 @@
+{
+  "row_count": 88350,
+  "station_count": 930,
+  "district_count": 31,
+  "positive_count": 281,
+  "negative_count": 88069,
+  "positive_percentage": "0.32%",
+  "scenario_count": 0,
+  "affected_station_count": 181,
+  "affected_district_count": 31,
+  "date_range": {
+    "start": "2024-10-26",
+    "end": "2026-08-15"
+  },
+  "feature_columns": [
+    "feature_week_start",
+    "feature_week_end",
+    "case_count_7d",
+    "case_count_previous_7d",
+    "case_count_previous_30d",
+    "case_count_previous_90d",
+    "growth_vs_previous_week",
+    "growth_vs_previous_30d",
+    "property_cases",
+    "women_cases",
+    "body_cases",
+    "economic_cases",
+    "cyber_cases",
+    "sll_cases",
+    "night_case_ratio",
+    "unique_accused_count",
+    "repeat_offender_case_count",
+    "historical_mean_7d",
+    "historical_stddev_7d",
+    "historical_z_score"
+  ],
+  "target_definition": "1 if the station appears as an anomaly in the following 7 days according to detectTemporalAnomalies",
+  "train_date_range": {
+    "start": "2024-10-26",
+    "end": "2026-04-04"
+  },
+  "validation_date_range": {
+    "start": "2026-04-11",
+    "end": "2026-08-15"
+  },
+  "leakage_result": "Passed. Date.now() strictly bounded, future features excluded."
+}

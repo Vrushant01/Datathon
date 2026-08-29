@@ -22,8 +22,27 @@ export interface IDataRepository {
   getAllAccused(): Promise<any[]>;
   getAllVictims(): Promise<any[]>;
   getAllCustomEdges(): Promise<any[]>;
+  getComplainants(): Promise<any[]>;
+  getActSections(): Promise<any[]>;
   
   // Single Entity queries for cases
   getCasesByOfficer(officerId: number): Promise<any[]>;
   getCasesByStation(stationId: number): Promise<any[]>;
+  
+  // Case Mutations
+  updateCaseStatus(caseId: number, statusId: number, userEmail: string): Promise<boolean>;
+  
+  // Timeline, Evidence, Chargesheets
+  addTimelineNote(note: any): Promise<any>;
+  getTimelineNotesByCase(caseId: number): Promise<any[]>;
+  uploadEvidence(evidence: any): Promise<any>;
+  getEvidenceFilesByCase(caseId: number): Promise<any[]>;
+  submitChargesheet(cs: any): Promise<any>;
+  getChargesheetsByCase(caseId: number): Promise<any[]>;
+  
+  // Network Mutations
+  addCustomEdge(edge: any): Promise<any>;
+  addCaseEntity(entityType: string, entity: any): Promise<any>;
+  updateCaseEntity(entityType: string, entity: any): Promise<any>;
+  deleteCaseEntity(entityType: string, entityId: number): Promise<boolean>;
 }

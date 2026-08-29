@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { faker } from '@faker-js/faker';
-import { State, District, UnitType, Unit, Employee, CaseMaster, Victim, Accused, CustomEdge } from '../src/models';
+import { State, District, UnitType, Unit, Employee, CaseMaster, Victim, Accused, CustomEdge, Complainant, ActSectionAssociation } from '../src/models';
 
 // Import seed data manually from frontend utils
-import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES, SEED_ACCUSED, SEED_VICTIMS } from './generated/seedData';
+import { SEED_DISTRICTS, SEED_UNITS, SEED_EMPLOYEES, SEED_CASES, SEED_ACCUSED, SEED_VICTIMS, SEED_COMPLAINANTS, SEED_ACT_SECTIONS } from './generated/seedData';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -37,14 +37,16 @@ const seedDB = async () => {
     console.log(`Payload Counts - Districts: ${SEED_DISTRICTS.length}, Units: ${SEED_UNITS.length}, Cases: ${SEED_CASES.length}, Victims: ${SEED_VICTIMS.length}, Accused: ${SEED_ACCUSED.length}`);
 
     // Clear existing data (Only CaseMaster for Temporal Fix)
-    console.log('Clearing old collections (CaseMaster only)...');
+    console.log('Clearing old collections...');
     await Promise.all([
       // District.deleteMany({}),
       // Unit.deleteMany({}),
       // Employee.deleteMany({}),
       CaseMaster.deleteMany({}),
-      // Victim.deleteMany({}),
-      // Accused.deleteMany({}),
+      Victim.deleteMany({}),
+      Accused.deleteMany({}),
+      Complainant.deleteMany({}),
+      ActSectionAssociation.deleteMany({}),
     ]);
 
     // console.log('Inserting Districts...');
@@ -83,16 +85,20 @@ const seedDB = async () => {
       console.log(`Inserted cases ${i} to ${i + batch.length}`);
     }
 
-    // console.log('Inserting Accused & Victims...');
-    // // Seed in batches to avoid payload limits
-    // for (let i = 0; i < SEED_ACCUSED.length; i += batchSize) {
-    //   const batch = SEED_ACCUSED.slice(i, i + batchSize);
-    //   await Accused.insertMany(batch);
-    // }
-    // for (let i = 0; i < SEED_VICTIMS.length; i += batchSize) {
-    //   const batch = SEED_VICTIMS.slice(i, i + batchSize);
-    //   await Victim.insertMany(batch);
-    // }
+    console.log('Inserting Accused, Victims, Complainants, Acts...');
+    // Seed in batches to avoid payload limits
+    for (let i = 0; i < SEED_ACCUSED.length; i += batchSize) {
+      await Accused.insertMany(SEED_ACCUSED.slice(i, i + batchSize));
+    }
+    for (let i = 0; i < SEED_VICTIMS.length; i += batchSize) {
+      await Victim.insertMany(SEED_VICTIMS.slice(i, i + batchSize));
+    }
+    for (let i = 0; i < SEED_COMPLAINANTS.length; i += batchSize) {
+      await Complainant.insertMany(SEED_COMPLAINANTS.slice(i, i + batchSize));
+    }
+    for (let i = 0; i < SEED_ACT_SECTIONS.length; i += batchSize) {
+      await ActSectionAssociation.insertMany(SEED_ACT_SECTIONS.slice(i, i + batchSize));
+    }
 
     console.log('MongoDB Seed complete!');
     process.exit(0);

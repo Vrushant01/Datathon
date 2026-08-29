@@ -1,0 +1,10 @@
+{
+  "totalRows": 50000,
+  "target0Count": 45000,
+  "target1Count": 5000,
+  "positiveRate": "10.00%",
+  "duplicates": 0,
+  "conflicts": 0,
+  "validationPassed": true,
+  "csvPath": "e:\\study\\Project\\datathon--code+base\\datathon2\\backend\\scripts\\station_risk_training_final.csv"
+}
