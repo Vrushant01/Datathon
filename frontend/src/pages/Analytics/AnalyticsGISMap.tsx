@@ -159,7 +159,8 @@ export const AnalyticsGISMap: React.FC = () => {
       center: [77.5946, 12.9716],
       zoom: 12,
       maxBounds: [[68.0, 6.0], [98.0, 36.0]], // India bounds
-      doubleClickZoom: false
+      doubleClickZoom: false,
+      antialias: true
     });
     
     mapRef.current = map;
@@ -172,7 +173,9 @@ export const AnalyticsGISMap: React.FC = () => {
         if (mapContainerRef.current) resizeObserver.observe(mapContainerRef.current);
         map.addSource('hotspots', {
             type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] }
+            data: { type: 'FeatureCollection', features: [] },
+            buffer: 512,
+            tolerance: 0.5
         });
 
         map.addSource('fir-cases', {
@@ -180,7 +183,9 @@ export const AnalyticsGISMap: React.FC = () => {
             data: { type: 'FeatureCollection', features: [] },
             cluster: true,
             clusterMaxZoom: 14,
-            clusterRadius: 50
+            clusterRadius: 50,
+            buffer: 512,
+            tolerance: 0.5
         });
 
         let insertBeforeId: string | undefined;
@@ -216,6 +221,10 @@ export const AnalyticsGISMap: React.FC = () => {
             id: 'hotspots-line',
             type: 'line',
             source: 'hotspots',
+            layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
             paint: {
                 'line-color': '#ef4444',
                 'line-width': 1,
@@ -441,10 +450,10 @@ export const AnalyticsGISMap: React.FC = () => {
              [selectedH.lng - radiusInDegrees, selectedH.lat - radiusInDegrees],
              [selectedH.lng + radiusInDegrees, selectedH.lat + radiusInDegrees]
            ] as maplibregl.LngLatBoundsLike;
-           mapRef.current.fitBounds(bbox, { padding: 100, duration: 1500 });
+           mapRef.current.fitBounds(bbox, { padding: 100, duration: 1000 });
          }
     } else {
-         mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 800 });
+         mapRef.current.flyTo({ center: [centerLng, centerLat], zoom: 12, duration: 1000 });
     }
 
     // [GIS DEBUG] Output exactly as requested by user
