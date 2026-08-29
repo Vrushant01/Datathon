@@ -359,19 +359,19 @@ export const AdminGISMap: React.FC = () => {
                  'circle-color': [
                      'step',
                      ['get', 'point_count'],
-                     '#2563eb', // Blue for 1-9
-                     10,
-                     '#f59e0b', // Amber for 10-49
-                     50,
-                     '#ef4444'  // Red for 50+
+                     '#2563eb', // Blue for 1-2
+                     3,
+                     '#f59e0b', // Amber for 3
+                     4,
+                     '#ef4444'  // Red for 4+
                  ],
                  'circle-radius': [
                      'step',
                      ['get', 'point_count'],
                      15,
-                     10,
+                     3,
                      20,
-                     50,
+                     4,
                      25
                  ],
                  'circle-stroke-width': 2,
@@ -932,15 +932,15 @@ export const AdminGISMap: React.FC = () => {
             <div className="space-y-1.5 text-[10px] text-slate-600 font-semibold">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                <span>Active Incident Clusters (1-9)</span>
+                <span>Active Incident Clusters (1-2)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span>Active Incident Clusters (10-49)</span>
+                <span>Active Incident Clusters (3)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                <span>Active Incident Clusters (50+)</span>
+                <span>Active Incident Clusters (4+)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#d4af37] border border-[#0b2240]"></span>

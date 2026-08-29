@@ -228,16 +228,16 @@ export const AnalyticsGISMap: React.FC = () => {
                 'circle-color': [
                     'step',
                     ['get', 'point_count'],
-                    '#2563eb', // Blue for 1-9
-                    10,
-                    '#f59e0b', // Amber for 10-49
-                    50,
-                    '#ef4444'  // Red for 50+
+                    '#2563eb', // Blue for 1-2
+                    3,
+                    '#f59e0b', // Amber for 3
+                    4,
+                    '#ef4444'  // Red for 4+
                 ],
                 'circle-radius': [
                     'step',
                     ['get', 'point_count'],
-                     15, 10, 20, 50, 25
+                     15, 3, 20, 4, 25
                 ],
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#ffffff',
