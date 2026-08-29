@@ -21,20 +21,59 @@ const GLOBAL_CACHE: Record<string, AppCacheState> = {
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Singleton Catalyst app instance.
+// In AppSail, CATALYST_CONFIG env var is always set by the platform and contains
+// the project credentials. initializeApp() reads it without needing request headers.
+// This avoids the "unable to find the type of initialisation" error that occurs
+// when catalyst.initialize(req) is called with a browser-originating request
+// that lacks Catalyst's internal proxy headers.
+let _catalystApp: any = null;
+function getCatalystApp(req?: any): any {
+  if (_catalystApp) return _catalystApp;
+  
+  // Try initializeApp() — reads CATALYST_CONFIG env var set by AppSail
+  if (process.env.CATALYST_CONFIG) {
+    try {
+      _catalystApp = (catalyst as any).initializeApp();
+      console.log('[DB] Catalyst initialized via CATALYST_CONFIG env var');
+      return _catalystApp;
+    } catch (e: any) {
+      console.warn('[DB] initializeApp() failed:', e.message);
+    }
+  }
+  
+  // Fallback: use request headers (works locally via catalyst serve proxy)
+  if (req && req.headers && (req.headers['x-zc-projectid'] || req.headers['x-zc-project-key'])) {
+    try {
+      _catalystApp = catalyst.initialize(req);
+      console.log('[DB] Catalyst initialized via request headers');
+      return _catalystApp;
+    } catch (e: any) {
+      console.warn('[DB] catalyst.initialize(req) failed:', e.message);
+    }
+  }
+  
+  // Last resort: try initialize with req (may work in catalyst serve local mode)
+  if (req) {
+    try {
+      _catalystApp = catalyst.initialize(req);
+      console.log('[DB] Catalyst initialized via req (local mode)');
+      return _catalystApp;
+    } catch (e: any) {
+      console.error('[DB] All Catalyst init methods failed. Last error:', e.message);
+      throw new Error(`Catalyst SDK init failed: ${e.message}`);
+    }
+  }
+  
+  throw new Error('Cannot initialize Catalyst SDK: no CATALYST_CONFIG env var and no valid request');
+}
+
 export class CloudScaleRepository implements IDataRepository {
   private app: any;
   private metrics: any;
 
   constructor(req: any) {
-    if (process.env.CATALYST_PROJECT_ID) {
-      // External standalone initialization
-      this.app = (catalyst as any).initialize();
-    } else if (req) {
-      this.app = catalyst.initialize(req);
-    } else {
-      console.warn('[DB] CloudScale initialized without req!');
-      this.app = (catalyst as any).initialize();
-    }
+    this.app = getCatalystApp(req);
     
     if (req) {
       if (!(req as any).metrics) {
@@ -98,22 +137,34 @@ export class CloudScaleRepository implements IDataRepository {
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         
         // Fetch in batches of 25 (max supported by fetchItem)
+        // Fetch in batches of 25 (max supported by fetchItem)
+        const fetchPromises: (() => Promise<void>)[] = [];
         for (let i = 0; i < ids.length; i += 25) {
             const batch = ids.slice(i, i + 25);
             const keys = batch.map(v => new NoSQLItem().addNumber(pkField, v));
-            try {
-                this.metrics.nosqlCalls++;
-                const resp = await table.fetchItem({ keys });
-                const raw = resp as any;
-                const items = (raw.get || []).map((d: any) => {
-                    const item = d.item;
-                    if (!item) return null;
-                    return typeof item.toJSON === 'function' ? item.toJSON() : item;
-                }).filter(Boolean);
-                allItems.push(...items);
-            } catch (e) {
-                // Ignore missing
-            }
+            
+            fetchPromises.push(async () => {
+                try {
+                    this.metrics.nosqlCalls++;
+                    const resp = await table.fetchItem({ keys });
+                    const raw = resp as any;
+                    const items = (raw.get || []).map((d: any) => {
+                        const item = d.item;
+                        if (!item) return null;
+                        return typeof item.toJSON === 'function' ? item.toJSON() : item;
+                    }).filter(Boolean);
+                    allItems.push(...items);
+                } catch (e) {
+                    // Ignore missing
+                }
+            });
+        }
+
+        // Run fetchPromises in chunks of 15 concurrency to avoid rate limits
+        const CONCURRENCY = 15;
+        for (let i = 0; i < fetchPromises.length; i += CONCURRENCY) {
+            const chunk = fetchPromises.slice(i, i + CONCURRENCY);
+            await Promise.all(chunk.map(fn => fn()));
         }
         
         const cleaned = allItems.map(item => {
