@@ -222,7 +222,7 @@ const STATES: StateRow[] = [
 const DISTRICTS: DistrictRow[] = [
   { DistrictID: 1001, DistrictName: 'Bengaluru City', StateID: 1, Active: true },
   { DistrictID: 1002, DistrictName: 'Mysuru City', StateID: 1, Active: true },
-  { DistrictID: 1003, DistrictName: 'Mangaluru City', StateID: 1, Active: true },
+  { DistrictID: 1003, DistrictName: 'Davanagere City', StateID: 1, Active: true },
   { DistrictID: 1004, DistrictName: 'Belagavi City', StateID: 1, Active: true },
   { DistrictID: 1005, DistrictName: 'Hubballi-Dharwad City', StateID: 1, Active: true },
   { DistrictID: 1006, DistrictName: 'Shivamogga', StateID: 1, Active: true },
@@ -320,7 +320,7 @@ const COURTS: CourtRow[] = [
   { CourtID: 3001, CourtName: 'Chief Metropolitan Magistrate Court Bengaluru', DistrictID: 1001, StateID: 1, Active: true },
   { CourtID: 3002, CourtName: 'Fast Track Court-I Bengaluru', DistrictID: 1001, StateID: 1, Active: true },
   { CourtID: 3003, CourtName: 'District & Sessions Court Mysuru', DistrictID: 1002, StateID: 1, Active: true },
-  { CourtID: 3004, CourtName: 'JMFC Court Mangaluru', DistrictID: 1003, StateID: 1, Active: true }
+  { CourtID: 3004, CourtName: 'JMFC Court Davanagere', DistrictID: 1003, StateID: 1, Active: true }
 ];
 
 const CRIME_HEADS: CrimeHeadRow[] = [
