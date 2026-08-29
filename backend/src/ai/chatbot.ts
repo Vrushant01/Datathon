@@ -1,66 +1,25 @@
-import { planQuery } from './planner';
-import { retrieveContext } from './retriever';
-import { generateAnswer } from './rag';
 import { aiLogger } from './logger';
-import { AI_CONFIG } from './config';
-import { getAI } from './embeddings';
-import { buildSystemPrompt } from './promptBuilder';
+import { QuickMLChatService } from '../services/quickmlChatService';
 
 export class ChatSession {
   private history: { role: 'user' | 'model', content: string }[] = [];
 
   constructor() {}
 
-  async processMessage(question: string, onToken?: (token: string) => void): Promise<string> {
+  async processMessage(req: any, question: string, onToken?: (token: string) => void): Promise<string> {
     try {
-      const plan = await planQuery(question);
-      aiLogger.info(`Plan generated`, plan);
-
-      const context = await retrieveContext(plan);
+      aiLogger.info(`Processing chat message via QuickML GLM-4.7-Flash`);
       
-      let answer = '';
-
-      if (AI_CONFIG.ENABLE_STREAMING && onToken) {
-        const ai = getAI();
-        const systemPrompt = await buildSystemPrompt();
-        
-        let prompt = `User Question: ${question}\n\n`;
-        if (context) {
-          prompt += `Database Context:\n${JSON.stringify(context, null, 2)}\n\n`;
-          prompt += `Please answer the user's question using strictly the Database Context provided above.\n`;
-        } else {
-          prompt += `No relevant database context was found or queried. Answer based on available knowledge or indicate that no data is available.\n`;
-        }
-
-        const contents = [
-          ...this.history.map(msg => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.content }]
-          })),
-          { role: 'user', parts: [{ text: prompt }] }
-        ];
-
-        const responseStream = await ai.models.generateContentStream({
-          model: AI_CONFIG.LLM_MODEL,
-          contents,
-          config: { systemInstruction: systemPrompt }
-        });
-
-        for await (const chunk of responseStream) {
-          if (chunk.text) {
-            onToken(chunk.text);
-            answer += chunk.text;
-          }
-        }
-      } else {
-        answer = await generateAnswer(question, context, this.history);
-      }
-
+      // Pass the request to our QuickML service abstraction
+      const answer = await QuickMLChatService.processMessage(req, question, this.history);
+      
+      // Save history
       this.history.push({ role: 'user', content: question });
       this.history.push({ role: 'model', content: answer });
 
-      if (this.history.length > AI_CONFIG.CHAT_HISTORY_LIMIT * 2) {
-        this.history = this.history.slice(this.history.length - AI_CONFIG.CHAT_HISTORY_LIMIT * 2);
+      // In real streaming, onToken would be called during the processMessage loop.
+      if (onToken) {
+        onToken(answer);
       }
 
       return answer;
@@ -87,3 +46,4 @@ export const getSession = (sessionId: string) => {
   }
   return sessions.get(sessionId)!;
 };
+

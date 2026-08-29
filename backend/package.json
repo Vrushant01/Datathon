@@ -7,18 +7,20 @@
     "build": "tsc",
     "start": "node dist/app.js",
     "dev": "nodemon --exec ts-node src/app.ts",
+    "catalyst:serve": "npm run build && catalyst serve",
     "seed": "ts-node scripts/seedMongo.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^10.5.0",
     "@google/genai": "^2.13.0",
     "@swc/helpers": "^0.5.23",
+    "@types/multer": "^2.2.0",
+    "axios": "^1.20.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.3",
-    "mongodb": "^7.5.0",
-    "mongoose": "^9.8.0",
+    "multer": "^2.3.0",
     "pdfkit": "^0.13.0",
     "pg": "^8.22.0",
     "zcatalyst-sdk-node": "^3.4.0"

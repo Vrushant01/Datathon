@@ -35,14 +35,14 @@ router.post('/chat', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      await session.processMessage(question, (token) => {
+      await session.processMessage(req, question, (token) => {
         res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
       });
 
       res.write(`data: [DONE]\n\n`);
       res.end();
     } else {
-      const answer = await session.processMessage(question);
+      const answer = await session.processMessage(req, question);
       res.json({ answer });
     }
   } catch (err: any) {
