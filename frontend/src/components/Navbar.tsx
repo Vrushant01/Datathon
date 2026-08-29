@@ -47,10 +47,10 @@ export const Navbar: React.FC = () => {
   };
 
   const showDbDetails = () => {
-    alert(`Database Connection Registry:
+    alert(`Database Connection:
 Status: ${dbConnectionStatus.toUpperCase()}
-Gateway: Local Storage / MongoDB
-Sync Status: Fully Synchronized`);
+Gateway: Zoho Catalyst CloudScale
+Data Source: Live CloudScale Database`);
   };
 
   const isAuthOrLanding = 
