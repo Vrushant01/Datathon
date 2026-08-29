@@ -35,6 +35,7 @@ import hotspotRoutes from './routes/hotspotRoutes';
 import adminRoutes from './routes/adminRoutes';
 import stationRiskRoutes from './routes/stationRiskRoutes';
 import { invalidateHotspotCache } from './controllers/hotspotController';
+import fixDatesRoute from './routes/fixDatesRoute';
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/hotspots', hotspotRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/station-risk', stationRiskRoutes);
+app.use('/api/admin/fix-dates', fixDatesRoute);
 
 app.get("/", (req, res) => {
   res.status(200).send("Backend is Connected with pipeline 🚀");
@@ -183,9 +185,9 @@ app.get('/api/cases', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getCases({});
     res.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('getCases error:', error);
-    res.status(500).json({ error: 'Failed to fetch cases' });
+    res.status(500).json({ error: 'Failed to fetch cases', details: error?.message });
   }
 });
 
