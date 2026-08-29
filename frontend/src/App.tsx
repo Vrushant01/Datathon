@@ -27,7 +27,7 @@ import { FIRManagement } from './pages/Admin/FIRManagement';
 import { AdminAnalytics } from './pages/Admin/AdminAnalytics';
 import { AdminGISMap } from './pages/Admin/AdminGISMap';
 import { AuditLogs } from './pages/Admin/AuditLogs';
-import { AIIntelligenceCenter } from './pages/Admin/AIIntelligenceCenter';
+import { AIAnomalyDetection } from './pages/Admin/AIAnomalyDetection';
 import { AIAssistant } from './pages/Admin/AIAssistant';
 
 // Officer Pages
@@ -100,7 +100,7 @@ const App: React.FC = () => {
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="gis" element={<AdminGISMap />} />
                 <Route path="network" element={<CriminalNetwork />} />
-                <Route path="ai" element={<AIIntelligenceCenter />} />
+                <Route path="anomaly-detection" element={<AIAnomalyDetection />} />
                 <Route path="assistant" element={<AIAssistant />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="audit" element={<AuditLogs />} />

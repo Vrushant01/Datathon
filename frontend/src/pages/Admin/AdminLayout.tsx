@@ -41,7 +41,7 @@ export const AdminLayout: React.FC = () => {
     { label: 'Analytics', path: '/admin-portal/analytics', icon: <BarChart3 size={18} /> },
     { label: 'GIS Maps', path: '/admin-portal/gis', icon: <MapPin size={18} /> },
     { label: 'Criminal Network', path: '/admin-portal/network', icon: <Share2 size={18} /> },
-    { label: 'AI Intelligence Center', path: '/admin-portal/ai', icon: <Brain size={18} /> },
+    { label: 'AI Anomaly Detection', path: '/admin-portal/anomaly-detection', icon: <Brain size={18} /> },
     { label: 'AI Assistant', path: '/admin-portal/assistant', icon: <Bot size={18} /> },
     { label: 'Audit Logs', path: '/admin-portal/audit', icon: <History size={18} /> }
   ];
