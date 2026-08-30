@@ -7,7 +7,6 @@ import {
 import { API_BASE_URL } from '../../config/api';
 import { mockDb } from '../../utils/mockDb';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 export const RepeatedOffenders: React.FC = () => {
   const navigate = useNavigate();
@@ -37,8 +36,12 @@ export const RepeatedOffenders: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/repeated-offenders`);
-      setData(response.data);
+      const response = await fetch(`${API_BASE_URL}/api/repeated-offenders`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const jsonData = await response.json();
+      setData(jsonData);
     } catch (e: any) {
       console.error(e);
       setError('Failed to load repeated offenders data.');
