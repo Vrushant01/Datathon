@@ -102,31 +102,27 @@ export const AIAssistant: React.FC = () => {
 
           chunkStr += decoder.decode(value, { stream: true });
           
-          const lines = chunkStr.split('\n\n');
+          const lines = chunkStr.split(/\r?\n/);
           chunkStr = lines.pop() || '';
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.replace('data: ', '');
-              if (dataStr === '[DONE]') {
-                setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, isStreaming: false } : m));
-                break;
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            
+            const dataStr = trimmed.replace(/^data:\s*/, '');
+            if (dataStr === '[DONE]') {
+              setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, isStreaming: false } : m));
+              continue;
+            }
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.error) {
+                setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: `**Error:** ${data.error}` } : m));
+              } else if (data.text) {
+                setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: m.content + data.text } : m));
               }
-              try {
-                const data = JSON.parse(dataStr);
-                if (data.error) {
-                  setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, content: `**Error:** ${data.error}` } : m));
-                } else if (data.text) {
-                  setMessages(prev => prev.map(m => {
-                    if (m.id === assistantMsgId) {
-                      return { ...m, content: m.content + data.text };
-                    }
-                    return m;
-                  }));
-                }
-              } catch (e) {
-                console.error("Error parsing JSON chunk", dataStr);
-              }
+            } catch (e) {
+              console.error("Error parsing JSON chunk", dataStr);
             }
           }
         }
@@ -256,7 +252,14 @@ export const AIAssistant: React.FC = () => {
                                     </div>
                                   );
                                 } catch (e) {
-                                  return <code className={className} {...props}>{children}</code>;
+                                  return (
+                                    <div className="w-full h-64 mt-4 mb-4 bg-slate-50 p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
+                                      <div className="flex flex-col items-center text-slate-400 gap-2">
+                                        <Loader2 size={24} className="animate-spin" />
+                                        <span className="text-sm">Generating chart...</span>
+                                      </div>
+                                    </div>
+                                  );
                                 }
                               }
                               return <code className={className} {...props}>{children}</code>;
