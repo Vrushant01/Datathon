@@ -78,6 +78,7 @@ export const AdminGISMap: React.FC = () => {
       startDate: dateFrom,
       endDate: dateTo,
       status: selectedStatus,
+      personId: searchParams.get('personId') || undefined,
     };
     
     // getCasesForAnomaly guarantees exact sync with backend logic

@@ -18,6 +18,7 @@ export interface AnomalyFilterParams {
   startDate?: string;
   endDate?: string;
   status?: string | number | 'ALL';
+  personId?: string;
 }
 
 /**
@@ -68,6 +69,8 @@ export function getCasesForAnomaly(cases: any[], filters: AnomalyFilterParams): 
 
   const startDayIdx = filters.startDate ? toDayIndex(filters.startDate) : null;
   const endDayIdx = filters.endDate ? toDayIndex(filters.endDate) : null;
+  
+  const accused = filters.personId ? mockDb.getAccused() : [];
 
   return cases.filter(c => {
     // 1. District Filter
@@ -98,6 +101,12 @@ export function getCasesForAnomaly(cases: any[], filters: AnomalyFilterParams): 
       
       if (startDayIdx !== null && caseDayIdx < startDayIdx) return false;
       if (endDayIdx !== null && caseDayIdx > endDayIdx) return false;
+    }
+    
+    // 6. Person ID Filter
+    if (filters.personId) {
+      const hasPerson = accused.some(a => a.CaseMasterID === c.CaseMasterID && a.PersonID === filters.personId);
+      if (!hasPerson) return false;
     }
 
     return true;

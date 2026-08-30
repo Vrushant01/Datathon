@@ -46,6 +46,7 @@ export const FIRManagement: React.FC = () => {
   const [filterDateTo, setFilterDateTo] = useState<string>(searchParams.get('endDate') || '');
 
   const [filterStatus, setFilterStatus] = useState<number | 'ALL'>('ALL');
+  const [filterPersonId, setFilterPersonId] = useState<string>(searchParams.get('personId') || '');
   
   // Master Lists
   const employees = mockDb.getEmployees().filter(e => e.status === 'Active');
@@ -356,7 +357,8 @@ export const FIRManagement: React.FC = () => {
       crimeType: filterCrimeHead,
       startDate: filterDateFrom,
       endDate: filterDateTo,
-      status: filterStatus
+      status: filterStatus,
+      personId: filterPersonId || undefined
     }).length === 1;
 
     if (!isAnomalyMatch) return false;

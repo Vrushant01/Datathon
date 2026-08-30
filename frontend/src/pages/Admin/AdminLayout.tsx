@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, Users, FileText, BarChart3, MapPin, 
-  Bell, History, Settings, Menu, X, ShieldAlert, Share2, Building, Brain, Bot
+  Bell, History, Settings, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -42,6 +42,7 @@ export const AdminLayout: React.FC = () => {
     { label: 'GIS Maps', path: '/admin-portal/gis', icon: <MapPin size={18} /> },
     { label: 'Criminal Network', path: '/admin-portal/network', icon: <Share2 size={18} /> },
     { label: 'AI Anomaly Detection', path: '/admin-portal/anomaly-detection', icon: <Brain size={18} /> },
+    { label: 'Repeated Offenders', path: '/admin-portal/repeated-offenders', icon: <Repeat size={18} /> },
     { label: 'AI Assistant', path: '/admin-portal/assistant', icon: <Bot size={18} /> },
     { label: 'Audit Logs', path: '/admin-portal/audit', icon: <History size={18} /> }
   ];
