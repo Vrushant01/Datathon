@@ -33,16 +33,7 @@ export const RepeatedOffenders: React.FC = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (selectedOffender) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [selectedOffender]);
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -108,6 +99,17 @@ export const RepeatedOffenders: React.FC = () => {
 
   // Details Modal
   const [selectedOffender, setSelectedOffender] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (selectedOffender) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedOffender]);
 
   const getSeverityLabel = (gravityId: number) => {
     const rec = gravityList.find(g => g.GravityOffenceID === gravityId);
