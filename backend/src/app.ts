@@ -250,7 +250,16 @@ app.get('/api/repeated-offenders', async (req, res) => {
           record.ActiveCases += 1;
         }
         
-        record.Cases.push(c);
+        record.Cases.push({
+          CaseMasterID: c.CaseMasterID,
+          CaseNo: c.CaseNo,
+          GravityOffenceID: c.GravityOffenceID,
+          DistrictID: c.DistrictID,
+          PoliceStationID: c.PoliceStationID,
+          CrimeMajorHeadID: c.CrimeMajorHeadID,
+          CaseStatusID: c.CaseStatusID,
+          CrimeRegisteredDate: c.CrimeRegisteredDate
+        });
       }
     });
 
