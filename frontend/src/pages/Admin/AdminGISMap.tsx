@@ -19,8 +19,6 @@ export const AdminGISMap: React.FC = () => {
   const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
   const crimeHeads = mockDb.getCrimeHeads();
   const gravityOffences = mockDb.getGravityOffences();
-
-  const searchParams = new URLSearchParams(location.search);
   
   // Filters
   const [selectedDistrict, setSelectedDistrict] = useState<number | 'ALL'>(() => {
