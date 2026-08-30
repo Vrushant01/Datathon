@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAIDashboard } from '../../services/aiService';
 import { Zap, Activity, ShieldAlert, Shield, MapPin, ExternalLink } from 'lucide-react';
+import { getCasesForAnomaly } from '../../utils/anomalyFilters';
+import { mockDb } from '../../utils/mockDb';
 
 export const AIAnomalyDetection: React.FC = () => {
   const navigate = useNavigate();
+  const cases = mockDb.getCases();
 
   // ── AI Anomaly Terminal ────────────────────────────────────────────────────
   const [anomalyAlerts, setAnomalyAlerts] = useState<any[]>([]);
@@ -160,7 +163,16 @@ export const AIAnomalyDetection: React.FC = () => {
                     <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
                       <div className="flex justify-between">
                         <span className="text-slate-500 font-medium">Current</span>
-                        <span className="font-extrabold text-slate-800">{alert.currentValue ?? alert.currentCount} cases</span>
+                        <span className="font-extrabold text-slate-800">
+                          {getCasesForAnomaly(cases, {
+                            district: alert.district,
+                            station: alert.level === 'STATION' ? alert.locationName : 'ALL',
+                            crimeType: alert.crimeType,
+                            startDate: alert.windowStart,
+                            endDate: alert.windowEnd,
+                            status: 'ALL'
+                          }).length} cases
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500 font-medium">Baseline</span>
