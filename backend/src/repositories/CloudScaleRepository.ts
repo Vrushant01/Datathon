@@ -267,6 +267,10 @@ export class CloudScaleRepository implements IDataRepository {
     return cases.find(c => Number(c.CaseMasterID) === caseId) || null;
   }
 
+  async getAllCases(): Promise<any[]> {
+    return await this.scanAll('CaseMaster');
+  }
+
   async getAllCasesForAnalytics(): Promise<any[]> {
     const cases = await this.scanAll('CaseMaster');
     const valid = cases.filter(c => c.latitude != null && c.latitude !== 0 && c.longitude != null && c.longitude !== 0);

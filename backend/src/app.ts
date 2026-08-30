@@ -206,89 +206,162 @@ app.get('/api/cases', async (req, res) => {
   }
 });
 
+let repeatedOffendersCache: { data: any[] | null, timestamp: number } = { data: null, timestamp: 0 };
+
 app.get('/api/repeated-offenders', async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
-    // Fetch all cases without the coordinate filters that getCases() uses
-    const cases = await (db as any).scanAll('CaseMaster'); 
-    const allAccused = await db.getAllAccused();
-
-    const personMap = new Map<string, any>();
+    const now = Date.now();
     
-    // Create lookup map for cases
-    const caseMap = new Map<number, any>();
-    cases.forEach((c: any) => {
-      caseMap.set(Number(c.CaseMasterID), c);
-    });
+    if (!repeatedOffendersCache.data || (now - repeatedOffendersCache.timestamp > 60000)) {
+      const cases = await (db as any).scanAll('CaseMaster'); 
+      const allAccused = await db.getAllAccused();
 
-    allAccused.forEach(acc => {
-      if (!acc.PersonID || acc.PersonID === "") return;
-      const c = caseMap.get(Number(acc.CaseMasterID));
-      if (!c) return; // Skip if case not found
+      const personMap = new Map<string, any>();
+      const caseMap = new Map<number, any>();
+      cases.forEach((c: any) => caseMap.set(Number(c.CaseMasterID), c));
 
-      if (!personMap.has(acc.PersonID)) {
-        personMap.set(acc.PersonID, {
-          PersonID: acc.PersonID,
-          AccusedName: acc.AccusedName || 'Unknown',
-          TotalCases: 0,
-          ActiveCases: 0,
-          ClosedCases: 0,
-          Cases: []
-        });
-      }
-      
-      const record = personMap.get(acc.PersonID);
-      // Check if this case is already counted for this offender to avoid duplicates
-      if (!record.Cases.find((existing: any) => existing.CaseMasterID === c.CaseMasterID)) {
-        record.TotalCases += 1;
-        
-        // Count active vs closed based on CaseStatusID (1 = Under Investigation / Pending, 2 = Solved / Closed typically)
-        // Adjust if your status IDs differ. Assuming 2 or 6 is closed, others active based on standard KSP mock.
-        if (c.CaseStatusID === 2 || c.CaseStatusID === 6) {
-          record.ClosedCases += 1;
-        } else {
-          record.ActiveCases += 1;
+      allAccused.forEach(acc => {
+        if (!acc.PersonID || acc.PersonID === "") return;
+        const c = caseMap.get(Number(acc.CaseMasterID));
+        if (!c) return;
+
+        if (!personMap.has(acc.PersonID)) {
+          personMap.set(acc.PersonID, {
+            PersonID: acc.PersonID,
+            AccusedName: acc.AccusedName || 'Unknown',
+            TotalCases: 0,
+            ActiveCases: 0,
+            ClosedCases: 0,
+            Cases: []
+          });
         }
         
-        record.Cases.push({
-          CaseMasterID: c.CaseMasterID,
-          CaseNo: c.CaseNo,
-          GravityOffenceID: c.GravityOffenceID,
-          DistrictID: c.DistrictID,
-          PoliceStationID: c.PoliceStationID,
-          CrimeMajorHeadID: c.CrimeMajorHeadID,
-          CaseStatusID: c.CaseStatusID,
-          CrimeRegisteredDate: c.CrimeRegisteredDate
-        });
+        const record = personMap.get(acc.PersonID);
+        if (!record.Cases.find((existing: any) => existing.CaseMasterID === c.CaseMasterID)) {
+          record.TotalCases += 1;
+          if (c.CaseStatusID === 2 || c.CaseStatusID === 6) {
+            record.ClosedCases += 1;
+          } else {
+            record.ActiveCases += 1;
+          }
+          
+          record.Cases.push({
+            CaseMasterID: c.CaseMasterID,
+            CaseNo: c.CaseNo,
+            GravityOffenceID: c.GravityOffenceID,
+            DistrictID: c.DistrictID,
+            PoliceStationID: c.PoliceStationID,
+            CrimeMajorHeadID: c.CrimeMajorHeadID,
+            CaseStatusID: c.CaseStatusID,
+            CrimeRegisteredDate: c.CrimeRegisteredDate
+          });
+        }
+      });
+
+      let repeatOffenders = Array.from(personMap.values()).filter(p => p.TotalCases > 1);
+
+      repeatOffenders = repeatOffenders.map(p => {
+        p.Cases.sort((a: any, b: any) => new Date(a.CrimeRegisteredDate).getTime() - new Date(b.CrimeRegisteredDate).getTime());
+        p.FirstCaseDate = p.Cases[0]?.CrimeRegisteredDate;
+        p.LatestCaseDate = p.Cases[p.Cases.length - 1]?.CrimeRegisteredDate;
+        p.CrimeCategories = Array.from(new Set(p.Cases.map((c: any) => Number(c.CrimeMajorHeadID)))).filter(id => id);
+        p.Districts = Array.from(new Set(p.Cases.map((c: any) => Number(c.DistrictID || c.PoliceStationID)))).filter(id => id);
+        p.Stations = Array.from(new Set(p.Cases.map((c: any) => Number(c.PoliceStationID)))).filter(id => id);
+        const gravities = p.Cases.map((c: any) => Number(c.GravityOffenceID)).filter((id: number) => !isNaN(id) && id > 0);
+        p.MaxGravity = gravities.length > 0 ? Math.min(...gravities) : 99;
+        return p;
+      });
+
+      repeatedOffendersCache.data = repeatOffenders;
+      repeatedOffendersCache.timestamp = now;
+    }
+
+    let results = repeatedOffendersCache.data || [];
+
+    // Filters
+    const minCases = parseInt(req.query.minCases as string) || 2;
+    const search = (req.query.search as string || '').toLowerCase();
+    const districtId = parseInt(req.query.district as string);
+    const stationId = parseInt(req.query.station as string);
+    const categoryId = parseInt(req.query.category as string);
+    const status = req.query.status as string;
+
+    results = results.filter(p => {
+      if (p.TotalCases < minCases) return false;
+      if (search && !p.AccusedName.toLowerCase().includes(search) && !p.PersonID.toLowerCase().includes(search)) return false;
+      if (districtId && !p.Districts.includes(districtId)) return false;
+      if (stationId && !p.Stations.includes(stationId)) return false;
+      if (categoryId && !p.CrimeCategories.includes(categoryId)) return false;
+      if (status === 'active' && p.ActiveCases === 0) return false;
+      if (status === 'closed' && p.ClosedCases === 0) return false;
+      return true;
+    });
+
+    results.sort((a, b) => b.TotalCases - a.TotalCases || a.PersonID.localeCompare(b.PersonID));
+
+    // Summary
+    let highRiskCount = 0;
+    let mostActiveCount = 0;
+    let mostActivePerson = 'None';
+    let totalRepeatCases = 0;
+
+    results.forEach(p => {
+      totalRepeatCases += p.TotalCases;
+      if (p.MaxGravity === 1 || p.TotalCases >= 5) highRiskCount++;
+      if (p.TotalCases > mostActiveCount) {
+        mostActiveCount = p.TotalCases;
+        mostActivePerson = p.AccusedName !== 'Unknown' ? p.AccusedName : p.PersonID;
       }
     });
 
-    let repeatOffenders = Array.from(personMap.values()).filter(p => p.TotalCases > 1);
+    const summary = {
+      totalOffenders: results.length,
+      totalRepeatCases,
+      highRiskCount,
+      mostActiveOffender: mostActivePerson,
+      mostActiveCount
+    };
 
-    // Compute derived arrays and dates
-    repeatOffenders = repeatOffenders.map(p => {
-      // Sort cases by date ascending
-      p.Cases.sort((a: any, b: any) => new Date(a.CrimeRegisteredDate).getTime() - new Date(b.CrimeRegisteredDate).getTime());
-      
-      p.FirstCaseDate = p.Cases[0]?.CrimeRegisteredDate;
-      p.LatestCaseDate = p.Cases[p.Cases.length - 1]?.CrimeRegisteredDate;
-      
-      // Extract unique categories, districts, stations
-      p.CrimeCategories = Array.from(new Set(p.Cases.map((c: any) => Number(c.CrimeMajorHeadID)))).filter(id => id);
-      p.Districts = Array.from(new Set(p.Cases.map((c: any) => Number(c.DistrictID || c.PoliceStationID)))).filter(id => id); // fallback to station if DistrictID absent
-      p.Stations = Array.from(new Set(p.Cases.map((c: any) => Number(c.PoliceStationID)))).filter(id => id);
-      
-      // Determine highest gravity/severity among their cases (lower ID usually means higher severity, e.g. 1=Heinous)
-      const gravities = p.Cases.map((c: any) => Number(c.GravityOffenceID)).filter((id: number) => !isNaN(id) && id > 0);
-      p.MaxGravity = gravities.length > 0 ? Math.min(...gravities) : 99;
+    // Pagination
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 25;
+    const startIndex = (page - 1) * pageSize;
+    const paginatedChunk = results.slice(startIndex, startIndex + pageSize);
 
-      return p;
+    const data = paginatedChunk.map(p => {
+      const { Cases, ...rest } = p;
+      return rest;
     });
 
-    res.json(repeatOffenders);
+    res.json({
+      data,
+      summary,
+      pagination: {
+        page,
+        pageSize,
+        total: results.length,
+        totalPages: Math.ceil(results.length / pageSize)
+      }
+    });
   } catch (error: any) {
     console.error('getRepeatedOffenders error:', error);
     res.status(500).json({ error: 'Failed to fetch repeated offenders', details: error?.message });
+  }
+});
+
+app.get('/api/repeated-offenders/:personId', async (req, res) => {
+  try {
+    const personId = req.params.personId;
+    if (!repeatedOffendersCache.data) {
+      return res.status(404).json({ error: 'Cache missing. Please query the main endpoint first.' });
+    }
+    const offender = repeatedOffendersCache.data.find(p => p.PersonID === personId);
+    if (!offender) return res.status(404).json({ error: 'Offender not found' });
+    
+    res.json(offender.Cases);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch offender cases' });
   }
 });
 

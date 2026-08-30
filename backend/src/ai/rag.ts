@@ -2,7 +2,7 @@ import { chatComplete, ChatMessage } from './catalystLLM';
 import { buildSystemPrompt } from './promptBuilder';
 import { aiLogger } from './logger';
 
-export const generateAnswer = async (question: string, context: any, chatHistory: any[] = [], req?: any) => {
+export const generateAnswer = async (question: string, context: any, chatHistory: any[] = [], req?: any, plan?: any) => {
   try {
     const systemPrompt = await buildSystemPrompt(req);
 
@@ -11,7 +11,11 @@ export const generateAnswer = async (question: string, context: any, chatHistory
       userContent += `Database Context:\n${JSON.stringify(context, null, 2)}\n\n`;
       userContent += `Please answer the user's question using strictly the Database Context provided above.\n`;
     } else {
-      userContent += `No relevant database context was found or queried. Answer based on available knowledge or indicate that no data is available.\n`;
+      userContent += `No database tools were queried for this question.\n`;
+      if (plan?.reasoning) {
+        userContent += `Planner reasoning: ${plan.reasoning}\n`;
+      }
+      userContent += `Please incorporate this reasoning into your response, or indicate that no data is available.\n`;
     }
 
     const messages: ChatMessage[] = [

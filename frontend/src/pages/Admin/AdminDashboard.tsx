@@ -5,7 +5,7 @@ import { useDbConnection } from '../../hooks/useDbConnection';
 import { getAIDashboard } from '../../services/aiService';
 import { 
   FileText, CheckCircle, Clock, AlertTriangle, Shield, MapPin, 
-  TrendingUp, Users, Brain, ShieldAlert, Activity, Zap, BarChart2, ExternalLink
+  TrendingUp, Users, Brain, ShieldAlert, Activity, Zap, BarChart2, ExternalLink, Database, RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
@@ -118,6 +118,41 @@ export const AdminDashboard: React.FC = () => {
       value: filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length
     };
   }).filter(item => item.value > 0);
+
+  if (dbConnectionStatus === 'error') {
+    return (
+      <div className="space-y-6 select-none">
+        <div className="flex justify-between items-center border-b pb-4">
+          <div>
+            <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Operations Control</h2>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => syncData()} 
+              className="text-xs bg-ksp-navy hover:bg-ksp-navy-light text-white px-3 py-1.5 rounded-full shadow-sm font-bold transition flex items-center gap-1"
+            >
+              <RefreshCw size={14} /> Retry Connection
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm bg-red-50 text-red-700 border-red-200">
+              <AlertTriangle size={14} /> DATABASE OFFLINE
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-red-50/50 border border-red-100 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+            <Database className="text-red-500" size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Database Connection Failed</h3>
+          <p className="text-sm text-slate-500 max-w-md">
+            The dashboard cannot fetch live statistics because the CloudScale database is unreachable. 
+            Please check your local backend server and ensure it is running on the correct port.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const COLORS = ['#0B2240', '#D4AF37', '#00529B', '#EF4444', '#10B981', '#8B5CF6'];
 
