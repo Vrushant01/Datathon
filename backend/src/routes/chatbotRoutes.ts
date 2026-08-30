@@ -45,11 +45,8 @@ const chatbotHandler = async (req: Request, res: Response) => {
       const timeoutHandle = setTimeout(() => {
         timedOut = true;
         aiLogger.warn(`Chat timeout after ${timeoutMs}ms for question: "${question}"`);
-        // Send a warm-up notice as text so the frontend shows it instead of an error
-        const warmupMsg = 'The crime database is still loading into memory (this takes ~30 seconds on a cold start). Please send your question again in a moment and it will answer instantly.';
-        warmupMsg.match(/.{1,6}/g)?.forEach((chunk: string) => {
-          res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
-        });
+        const warmupMsg = 'The database query took too long to complete. Please try a simpler query or try again later.';
+        res.write(`data: ${JSON.stringify({ text: warmupMsg })}\n\n`);
         res.write(`data: [DONE]\n\n`);
         res.end();
       }, timeoutMs);

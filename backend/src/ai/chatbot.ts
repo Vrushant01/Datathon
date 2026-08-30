@@ -41,10 +41,10 @@ export class ChatSession {
       // incremental delivery so the existing UI typing effect still works;
       // swap for real SSE once the streaming response shape is verified.
       if (AI_CONFIG.ENABLE_STREAMING && onToken) {
-        const chunkSize = 6;
-        for (let i = 0; i < answer.length; i += chunkSize) {
-          onToken(answer.slice(i, i + chunkSize));
-        }
+        // Send the entire generated response as a single chunk.
+        // Attempting to simulate typing synchronously with hundreds of tiny chunks
+        // floods the AppSail proxy buffer and causes missing/corrupted SSE events in production.
+        onToken(answer);
       }
 
       this.history.push({ role: 'assistant', content: answer });
