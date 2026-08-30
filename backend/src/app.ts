@@ -137,16 +137,29 @@ app.get('/api/forensic', async (req, res) => {
     await checkRecord('accuseds', 'CaseMasterID', 100001);
     await checkRecord('victims', 'CaseMasterID', 100001);
 
+    if (req.query.zcql) {
+      const zcql = catalystApp.zcql();
+      const zcqlRes = await zcql.executeZCQLQuery(req.query.zcql as string);
+      return res.json({ zcqlRes });
+    }
+
     const projectDetails = { error: "Not supported in this SDK version" };
-
-    res.json({
-      projectDetails: projectDetails,
-      forensicResults: results,
-      dbProvider: process.env.DB_PROVIDER || 'mongo',
-    });
-
+    res.json({ projectDetails, forensicResults: results, dbProvider: 'cloudscale' });
   } catch (error: any) {
-    res.status(500).json({ error: error.message, stack: error.stack });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/zcql', express.json(), async (req, res) => {
+  try {
+    const catalyst = require('zcatalyst-sdk-node');
+    const catalystApp = catalyst.initialize(req);
+    const zcql = catalystApp.zcql();
+    const query = req.body.query;
+    const zcqlRes = await zcql.executeZCQLQuery(query);
+    res.json(zcqlRes);
+  } catch(e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 
