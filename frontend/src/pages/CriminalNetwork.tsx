@@ -397,7 +397,7 @@ export const CriminalNetwork: React.FC = () => {
   );
 
   return (
-    <div className="dark flex-1 h-full min-h-[calc(100vh-64px)] w-full bg-[#020617] text-[#e4e2e4] flex flex-col font-sans overflow-hidden select-none">
+    <div className="dark flex-1 h-full min-h-[calc(100vh-64px)] w-full bg-[#020617] text-[#e4e2e4] flex flex-col font-sans overflow-hidden select-none pb-24 xl:pb-0">
       
       {/* Stitch Design Top Header Component Inside the Page Wrapper */}
       <div className="flex justify-between items-center px-6 py-4 glass-panel border-b border-white/10 z-10 shrink-0">

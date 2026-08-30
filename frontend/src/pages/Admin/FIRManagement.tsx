@@ -409,7 +409,7 @@ export const FIRManagement: React.FC = () => {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center">
         <div className="flex-1 w-full relative">
           <span className="absolute left-3 top-3 text-slate-400">
             <Search size={16} />
@@ -429,7 +429,7 @@ export const FIRManagement: React.FC = () => {
             setFilterDistrict(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value));
             setFilterStation('ALL');
           }}
-          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+          className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
           <option value="ALL">All Districts</option>
           {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
@@ -439,7 +439,7 @@ export const FIRManagement: React.FC = () => {
           value={filterStation}
           onChange={(e) => setFilterStation(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
           disabled={filterDistrict === 'ALL'}
-          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="ALL">All Stations in District</option>
           {filterDistrict !== 'ALL' && stations.filter(s => s.DistrictID === filterDistrict).map(s => <option key={s.UnitID} value={s.UnitID}>{s.UnitName}</option>)}
@@ -448,7 +448,7 @@ export const FIRManagement: React.FC = () => {
         <select 
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-          className="w-full md:w-36 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+          className="w-full xl:w-36 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
           <option value="ALL">All Statuses</option>
           {caseStatuses.map(s => <option key={s.CaseStatusID} value={s.CaseStatusID}>{s.CaseStatusName}</option>)}
@@ -457,7 +457,7 @@ export const FIRManagement: React.FC = () => {
         <select 
           value={filterCrimeHead}
           onChange={(e) => setFilterCrimeHead(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+          className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
           <option value="ALL">All Crime Types</option>
           {crimeHeads.map(c => <option key={c.CrimeHeadID} value={c.CrimeHeadID}>{c.CrimeGroupName}</option>)}
@@ -465,16 +465,16 @@ export const FIRManagement: React.FC = () => {
       </div>
       
       {/* Date Filters Row */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center mb-6">
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center mb-6">
          <div className="flex items-center gap-2">
            <Calendar size={14} className="text-slate-400" />
            <span className="text-xs font-bold text-slate-600">From:</span>
-           <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-2 border rounded-lg text-xs" />
+           <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-2 border rounded-lg text-xs w-full xl:w-auto" />
          </div>
          <div className="flex items-center gap-2">
            <Calendar size={14} className="text-slate-400" />
            <span className="text-xs font-bold text-slate-600">To:</span>
-           <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-2 border rounded-lg text-xs" />
+           <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-2 border rounded-lg text-xs w-full xl:w-auto" />
          </div>
          
          {(filterDistrict !== 'ALL' || filterStation !== 'ALL' || filterCrimeHead !== 'ALL' || filterStatus !== 'ALL' || filterDateFrom || filterDateTo || searchQuery) && (
@@ -496,8 +496,8 @@ export const FIRManagement: React.FC = () => {
       </div>
 
       {/* Roster Table Grid */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
+        <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
           <thead>
             <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <th className="p-4">Case / FIR No.</th>

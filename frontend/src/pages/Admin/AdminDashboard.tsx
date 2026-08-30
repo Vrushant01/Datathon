@@ -200,7 +200,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         
         <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-ksp-navy rounded-lg border border-blue-100">
@@ -242,7 +242,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4 col-span-2 lg:col-span-1">
+        <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4 col-span-2 xl:col-span-1">
           <div className="p-3 bg-slate-50 text-slate-700 rounded-lg border border-slate-200">
             <MapPin size={20} />
           </div>
@@ -255,10 +255,10 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Main Charts area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Chart 1: Monthly Trend */}
-        <div className="bg-white p-5 rounded-xl border shadow-sm lg:col-span-2 flex flex-col">
+        <div className="bg-white p-5 rounded-xl border shadow-sm xl:col-span-2 flex flex-col">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
             <TrendingUp size={14} className="text-ksp-blue" /> {trendTitle}
           </h3>

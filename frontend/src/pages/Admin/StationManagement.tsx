@@ -132,7 +132,7 @@ export const StationManagement: React.FC = () => {
       )}
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center">
         <div className="flex-1 w-full relative">
           <span className="absolute left-3 top-3 text-slate-400">
             <Search size={16} />
@@ -149,7 +149,7 @@ export const StationManagement: React.FC = () => {
         <select 
           value={filterDistrict}
           onChange={(e) => setFilterDistrict(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+          className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
           <option value="ALL">All Districts</option>
           {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
@@ -157,8 +157,8 @@ export const StationManagement: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
+        <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
           <thead>
             <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <th className="p-4">Station ID</th>
