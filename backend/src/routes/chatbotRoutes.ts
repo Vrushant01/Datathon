@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { adminJwtMiddleware } from '../middleware/adminJwt';
 import { getSession } from '../ai/chatbot';
 import { aiLogger } from '../ai/logger';
@@ -69,6 +69,20 @@ router.get('/analytics', (req, res) => {
     tokenUsage: '1.2M',
     activeSessions: 5
   });
+});
+
+import { CloudScaleRepository } from '../repositories/CloudScaleRepository';
+
+router.get('/debug/mappings', async (req: Request, res: Response) => {
+  try {
+    const repo = new CloudScaleRepository(req);
+    const cases = await repo.getAllCases();
+    res.json({
+      firstCase: cases[0] || null
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

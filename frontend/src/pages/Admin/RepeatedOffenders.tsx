@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, AlertTriangle, Activity, Database, 
   Search, SlidersHorizontal, ArrowLeftRight, Eye, ShieldAlert,
-  MapPin, Calendar, Clock, History, User, FileText, X
+  MapPin, Calendar, Clock, History, User, FileText, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
 import { mockDb } from '../../utils/mockDb';
@@ -20,7 +20,19 @@ export const RepeatedOffenders: React.FC = () => {
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
   const [filterStation, setFilterStation] = useState<number | 'ALL'>('ALL');
   const [filterCategory, setFilterCategory] = useState<number | 'ALL'>('ALL');
-  const [filterStatus, setFilterStatus] = useState<number | 'ALL'>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string | 'ALL'>('ALL');
+
+  // Pagination & Summary State
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+  const [totalPages, setTotalPages] = useState(1);
+  const [summary, setSummary] = useState({
+    totalOffenders: 0,
+    totalRepeatCases: 0,
+    highRiskCount: 0,
+    mostActiveOffender: 'N/A',
+    mostActiveCount: 0
+  });
 
   // Master lists
   const districts = mockDb.getDistricts();
@@ -29,82 +41,81 @@ export const RepeatedOffenders: React.FC = () => {
   const caseStatuses = mockDb.getCaseStatuses();
   const gravityList = mockDb.getGravityOffences();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      const response = await fetch(`${API_BASE_URL}/api/repeated-offenders`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+        minCases: minCases.toString(),
+        search: searchQuery,
+        district: filterDistrict !== 'ALL' ? filterDistrict.toString() : '',
+        station: filterStation !== 'ALL' ? filterStation.toString() : '',
+        category: filterCategory !== 'ALL' ? filterCategory.toString() : '',
+        status: filterStatus !== 'ALL' ? filterStatus : ''
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/repeated-offenders?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const jsonData = await response.json();
-      setData(jsonData);
+      setData(jsonData.data || []);
+      if (jsonData.summary) setSummary(jsonData.summary);
+      if (jsonData.pagination) setTotalPages(jsonData.pagination.totalPages || 1);
     } catch (e: any) {
       console.error(e);
       setError('Failed to load repeated offenders data.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, minCases, searchQuery, filterDistrict, filterStation, filterCategory, filterStatus]);
 
-  // -----------------------------------------------------
-  // Data Processing
-  // -----------------------------------------------------
-  const processedData = useMemo(() => {
-    return data.filter(offender => {
-      // 1. Min Cases Filter
-      if (offender.TotalCases < minCases) return false;
+  // Fetch when filters or page changes
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchData();
+    }, 300); // debounce search
+    return () => clearTimeout(delayDebounceFn);
+  }, [fetchData]);
 
-      // 2. Text Search
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        if (!offender.AccusedName.toLowerCase().includes(q) && !offender.PersonID.toLowerCase().includes(q)) {
-          return false;
-        }
-      }
-
-      // 3. District
-      if (filterDistrict !== 'ALL' && !offender.Districts.includes(filterDistrict)) return false;
-
-      // 4. Station
-      if (filterStation !== 'ALL' && !offender.Stations.includes(filterStation)) return false;
-
-      // 5. Category
-      if (filterCategory !== 'ALL' && !offender.CrimeCategories.includes(filterCategory)) return false;
-
-      // 6. Status (Active/Closed approximation for filtering)
-      if (filterStatus !== 'ALL') {
-        const hasStatus = offender.Cases.some((c: any) => c.CaseStatusID === filterStatus);
-        if (!hasStatus) return false;
-      }
-
-      return true;
-    });
-  }, [data, minCases, searchQuery, filterDistrict, filterStation, filterCategory, filterStatus]);
-
-  // Statistics
-  const totalOffenders = processedData.length;
-  const totalRepeatCases = processedData.reduce((acc, curr) => acc + curr.TotalCases, 0);
-  const highRiskCount = processedData.filter(p => p.MaxGravity === 1 || p.MaxGravity === 2).length;
-  
-  let mostActive = { AccusedName: 'N/A', TotalCases: 0 };
-  if (processedData.length > 0) {
-    mostActive = processedData.reduce((prev, current) => (prev.TotalCases > current.TotalCases) ? prev : current);
-  }
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [minCases, searchQuery, filterDistrict, filterStation, filterCategory, filterStatus]);
 
   // Details Modal
   const [selectedOffender, setSelectedOffender] = useState<any | null>(null);
+  const [offenderCases, setOffenderCases] = useState<any[]>([]);
+  const [casesLoading, setCasesLoading] = useState(false);
 
   useEffect(() => {
     if (selectedOffender) {
       document.body.style.overflow = 'hidden';
+      // Lazy load case history
+      const fetchCases = async () => {
+        setCasesLoading(true);
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/repeated-offenders/${selectedOffender.PersonID}`);
+          if (res.ok) {
+            setOffenderCases(await res.json());
+          } else {
+            console.error('Failed to load specific case history');
+            setOffenderCases([]);
+          }
+        } catch (e) {
+          console.error(e);
+          setOffenderCases([]);
+        } finally {
+          setCasesLoading(false);
+        }
+      };
+      fetchCases();
     } else {
       document.body.style.overflow = 'unset';
+      setOffenderCases([]);
     }
     return () => {
       document.body.style.overflow = 'unset';
@@ -114,7 +125,7 @@ export const RepeatedOffenders: React.FC = () => {
   const getSeverityLabel = (gravityId: number) => {
     const rec = gravityList.find(g => g.GravityOffenceID === gravityId);
     if (!rec) return 'Unknown';
-    return rec.GravityOffenceName;
+    return (rec as any).LookupValue || (rec as any).GravityOffenceName || 'Unknown';
   };
 
   const getSeverityColor = (gravityId: number) => {
@@ -138,241 +149,244 @@ export const RepeatedOffenders: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ksp-gold"></div>
-        </div>
-      ) : error ? (
+      {error && (
         <div className="bg-red-50 text-red-700 p-4 rounded-lg flex items-center gap-3">
           <AlertTriangle size={24} />
           <span className="font-semibold">{error}</span>
         </div>
-      ) : (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
-                <Users size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Repeated Offenders</p>
-                <p className="text-2xl font-black text-slate-800">{totalOffenders}</p>
-              </div>
-            </div>
-            
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
-                <Database size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Repeat Cases</p>
-                <p className="text-2xl font-black text-slate-800">{totalRepeatCases}</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-red-50 text-red-600 rounded-lg">
-                <ShieldAlert size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">High-Risk Offenders</p>
-                <p className="text-2xl font-black text-slate-800">{highRiskCount}</p>
-                <p className="text-[10px] text-slate-400 font-medium">Heinous / Grave</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-orange-50 text-orange-600 rounded-lg">
-                <Activity size={24} />
-              </div>
-              <div>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Most Active</p>
-                <p className="text-lg font-black text-slate-800 truncate" title={mostActive.AccusedName}>{mostActive.AccusedName}</p>
-                <p className="text-[10px] text-slate-400 font-medium">{mostActive.TotalCases} associated FIRs</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Filter Bar */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex-grow min-w-[200px]">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Search ID / Name</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Search offenders..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="w-32">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Min Cases</label>
-                <input
-                  type="number"
-                  min="2"
-                  value={minCases}
-                  onChange={(e) => setMinCases(parseInt(e.target.value) || 2)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="w-40">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">District</label>
-                <select
-                  value={filterDistrict}
-                  onChange={(e) => setFilterDistrict(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">All Districts</option>
-                  {districts.map(d => (
-                    <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="w-48">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Station</label>
-                <select
-                  value={filterStation}
-                  onChange={(e) => setFilterStation(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">All Stations</option>
-                  {stations.filter(s => filterDistrict === 'ALL' || s.DistrictID === filterDistrict).map(s => (
-                    <option key={s.UnitID} value={s.UnitID}>{s.UnitName}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="w-40">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Crime Category</label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">All Categories</option>
-                  {categories.map(c => (
-                    <option key={c.CrimeHeadID} value={c.CrimeHeadID}>{c.CrimeGroupName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="w-40">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status (Includes)</label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="ALL">All Statuses</option>
-                  {caseStatuses.map(s => (
-                    <option key={s.CaseStatusID} value={s.CaseStatusID}>{s.CaseStatusName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button 
-                onClick={() => {
-                  setSearchQuery('');
-                  setMinCases(2);
-                  setFilterDistrict('ALL');
-                  setFilterStation('ALL');
-                  setFilterCategory('ALL');
-                  setFilterStatus('ALL');
-                }}
-                className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-semibold transition"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-                    <th className="p-4">Offender Profile</th>
-                    <th className="p-4 text-center">Total FIRs</th>
-                    <th className="p-4 text-center">Active / Closed</th>
-                    <th className="p-4">Highest Severity</th>
-                    <th className="p-4">First Offence</th>
-                    <th className="p-4">Latest Offence</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {processedData.length > 0 ? (
-                    processedData.map((offender, idx) => (
-                      <tr key={offender.PersonID} className="border-b border-slate-100 hover:bg-blue-50/50 transition">
-                        <td className="p-4">
-                          <p className="font-bold text-slate-800">{offender.AccusedName}</p>
-                          <p className="text-xs text-slate-500 font-mono">ID: {offender.PersonID}</p>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 font-bold rounded-md">
-                            {offender.TotalCases}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{offender.ActiveCases} Act</span>
-                            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{offender.ClosedCases} Cls</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className={`inline-block px-2 py-1 border rounded text-[10px] font-bold uppercase tracking-wider ${getSeverityColor(offender.MaxGravity)}`}>
-                            {getSeverityLabel(offender.MaxGravity)}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <Calendar size={14} className="text-slate-400" />
-                            {offender.FirstCaseDate?.split('T')[0] || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <Clock size={14} className="text-slate-400" />
-                            {offender.LatestCaseDate?.split('T')[0] || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="p-4 text-right">
-                          <button 
-                            onClick={() => setSelectedOffender(offender)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition"
-                          >
-                            <Eye size={14} /> Profile
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
-                        No repeated offenders found matching your criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
       )}
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Repeated Offenders</p>
+            <p className="text-2xl font-black text-slate-800">{summary.totalOffenders}</p>
+          </div>
+        </div>
+        
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+            <Database size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Repeat Cases</p>
+            <p className="text-2xl font-black text-slate-800">{summary.totalRepeatCases}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-red-50 text-red-600 rounded-lg">
+            <ShieldAlert size={24} />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">High-Risk Offenders</p>
+            <p className="text-2xl font-black text-slate-800">{summary.highRiskCount}</p>
+            <p className="text-[10px] text-slate-400 font-medium">Heinous / Grave</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-orange-50 text-orange-600 rounded-lg">
+            <Activity size={24} />
+          </div>
+          <div className="overflow-hidden">
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Most Active</p>
+            <p className="text-lg font-black text-slate-800 truncate" title={summary.mostActiveOffender}>{summary.mostActiveOffender}</p>
+            <p className="text-[10px] text-slate-400 font-medium">{summary.mostActiveCount} associated FIRs</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap gap-4 items-end">
+          <div className="flex-grow min-w-[150px]">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Search ID / Name</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-2 text-slate-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search offenders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="w-24">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Min Cases</label>
+            <input
+              type="number"
+              min="2"
+              value={minCases}
+              onChange={(e) => setMinCases(parseInt(e.target.value) || 2)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="w-32">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">District</label>
+            <select
+              value={filterDistrict}
+              onChange={(e) => setFilterDistrict(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Districts</option>
+              {districts.map(d => (
+                <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-40">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Station</label>
+            <select
+              value={filterStation}
+              onChange={(e) => setFilterStation(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Stations</option>
+              {stations.filter(s => filterDistrict === 'ALL' || s.DistrictID === filterDistrict).map(s => (
+                <option key={s.UnitID} value={s.UnitID}>{s.UnitName}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="w-36">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Crime Category</label>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Categories</option>
+              {categories.map(c => (
+                <option key={c.CrimeHeadID} value={c.CrimeHeadID}>{c.CrimeGroupName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-32">
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="active">Active Only</option>
+              <option value="closed">Closed Only</option>
+            </select>
+          </div>
+
+          <button 
+            onClick={() => {
+              setSearchQuery('');
+              setMinCases(2);
+              setFilterDistrict('ALL');
+              setFilterStation('ALL');
+              setFilterCategory('ALL');
+              setFilterStatus('ALL');
+            }}
+            className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-semibold transition"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative min-h-[300px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-ksp-gold"></div>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                <th className="p-4">Offender Profile</th>
+                <th className="p-4 text-center">Total FIRs</th>
+                <th className="p-4 text-center">Active / Closed</th>
+                <th className="p-4">Highest Severity</th>
+                <th className="p-4">First Offence</th>
+                <th className="p-4">Latest Offence</th>
+                <th className="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {data.length > 0 ? (
+                data.map((offender, idx) => (
+                  <tr key={offender.PersonID} className="border-b border-slate-100 hover:bg-blue-50/50 transition">
+                    <td className="p-4">
+                      <p className="font-bold text-slate-800">{offender.AccusedName}</p>
+                      <p className="text-xs text-slate-500 font-mono">ID: {offender.PersonID}</p>
+                    </td>
+                    <td className="p-4 text-center">
+                      <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 font-bold rounded-md">
+                        {offender.TotalCases}
+                      </span>
+                    </td>
+                    <td className="p-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{offender.ActiveCases} Act</span>
+                        <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{offender.ClosedCases} Cls</span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className={`inline-block px-2 py-1 border rounded text-[10px] font-bold uppercase tracking-wider ${getSeverityColor(offender.MaxGravity)}`}>
+                        {getSeverityLabel(offender.MaxGravity)}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <Calendar size={14} className="text-slate-400" />
+                        {offender.FirstCaseDate?.split('T')[0] || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-1.5 text-slate-600">
+                        <Clock size={14} className="text-slate-400" />
+                        {offender.LatestCaseDate?.split('T')[0] || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button 
+                        onClick={() => setSelectedOffender(offender)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-bold transition"
+                      >
+                        <Eye size={14} /> Profile
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
+                    {loading ? 'Fetching data...' : 'No repeated offenders found matching your criteria.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination Controls */}
+        <div className="bg-slate-50 border-t p-4 flex justify-center items-center text-sm font-medium text-slate-500">
+          Showing top {data.length} results out of {summary.totalOffenders}. Please use the search bar to refine.
+        </div>
+      </div>
 
       {/* Details Modal */}
       {selectedOffender && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden animate-fade-in-up">
+        <div className="fixed inset-0 z-50 flex justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-auto flex flex-col overflow-hidden animate-fade-in-up max-h-[calc(100vh-48px)]">
             
             {/* Modal Header */}
             <div className="bg-ksp-navy text-white p-5 flex justify-between items-center shrink-0 border-b-4 border-ksp-gold">
@@ -406,8 +420,15 @@ export const RepeatedOffenders: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto bg-slate-50 flex-grow min-h-0">
+            <div className="p-6 overflow-y-auto bg-slate-50 flex-grow min-h-0 relative">
               
+              {casesLoading && (
+                <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-sm flex items-center justify-center z-10 flex-col gap-3">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-ksp-gold"></div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fetching Complete Case History...</p>
+                </div>
+              )}
+
               {/* Summary Strip */}
               <div className="flex flex-wrap gap-4 mb-6 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
                 <div>
@@ -442,7 +463,7 @@ export const RepeatedOffenders: React.FC = () => {
 
               {/* Timeline */}
               <div className="relative pl-6 border-l-2 border-slate-200 space-y-6">
-                {selectedOffender.Cases.map((c: any, index: number) => {
+                {offenderCases.map((c: any, index: number) => {
                   const sLabel = getSeverityLabel(c.GravityOffenceID);
                   const sColor = getSeverityColor(c.GravityOffenceID);
                   const dist = districts.find(d => d.DistrictID === (c.DistrictID || c.PoliceStationID))?.DistrictName || 'Unknown';
