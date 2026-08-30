@@ -78,14 +78,13 @@ export const AIAssistant: React.FC = () => {
     setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true }]);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/chatbot/chat`, {
-        method: 'POST',
+      const q = encodeURIComponent(question);
+      const sid = encodeURIComponent('admin-session-1');
+      const response = await fetch(`${API_BASE_URL}/api/chatbot/chat?question=${q}&sessionId=${sid}`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ question, sessionId: 'admin-session-1' })
+          'Accept': 'text/event-stream'
+        }
       });
 
       if (!response.ok) {

@@ -21,9 +21,11 @@ router.post('/reindex', async (req, res) => {
   }
 });
 
-router.post('/chat', async (req, res) => {
+router.all('/chat', async (req, res) => {
   try {
-    const { question, sessionId = 'default' } = req.body;
+    const question = req.body.question || req.query.question;
+    const sessionId = req.body.sessionId || req.query.sessionId || 'default';
+    
     if (!question) {
       return res.status(400).json({ error: 'Question is required' });
     }
