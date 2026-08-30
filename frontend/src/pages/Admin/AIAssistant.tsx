@@ -48,7 +48,11 @@ export const AIAssistant: React.FC = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/chatbot/analytics`);
+      const res = await fetch(`${API_BASE_URL}/api/chatbot/analytics`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       const data = await res.json();
       setAnalyticsData(data);
     } catch (err) {
@@ -78,7 +82,8 @@ export const AIAssistant: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream'
+          'Accept': 'text/event-stream',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({ question, sessionId: 'admin-session-1' })
       });
