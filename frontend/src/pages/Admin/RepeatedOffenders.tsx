@@ -33,6 +33,17 @@ export const RepeatedOffenders: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (selectedOffender) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedOffender]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -359,7 +370,7 @@ export const RepeatedOffenders: React.FC = () => {
       {/* Details Modal */}
       {selectedOffender && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-up">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[calc(100vh-40px)] flex flex-col overflow-hidden animate-fade-in-up">
             
             {/* Modal Header */}
             <div className="bg-ksp-navy text-white p-5 flex justify-between items-center shrink-0 border-b-4 border-ksp-gold">
@@ -393,7 +404,7 @@ export const RepeatedOffenders: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto bg-slate-50 flex-grow">
+            <div className="p-6 overflow-y-auto bg-slate-50 flex-grow min-h-0">
               
               {/* Summary Strip */}
               <div className="flex flex-wrap gap-4 mb-6 p-4 bg-white border border-slate-200 rounded-lg shadow-sm">
