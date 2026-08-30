@@ -21,7 +21,7 @@ router.post('/reindex', async (req, res) => {
   }
 });
 
-router.all('/chat', async (req, res) => {
+const chatbotHandler = async (req: Request, res: Response) => {
   try {
     const question = req.body.question || req.query.question;
     const sessionId = req.body.sessionId || req.query.sessionId || 'default';
@@ -30,7 +30,7 @@ router.all('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Question is required' });
     }
 
-    const session = getSession(sessionId);
+    const session = getSession(sessionId as string);
 
     if (req.headers.accept === 'text/event-stream') {
       res.setHeader('Content-Type', 'text/event-stream');
@@ -55,7 +55,7 @@ router.all('/chat', async (req, res) => {
       }, timeoutMs);
 
       try {
-        await session.processMessage(req, question, (token) => {
+        await session.processMessage(req, question as string, (token) => {
           if (!timedOut) {
             res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
           }
@@ -68,7 +68,7 @@ router.all('/chat', async (req, res) => {
         clearTimeout(timeoutHandle);
       }
     } else {
-      const answer = await session.processMessage(req, question);
+      const answer = await session.processMessage(req, question as string);
       res.json({ answer });
     }
   } catch (err: any) {
@@ -81,7 +81,10 @@ router.all('/chat', async (req, res) => {
       res.status(500).json({ error: err.message });
     }
   }
-});
+};
+
+router.get('/chat', chatbotHandler);
+router.post('/chat', chatbotHandler);
 
 
 router.get('/analytics', (req, res) => {
