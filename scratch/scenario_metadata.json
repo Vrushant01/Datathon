@@ -1,0 +1,1802 @@
+[
+  {
+    "scenario_id": "SCN-1",
+    "scenario_type": "repeat_offender",
+    "station_id": 2672,
+    "crime_head": 100,
+    "days_ago_start": 234.73133290974295,
+    "days_ago_end": 227.73133290974295,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-2",
+    "scenario_type": "repeat_offender",
+    "station_id": 2623,
+    "crime_head": 100,
+    "days_ago_start": 245.91456461604065,
+    "days_ago_end": 238.91456461604065,
+    "count": 11
+  },
+  {
+    "scenario_id": "SCN-3",
+    "scenario_type": "night_concentration",
+    "station_id": 2291,
+    "crime_head": 200,
+    "days_ago_start": 171.81260116643782,
+    "days_ago_end": 164.81260116643782,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-4",
+    "scenario_type": "night_concentration",
+    "station_id": 2396,
+    "crime_head": 200,
+    "days_ago_start": 45.58093917251625,
+    "days_ago_end": 38.58093917251625,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-5",
+    "scenario_type": "night_concentration",
+    "station_id": 2430,
+    "crime_head": 200,
+    "days_ago_start": 306.1591819494228,
+    "days_ago_end": 299.1591819494228,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-6",
+    "scenario_type": "night_concentration",
+    "station_id": 2224,
+    "crime_head": 200,
+    "days_ago_start": 194.19696013815758,
+    "days_ago_end": 187.19696013815758,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-7",
+    "scenario_type": "night_concentration",
+    "station_id": 2529,
+    "crime_head": 200,
+    "days_ago_start": 257.8878819205552,
+    "days_ago_end": 250.88788192055517,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-8",
+    "scenario_type": "night_concentration",
+    "station_id": 2552,
+    "crime_head": 200,
+    "days_ago_start": 320.02333999811367,
+    "days_ago_end": 313.02333999811367,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-9",
+    "scenario_type": "sustained_spike",
+    "station_id": 2466,
+    "crime_head": 300,
+    "days_ago_start": 228.95080424134224,
+    "days_ago_end": 214.95080424134224,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-10",
+    "scenario_type": "repeat_offender",
+    "station_id": 2550,
+    "crime_head": 100,
+    "days_ago_start": 167.85763739641342,
+    "days_ago_end": 160.85763739641342,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-11",
+    "scenario_type": "gradual_increase",
+    "station_id": 2514,
+    "crime_head": 200,
+    "days_ago_start": 330.420006980955,
+    "days_ago_end": 309.420006980955,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-12",
+    "scenario_type": "short_spike",
+    "station_id": 2583,
+    "crime_head": 600,
+    "days_ago_start": 170.88784948540342,
+    "days_ago_end": 163.88784948540342,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-13",
+    "scenario_type": "gradual_increase",
+    "station_id": 2499,
+    "crime_head": 300,
+    "days_ago_start": 218.93105742452155,
+    "days_ago_end": 197.93105742452155,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-14",
+    "scenario_type": "short_spike",
+    "station_id": 2831,
+    "crime_head": 200,
+    "days_ago_start": 302.64826002382426,
+    "days_ago_end": 295.64826002382426,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-15",
+    "scenario_type": "sustained_spike",
+    "station_id": 2393,
+    "crime_head": 400,
+    "days_ago_start": 304.5265225205123,
+    "days_ago_end": 290.5265225205123,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-16",
+    "scenario_type": "short_spike",
+    "station_id": 2067,
+    "crime_head": 300,
+    "days_ago_start": 152.19455825347367,
+    "days_ago_end": 145.19455825347367,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-17",
+    "scenario_type": "night_concentration",
+    "station_id": 2067,
+    "crime_head": 200,
+    "days_ago_start": 35.684272135976656,
+    "days_ago_end": 28.684272135976656,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-18",
+    "scenario_type": "night_concentration",
+    "station_id": 2186,
+    "crime_head": 200,
+    "days_ago_start": 270.74842651430276,
+    "days_ago_end": 263.74842651430276,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-19",
+    "scenario_type": "night_concentration",
+    "station_id": 2657,
+    "crime_head": 200,
+    "days_ago_start": 235.0280147551914,
+    "days_ago_end": 228.0280147551914,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-20",
+    "scenario_type": "repeat_offender",
+    "station_id": 2811,
+    "crime_head": 100,
+    "days_ago_start": 47.899717254397345,
+    "days_ago_end": 40.899717254397345,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-21",
+    "scenario_type": "sustained_spike",
+    "station_id": 2679,
+    "crime_head": 200,
+    "days_ago_start": 241.4120271344967,
+    "days_ago_end": 227.4120271344967,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-22",
+    "scenario_type": "night_concentration",
+    "station_id": 2418,
+    "crime_head": 200,
+    "days_ago_start": 105.45914523406867,
+    "days_ago_end": 98.45914523406867,
+    "count": 24
+  },
+  {
+    "scenario_id": "SCN-23",
+    "scenario_type": "short_spike",
+    "station_id": 2815,
+    "crime_head": 200,
+    "days_ago_start": 67.8118726777712,
+    "days_ago_end": 60.811872677771206,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-24",
+    "scenario_type": "night_concentration",
+    "station_id": 2064,
+    "crime_head": 200,
+    "days_ago_start": 63.98658397831298,
+    "days_ago_end": 56.98658397831298,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-25",
+    "scenario_type": "sustained_spike",
+    "station_id": 2390,
+    "crime_head": 500,
+    "days_ago_start": 287.0653176866368,
+    "days_ago_end": 273.0653176866368,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-26",
+    "scenario_type": "repeat_offender",
+    "station_id": 2608,
+    "crime_head": 100,
+    "days_ago_start": 127.23641975452625,
+    "days_ago_end": 120.23641975452625,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-27",
+    "scenario_type": "gradual_increase",
+    "station_id": 2612,
+    "crime_head": 300,
+    "days_ago_start": 49.19463102814522,
+    "days_ago_end": 28.194631028145217,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-28",
+    "scenario_type": "night_concentration",
+    "station_id": 2066,
+    "crime_head": 200,
+    "days_ago_start": 61.437169563408034,
+    "days_ago_end": 54.437169563408034,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-29",
+    "scenario_type": "night_concentration",
+    "station_id": 2261,
+    "crime_head": 200,
+    "days_ago_start": 188.24442758494536,
+    "days_ago_end": 181.24442758494536,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-30",
+    "scenario_type": "short_spike",
+    "station_id": 2886,
+    "crime_head": 600,
+    "days_ago_start": 230.3115558076614,
+    "days_ago_end": 223.3115558076614,
+    "count": 8
+  },
+  {
+    "scenario_id": "SCN-31",
+    "scenario_type": "sustained_spike",
+    "station_id": 2444,
+    "crime_head": 500,
+    "days_ago_start": 220.8882118567161,
+    "days_ago_end": 206.8882118567161,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-32",
+    "scenario_type": "night_concentration",
+    "station_id": 2864,
+    "crime_head": 200,
+    "days_ago_start": 336.30865973986715,
+    "days_ago_end": 329.30865973986715,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-33",
+    "scenario_type": "repeat_offender",
+    "station_id": 2846,
+    "crime_head": 100,
+    "days_ago_start": 53.23673699507484,
+    "days_ago_end": 46.23673699507484,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-34",
+    "scenario_type": "gradual_increase",
+    "station_id": 2315,
+    "crime_head": 100,
+    "days_ago_start": 167.2477862751004,
+    "days_ago_end": 146.2477862751004,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-35",
+    "scenario_type": "repeat_offender",
+    "station_id": 2098,
+    "crime_head": 100,
+    "days_ago_start": 182.6103443127634,
+    "days_ago_end": 175.6103443127634,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-36",
+    "scenario_type": "sustained_spike",
+    "station_id": 2855,
+    "crime_head": 500,
+    "days_ago_start": 119.05792513654762,
+    "days_ago_end": 105.05792513654762,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-37",
+    "scenario_type": "repeat_offender",
+    "station_id": 2909,
+    "crime_head": 100,
+    "days_ago_start": 46.04895247726429,
+    "days_ago_end": 39.04895247726429,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-38",
+    "scenario_type": "gradual_increase",
+    "station_id": 2758,
+    "crime_head": 500,
+    "days_ago_start": 268.09192890800915,
+    "days_ago_end": 247.09192890800915,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-39",
+    "scenario_type": "sustained_spike",
+    "station_id": 2286,
+    "crime_head": 600,
+    "days_ago_start": 33.72773231254872,
+    "days_ago_end": 19.727732312548717,
+    "count": 24
+  },
+  {
+    "scenario_id": "SCN-40",
+    "scenario_type": "repeat_offender",
+    "station_id": 2496,
+    "crime_head": 100,
+    "days_ago_start": 248.93283030845797,
+    "days_ago_end": 241.93283030845797,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-41",
+    "scenario_type": "gradual_increase",
+    "station_id": 2718,
+    "crime_head": 400,
+    "days_ago_start": 86.52464696138281,
+    "days_ago_end": 65.52464696138281,
+    "count": 34
+  },
+  {
+    "scenario_id": "SCN-42",
+    "scenario_type": "short_spike",
+    "station_id": 2236,
+    "crime_head": 100,
+    "days_ago_start": 93.1346966827222,
+    "days_ago_end": 86.1346966827222,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-43",
+    "scenario_type": "night_concentration",
+    "station_id": 2885,
+    "crime_head": 200,
+    "days_ago_start": 59.556478136356574,
+    "days_ago_end": 52.556478136356574,
+    "count": 16
+  },
+  {
+    "scenario_id": "SCN-44",
+    "scenario_type": "night_concentration",
+    "station_id": 2623,
+    "crime_head": 200,
+    "days_ago_start": 86.98345845502793,
+    "days_ago_end": 79.98345845502793,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-45",
+    "scenario_type": "gradual_increase",
+    "station_id": 2625,
+    "crime_head": 300,
+    "days_ago_start": 232.77367336726945,
+    "days_ago_end": 211.77367336726945,
+    "count": 27
+  },
+  {
+    "scenario_id": "SCN-46",
+    "scenario_type": "gradual_increase",
+    "station_id": 2660,
+    "crime_head": 100,
+    "days_ago_start": 225.20686690921957,
+    "days_ago_end": 204.20686690921957,
+    "count": 28
+  },
+  {
+    "scenario_id": "SCN-47",
+    "scenario_type": "gradual_increase",
+    "station_id": 2884,
+    "crime_head": 500,
+    "days_ago_start": 328.3051710411749,
+    "days_ago_end": 307.3051710411749,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-48",
+    "scenario_type": "gradual_increase",
+    "station_id": 2077,
+    "crime_head": 500,
+    "days_ago_start": 213.2284213016003,
+    "days_ago_end": 192.2284213016003,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-49",
+    "scenario_type": "sustained_spike",
+    "station_id": 2881,
+    "crime_head": 400,
+    "days_ago_start": 104.36973383963533,
+    "days_ago_end": 90.36973383963533,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-50",
+    "scenario_type": "night_concentration",
+    "station_id": 2855,
+    "crime_head": 200,
+    "days_ago_start": 344.65937887411843,
+    "days_ago_end": 337.65937887411843,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-51",
+    "scenario_type": "repeat_offender",
+    "station_id": 2714,
+    "crime_head": 100,
+    "days_ago_start": 47.55682356716104,
+    "days_ago_end": 40.55682356716104,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-52",
+    "scenario_type": "gradual_increase",
+    "station_id": 2870,
+    "crime_head": 600,
+    "days_ago_start": 82.93588500653343,
+    "days_ago_end": 61.935885006533425,
+    "count": 27
+  },
+  {
+    "scenario_id": "SCN-53",
+    "scenario_type": "sustained_spike",
+    "station_id": 2631,
+    "crime_head": 600,
+    "days_ago_start": 267.9318436632401,
+    "days_ago_end": 253.9318436632401,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-54",
+    "scenario_type": "gradual_increase",
+    "station_id": 2203,
+    "crime_head": 600,
+    "days_ago_start": 119.04244007126803,
+    "days_ago_end": 98.04244007126803,
+    "count": 28
+  },
+  {
+    "scenario_id": "SCN-55",
+    "scenario_type": "sustained_spike",
+    "station_id": 2093,
+    "crime_head": 200,
+    "days_ago_start": 197.22802790066896,
+    "days_ago_end": 183.22802790066896,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-56",
+    "scenario_type": "short_spike",
+    "station_id": 2320,
+    "crime_head": 600,
+    "days_ago_start": 304.46216187207943,
+    "days_ago_end": 297.46216187207943,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-57",
+    "scenario_type": "night_concentration",
+    "station_id": 2283,
+    "crime_head": 200,
+    "days_ago_start": 245.10411731152547,
+    "days_ago_end": 238.10411731152547,
+    "count": 16
+  },
+  {
+    "scenario_id": "SCN-58",
+    "scenario_type": "short_spike",
+    "station_id": 2215,
+    "crime_head": 500,
+    "days_ago_start": 204.613341719649,
+    "days_ago_end": 197.613341719649,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-59",
+    "scenario_type": "gradual_increase",
+    "station_id": 2825,
+    "crime_head": 200,
+    "days_ago_start": 80.27012802520258,
+    "days_ago_end": 59.27012802520258,
+    "count": 34
+  },
+  {
+    "scenario_id": "SCN-60",
+    "scenario_type": "repeat_offender",
+    "station_id": 2370,
+    "crime_head": 100,
+    "days_ago_start": 191.35687531970598,
+    "days_ago_end": 184.35687531970598,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-61",
+    "scenario_type": "repeat_offender",
+    "station_id": 2248,
+    "crime_head": 100,
+    "days_ago_start": 178.11056213287458,
+    "days_ago_end": 171.11056213287458,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-62",
+    "scenario_type": "gradual_increase",
+    "station_id": 2153,
+    "crime_head": 600,
+    "days_ago_start": 343.80727223722556,
+    "days_ago_end": 322.80727223722556,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-63",
+    "scenario_type": "gradual_increase",
+    "station_id": 2240,
+    "crime_head": 300,
+    "days_ago_start": 253.57411895929607,
+    "days_ago_end": 232.57411895929607,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-64",
+    "scenario_type": "sustained_spike",
+    "station_id": 2582,
+    "crime_head": 300,
+    "days_ago_start": 285.2578156999693,
+    "days_ago_end": 271.2578156999693,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-65",
+    "scenario_type": "night_concentration",
+    "station_id": 2907,
+    "crime_head": 200,
+    "days_ago_start": 134.2867253855235,
+    "days_ago_end": 127.28672538552351,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-66",
+    "scenario_type": "night_concentration",
+    "station_id": 2006,
+    "crime_head": 200,
+    "days_ago_start": 93.12902900333349,
+    "days_ago_end": 86.12902900333349,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-67",
+    "scenario_type": "short_spike",
+    "station_id": 2012,
+    "crime_head": 400,
+    "days_ago_start": 257.02643456227423,
+    "days_ago_end": 250.02643456227423,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-68",
+    "scenario_type": "gradual_increase",
+    "station_id": 2789,
+    "crime_head": 300,
+    "days_ago_start": 260.5380333023113,
+    "days_ago_end": 239.5380333023113,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-69",
+    "scenario_type": "gradual_increase",
+    "station_id": 2800,
+    "crime_head": 500,
+    "days_ago_start": 84.62113526606643,
+    "days_ago_end": 63.62113526606643,
+    "count": 33
+  },
+  {
+    "scenario_id": "SCN-70",
+    "scenario_type": "short_spike",
+    "station_id": 2487,
+    "crime_head": 600,
+    "days_ago_start": 203.13725509461398,
+    "days_ago_end": 196.13725509461398,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-71",
+    "scenario_type": "sustained_spike",
+    "station_id": 2374,
+    "crime_head": 600,
+    "days_ago_start": 141.13566999809083,
+    "days_ago_end": 127.13566999809083,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-72",
+    "scenario_type": "sustained_spike",
+    "station_id": 2590,
+    "crime_head": 200,
+    "days_ago_start": 307.53306801925055,
+    "days_ago_end": 293.53306801925055,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-73",
+    "scenario_type": "short_spike",
+    "station_id": 2784,
+    "crime_head": 400,
+    "days_ago_start": 310.52784145516546,
+    "days_ago_end": 303.52784145516546,
+    "count": 9
+  },
+  {
+    "scenario_id": "SCN-74",
+    "scenario_type": "gradual_increase",
+    "station_id": 2889,
+    "crime_head": 500,
+    "days_ago_start": 334.5587288451986,
+    "days_ago_end": 313.5587288451986,
+    "count": 30
+  },
+  {
+    "scenario_id": "SCN-75",
+    "scenario_type": "repeat_offender",
+    "station_id": 2019,
+    "crime_head": 100,
+    "days_ago_start": 49.35597268865166,
+    "days_ago_end": 42.35597268865166,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-76",
+    "scenario_type": "sustained_spike",
+    "station_id": 2846,
+    "crime_head": 600,
+    "days_ago_start": 73.48253826633723,
+    "days_ago_end": 59.48253826633723,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-77",
+    "scenario_type": "sustained_spike",
+    "station_id": 2723,
+    "crime_head": 600,
+    "days_ago_start": 56.46239750852562,
+    "days_ago_end": 42.46239750852562,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-78",
+    "scenario_type": "repeat_offender",
+    "station_id": 2382,
+    "crime_head": 100,
+    "days_ago_start": 50.32519599046026,
+    "days_ago_end": 43.32519599046026,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-79",
+    "scenario_type": "sustained_spike",
+    "station_id": 2651,
+    "crime_head": 400,
+    "days_ago_start": 269.1248036013968,
+    "days_ago_end": 255.12480360139682,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-80",
+    "scenario_type": "sustained_spike",
+    "station_id": 2855,
+    "crime_head": 300,
+    "days_ago_start": 275.4328086267791,
+    "days_ago_end": 261.4328086267791,
+    "count": 27
+  },
+  {
+    "scenario_id": "SCN-81",
+    "scenario_type": "gradual_increase",
+    "station_id": 2454,
+    "crime_head": 400,
+    "days_ago_start": 325.9594472347926,
+    "days_ago_end": 304.9594472347926,
+    "count": 31
+  },
+  {
+    "scenario_id": "SCN-82",
+    "scenario_type": "night_concentration",
+    "station_id": 2521,
+    "crime_head": 200,
+    "days_ago_start": 246.2063894782773,
+    "days_ago_end": 239.2063894782773,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-83",
+    "scenario_type": "repeat_offender",
+    "station_id": 2091,
+    "crime_head": 100,
+    "days_ago_start": 345.91878042121124,
+    "days_ago_end": 338.91878042121124,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-84",
+    "scenario_type": "night_concentration",
+    "station_id": 2550,
+    "crime_head": 200,
+    "days_ago_start": 32.528466045889175,
+    "days_ago_end": 25.528466045889175,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-85",
+    "scenario_type": "gradual_increase",
+    "station_id": 2254,
+    "crime_head": 500,
+    "days_ago_start": 88.97954831033798,
+    "days_ago_end": 67.97954831033798,
+    "count": 34
+  },
+  {
+    "scenario_id": "SCN-86",
+    "scenario_type": "night_concentration",
+    "station_id": 2756,
+    "crime_head": 200,
+    "days_ago_start": 285.39017957648406,
+    "days_ago_end": 278.39017957648406,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-87",
+    "scenario_type": "sustained_spike",
+    "station_id": 2674,
+    "crime_head": 500,
+    "days_ago_start": 154.91079283011433,
+    "days_ago_end": 140.91079283011433,
+    "count": 27
+  },
+  {
+    "scenario_id": "SCN-88",
+    "scenario_type": "repeat_offender",
+    "station_id": 2704,
+    "crime_head": 100,
+    "days_ago_start": 146.405510532946,
+    "days_ago_end": 139.405510532946,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-89",
+    "scenario_type": "repeat_offender",
+    "station_id": 2811,
+    "crime_head": 100,
+    "days_ago_start": 116.34535028084744,
+    "days_ago_end": 109.34535028084744,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-90",
+    "scenario_type": "short_spike",
+    "station_id": 2162,
+    "crime_head": 600,
+    "days_ago_start": 134.86141664209728,
+    "days_ago_end": 127.86141664209728,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-91",
+    "scenario_type": "sustained_spike",
+    "station_id": 2156,
+    "crime_head": 100,
+    "days_ago_start": 203.32871667075926,
+    "days_ago_end": 189.32871667075926,
+    "count": 28
+  },
+  {
+    "scenario_id": "SCN-92",
+    "scenario_type": "sustained_spike",
+    "station_id": 2803,
+    "crime_head": 300,
+    "days_ago_start": 276.9153533168965,
+    "days_ago_end": 262.9153533168965,
+    "count": 27
+  },
+  {
+    "scenario_id": "SCN-93",
+    "scenario_type": "gradual_increase",
+    "station_id": 2819,
+    "crime_head": 200,
+    "days_ago_start": 218.18761483616188,
+    "days_ago_end": 197.18761483616188,
+    "count": 30
+  },
+  {
+    "scenario_id": "SCN-94",
+    "scenario_type": "repeat_offender",
+    "station_id": 2124,
+    "crime_head": 100,
+    "days_ago_start": 195.69817079754142,
+    "days_ago_end": 188.69817079754142,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-95",
+    "scenario_type": "night_concentration",
+    "station_id": 2694,
+    "crime_head": 200,
+    "days_ago_start": 44.19668654400873,
+    "days_ago_end": 37.19668654400873,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-96",
+    "scenario_type": "night_concentration",
+    "station_id": 2606,
+    "crime_head": 200,
+    "days_ago_start": 94.77378989508786,
+    "days_ago_end": 87.77378989508786,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-97",
+    "scenario_type": "gradual_increase",
+    "station_id": 2076,
+    "crime_head": 100,
+    "days_ago_start": 334.37356325229376,
+    "days_ago_end": 313.37356325229376,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-98",
+    "scenario_type": "night_concentration",
+    "station_id": 2204,
+    "crime_head": 200,
+    "days_ago_start": 260.5413774298732,
+    "days_ago_end": 253.5413774298732,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-99",
+    "scenario_type": "short_spike",
+    "station_id": 2390,
+    "crime_head": 200,
+    "days_ago_start": 341.7943729930272,
+    "days_ago_end": 334.7943729930272,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-100",
+    "scenario_type": "repeat_offender",
+    "station_id": 2015,
+    "crime_head": 100,
+    "days_ago_start": 252.0852951658752,
+    "days_ago_end": 245.0852951658752,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-101",
+    "scenario_type": "gradual_increase",
+    "station_id": 2717,
+    "crime_head": 400,
+    "days_ago_start": 284.3976159066358,
+    "days_ago_end": 263.3976159066358,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-102",
+    "scenario_type": "short_spike",
+    "station_id": 2251,
+    "crime_head": 400,
+    "days_ago_start": 238.29710290587155,
+    "days_ago_end": 231.29710290587155,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-103",
+    "scenario_type": "gradual_increase",
+    "station_id": 2385,
+    "crime_head": 500,
+    "days_ago_start": 136.57757437548955,
+    "days_ago_end": 115.57757437548955,
+    "count": 34
+  },
+  {
+    "scenario_id": "SCN-104",
+    "scenario_type": "repeat_offender",
+    "station_id": 2180,
+    "crime_head": 100,
+    "days_ago_start": 230.49566277161117,
+    "days_ago_end": 223.49566277161117,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-105",
+    "scenario_type": "repeat_offender",
+    "station_id": 2628,
+    "crime_head": 100,
+    "days_ago_start": 53.461819029262756,
+    "days_ago_end": 46.461819029262756,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-106",
+    "scenario_type": "sustained_spike",
+    "station_id": 2560,
+    "crime_head": 500,
+    "days_ago_start": 204.815515552645,
+    "days_ago_end": 190.815515552645,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-107",
+    "scenario_type": "short_spike",
+    "station_id": 2693,
+    "crime_head": 500,
+    "days_ago_start": 314.6666705952166,
+    "days_ago_end": 307.6666705952166,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-108",
+    "scenario_type": "night_concentration",
+    "station_id": 2392,
+    "crime_head": 200,
+    "days_ago_start": 198.09115903041294,
+    "days_ago_end": 191.09115903041294,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-109",
+    "scenario_type": "short_spike",
+    "station_id": 2471,
+    "crime_head": 100,
+    "days_ago_start": 120.35006426772895,
+    "days_ago_end": 113.35006426772895,
+    "count": 16
+  },
+  {
+    "scenario_id": "SCN-110",
+    "scenario_type": "sustained_spike",
+    "station_id": 2720,
+    "crime_head": 400,
+    "days_ago_start": 38.2134753334207,
+    "days_ago_end": 24.213475333420703,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-111",
+    "scenario_type": "repeat_offender",
+    "station_id": 2523,
+    "crime_head": 100,
+    "days_ago_start": 192.42989218271651,
+    "days_ago_end": 185.42989218271651,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-112",
+    "scenario_type": "night_concentration",
+    "station_id": 2678,
+    "crime_head": 200,
+    "days_ago_start": 121.5853125120902,
+    "days_ago_end": 114.5853125120902,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-113",
+    "scenario_type": "gradual_increase",
+    "station_id": 2214,
+    "crime_head": 400,
+    "days_ago_start": 72.98584647076478,
+    "days_ago_end": 51.985846470764784,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-114",
+    "scenario_type": "sustained_spike",
+    "station_id": 2177,
+    "crime_head": 400,
+    "days_ago_start": 304.8426074750022,
+    "days_ago_end": 290.8426074750022,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-115",
+    "scenario_type": "repeat_offender",
+    "station_id": 2507,
+    "crime_head": 100,
+    "days_ago_start": 97.97244277951904,
+    "days_ago_end": 90.97244277951904,
+    "count": 16
+  },
+  {
+    "scenario_id": "SCN-116",
+    "scenario_type": "sustained_spike",
+    "station_id": 2794,
+    "crime_head": 100,
+    "days_ago_start": 258.8330497439855,
+    "days_ago_end": 244.8330497439855,
+    "count": 16
+  },
+  {
+    "scenario_id": "SCN-117",
+    "scenario_type": "night_concentration",
+    "station_id": 2056,
+    "crime_head": 200,
+    "days_ago_start": 104.53921201819622,
+    "days_ago_end": 97.53921201819622,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-118",
+    "scenario_type": "sustained_spike",
+    "station_id": 2047,
+    "crime_head": 500,
+    "days_ago_start": 344.67956654781744,
+    "days_ago_end": 330.67956654781744,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-119",
+    "scenario_type": "repeat_offender",
+    "station_id": 2337,
+    "crime_head": 100,
+    "days_ago_start": 194.03638295166502,
+    "days_ago_end": 187.03638295166502,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-120",
+    "scenario_type": "sustained_spike",
+    "station_id": 2120,
+    "crime_head": 500,
+    "days_ago_start": 68.88937367472505,
+    "days_ago_end": 54.88937367472505,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-121",
+    "scenario_type": "short_spike",
+    "station_id": 2067,
+    "crime_head": 500,
+    "days_ago_start": 301.43312393873595,
+    "days_ago_end": 294.43312393873595,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-122",
+    "scenario_type": "repeat_offender",
+    "station_id": 2170,
+    "crime_head": 100,
+    "days_ago_start": 59.27874496793926,
+    "days_ago_end": 52.27874496793926,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-123",
+    "scenario_type": "sustained_spike",
+    "station_id": 2107,
+    "crime_head": 100,
+    "days_ago_start": 81.03651515131922,
+    "days_ago_end": 67.03651515131922,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-124",
+    "scenario_type": "night_concentration",
+    "station_id": 2708,
+    "crime_head": 200,
+    "days_ago_start": 128.93422934448375,
+    "days_ago_end": 121.93422934448375,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-125",
+    "scenario_type": "short_spike",
+    "station_id": 2134,
+    "crime_head": 600,
+    "days_ago_start": 98.00366188737911,
+    "days_ago_end": 91.00366188737911,
+    "count": 9
+  },
+  {
+    "scenario_id": "SCN-126",
+    "scenario_type": "repeat_offender",
+    "station_id": 2540,
+    "crime_head": 100,
+    "days_ago_start": 173.28643509519384,
+    "days_ago_end": 166.28643509519384,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-127",
+    "scenario_type": "gradual_increase",
+    "station_id": 2181,
+    "crime_head": 600,
+    "days_ago_start": 108.23931901136106,
+    "days_ago_end": 87.23931901136106,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-128",
+    "scenario_type": "gradual_increase",
+    "station_id": 2538,
+    "crime_head": 500,
+    "days_ago_start": 206.45004532788388,
+    "days_ago_end": 185.45004532788388,
+    "count": 33
+  },
+  {
+    "scenario_id": "SCN-129",
+    "scenario_type": "night_concentration",
+    "station_id": 2325,
+    "crime_head": 200,
+    "days_ago_start": 289.81115619363146,
+    "days_ago_end": 282.81115619363146,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-130",
+    "scenario_type": "sustained_spike",
+    "station_id": 2024,
+    "crime_head": 300,
+    "days_ago_start": 67.23153920425148,
+    "days_ago_end": 53.231539204251476,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-131",
+    "scenario_type": "repeat_offender",
+    "station_id": 2171,
+    "crime_head": 100,
+    "days_ago_start": 58.617864974104705,
+    "days_ago_end": 51.617864974104705,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-132",
+    "scenario_type": "short_spike",
+    "station_id": 2009,
+    "crime_head": 500,
+    "days_ago_start": 140.11983209907226,
+    "days_ago_end": 133.11983209907226,
+    "count": 9
+  },
+  {
+    "scenario_id": "SCN-133",
+    "scenario_type": "short_spike",
+    "station_id": 2019,
+    "crime_head": 100,
+    "days_ago_start": 177.09876919261524,
+    "days_ago_end": 170.09876919261524,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-134",
+    "scenario_type": "sustained_spike",
+    "station_id": 2775,
+    "crime_head": 300,
+    "days_ago_start": 50.61938578010199,
+    "days_ago_end": 36.61938578010199,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-135",
+    "scenario_type": "sustained_spike",
+    "station_id": 2159,
+    "crime_head": 200,
+    "days_ago_start": 203.82995999417972,
+    "days_ago_end": 189.82995999417972,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-136",
+    "scenario_type": "sustained_spike",
+    "station_id": 2678,
+    "crime_head": 400,
+    "days_ago_start": 335.5967546272013,
+    "days_ago_end": 321.5967546272013,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-137",
+    "scenario_type": "night_concentration",
+    "station_id": 2668,
+    "crime_head": 200,
+    "days_ago_start": 314.050149553429,
+    "days_ago_end": 307.050149553429,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-138",
+    "scenario_type": "night_concentration",
+    "station_id": 2319,
+    "crime_head": 200,
+    "days_ago_start": 53.91976801294902,
+    "days_ago_end": 46.91976801294902,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-139",
+    "scenario_type": "gradual_increase",
+    "station_id": 2397,
+    "crime_head": 500,
+    "days_ago_start": 154.00502462951005,
+    "days_ago_end": 133.00502462951005,
+    "count": 32
+  },
+  {
+    "scenario_id": "SCN-140",
+    "scenario_type": "sustained_spike",
+    "station_id": 2835,
+    "crime_head": 400,
+    "days_ago_start": 41.473514880350066,
+    "days_ago_end": 27.473514880350066,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-141",
+    "scenario_type": "sustained_spike",
+    "station_id": 2915,
+    "crime_head": 400,
+    "days_ago_start": 80.15023001748733,
+    "days_ago_end": 66.15023001748733,
+    "count": 24
+  },
+  {
+    "scenario_id": "SCN-142",
+    "scenario_type": "gradual_increase",
+    "station_id": 2373,
+    "crime_head": 100,
+    "days_ago_start": 252.7546065163703,
+    "days_ago_end": 231.7546065163703,
+    "count": 28
+  },
+  {
+    "scenario_id": "SCN-143",
+    "scenario_type": "night_concentration",
+    "station_id": 2007,
+    "crime_head": 200,
+    "days_ago_start": 265.4627557813801,
+    "days_ago_end": 258.4627557813801,
+    "count": 23
+  },
+  {
+    "scenario_id": "SCN-144",
+    "scenario_type": "gradual_increase",
+    "station_id": 2234,
+    "crime_head": 200,
+    "days_ago_start": 337.38914300634684,
+    "days_ago_end": 316.38914300634684,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-145",
+    "scenario_type": "short_spike",
+    "station_id": 2411,
+    "crime_head": 600,
+    "days_ago_start": 89.9979482202838,
+    "days_ago_end": 82.9979482202838,
+    "count": 9
+  },
+  {
+    "scenario_id": "SCN-146",
+    "scenario_type": "short_spike",
+    "station_id": 2036,
+    "crime_head": 300,
+    "days_ago_start": 299.7865434492526,
+    "days_ago_end": 292.7865434492526,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-147",
+    "scenario_type": "repeat_offender",
+    "station_id": 2122,
+    "crime_head": 100,
+    "days_ago_start": 108.16113718866234,
+    "days_ago_end": 101.16113718866234,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-148",
+    "scenario_type": "gradual_increase",
+    "station_id": 2681,
+    "crime_head": 100,
+    "days_ago_start": 289.24350673967035,
+    "days_ago_end": 268.24350673967035,
+    "count": 34
+  },
+  {
+    "scenario_id": "SCN-149",
+    "scenario_type": "short_spike",
+    "station_id": 2211,
+    "crime_head": 200,
+    "days_ago_start": 240.40847093004072,
+    "days_ago_end": 233.40847093004072,
+    "count": 8
+  },
+  {
+    "scenario_id": "SCN-150",
+    "scenario_type": "repeat_offender",
+    "station_id": 2453,
+    "crime_head": 100,
+    "days_ago_start": 47.63526169049612,
+    "days_ago_end": 40.63526169049612,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-151",
+    "scenario_type": "night_concentration",
+    "station_id": 2854,
+    "crime_head": 200,
+    "days_ago_start": 123.89326089731227,
+    "days_ago_end": 116.89326089731227,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-152",
+    "scenario_type": "gradual_increase",
+    "station_id": 2095,
+    "crime_head": 600,
+    "days_ago_start": 299.59275770553666,
+    "days_ago_end": 278.59275770553666,
+    "count": 25
+  },
+  {
+    "scenario_id": "SCN-153",
+    "scenario_type": "repeat_offender",
+    "station_id": 2424,
+    "crime_head": 100,
+    "days_ago_start": 106.43508729100543,
+    "days_ago_end": 99.43508729100543,
+    "count": 16
+  },
+  {
+    "scenario_id": "SCN-154",
+    "scenario_type": "sustained_spike",
+    "station_id": 2814,
+    "crime_head": 400,
+    "days_ago_start": 102.09209122880796,
+    "days_ago_end": 88.09209122880796,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-155",
+    "scenario_type": "gradual_increase",
+    "station_id": 2492,
+    "crime_head": 300,
+    "days_ago_start": 94.19604831048258,
+    "days_ago_end": 73.19604831048258,
+    "count": 29
+  },
+  {
+    "scenario_id": "SCN-156",
+    "scenario_type": "night_concentration",
+    "station_id": 2327,
+    "crime_head": 200,
+    "days_ago_start": 36.21852803843215,
+    "days_ago_end": 29.218528038432147,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-157",
+    "scenario_type": "night_concentration",
+    "station_id": 2305,
+    "crime_head": 200,
+    "days_ago_start": 155.39145741847256,
+    "days_ago_end": 148.39145741847256,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-158",
+    "scenario_type": "repeat_offender",
+    "station_id": 2369,
+    "crime_head": 100,
+    "days_ago_start": 59.60730007497837,
+    "days_ago_end": 52.60730007497837,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-159",
+    "scenario_type": "night_concentration",
+    "station_id": 2246,
+    "crime_head": 200,
+    "days_ago_start": 68.80865399358274,
+    "days_ago_end": 61.80865399358274,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-160",
+    "scenario_type": "short_spike",
+    "station_id": 2850,
+    "crime_head": 100,
+    "days_ago_start": 102.04766888033234,
+    "days_ago_end": 95.04766888033234,
+    "count": 11
+  },
+  {
+    "scenario_id": "SCN-161",
+    "scenario_type": "gradual_increase",
+    "station_id": 2888,
+    "crime_head": 300,
+    "days_ago_start": 193.4787981906173,
+    "days_ago_end": 172.4787981906173,
+    "count": 30
+  },
+  {
+    "scenario_id": "SCN-162",
+    "scenario_type": "gradual_increase",
+    "station_id": 2397,
+    "crime_head": 600,
+    "days_ago_start": 122.02378426273552,
+    "days_ago_end": 101.02378426273552,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-163",
+    "scenario_type": "short_spike",
+    "station_id": 2514,
+    "crime_head": 100,
+    "days_ago_start": 274.0886512889978,
+    "days_ago_end": 267.0886512889978,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-164",
+    "scenario_type": "short_spike",
+    "station_id": 2143,
+    "crime_head": 200,
+    "days_ago_start": 84.13834572360663,
+    "days_ago_end": 77.13834572360663,
+    "count": 9
+  },
+  {
+    "scenario_id": "SCN-165",
+    "scenario_type": "gradual_increase",
+    "station_id": 2107,
+    "crime_head": 500,
+    "days_ago_start": 197.13657748114414,
+    "days_ago_end": 176.13657748114414,
+    "count": 33
+  },
+  {
+    "scenario_id": "SCN-166",
+    "scenario_type": "short_spike",
+    "station_id": 2415,
+    "crime_head": 600,
+    "days_ago_start": 35.06340943115781,
+    "days_ago_end": 28.063409431157808,
+    "count": 15
+  },
+  {
+    "scenario_id": "SCN-167",
+    "scenario_type": "repeat_offender",
+    "station_id": 2784,
+    "crime_head": 100,
+    "days_ago_start": 40.349999562352785,
+    "days_ago_end": 33.349999562352785,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-168",
+    "scenario_type": "short_spike",
+    "station_id": 2760,
+    "crime_head": 500,
+    "days_ago_start": 325.9962491071617,
+    "days_ago_end": 318.9962491071617,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-169",
+    "scenario_type": "repeat_offender",
+    "station_id": 2484,
+    "crime_head": 100,
+    "days_ago_start": 143.38223648646706,
+    "days_ago_end": 136.38223648646706,
+    "count": 10
+  },
+  {
+    "scenario_id": "SCN-170",
+    "scenario_type": "repeat_offender",
+    "station_id": 2096,
+    "crime_head": 100,
+    "days_ago_start": 237.20096387741546,
+    "days_ago_end": 230.20096387741546,
+    "count": 17
+  },
+  {
+    "scenario_id": "SCN-171",
+    "scenario_type": "night_concentration",
+    "station_id": 2642,
+    "crime_head": 200,
+    "days_ago_start": 347.3132972628572,
+    "days_ago_end": 340.3132972628572,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-172",
+    "scenario_type": "repeat_offender",
+    "station_id": 2354,
+    "crime_head": 100,
+    "days_ago_start": 202.1380064004918,
+    "days_ago_end": 195.1380064004918,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-173",
+    "scenario_type": "night_concentration",
+    "station_id": 2851,
+    "crime_head": 200,
+    "days_ago_start": 189.69185539384824,
+    "days_ago_end": 182.69185539384824,
+    "count": 24
+  },
+  {
+    "scenario_id": "SCN-174",
+    "scenario_type": "short_spike",
+    "station_id": 2145,
+    "crime_head": 100,
+    "days_ago_start": 112.26925097779389,
+    "days_ago_end": 105.26925097779389,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-175",
+    "scenario_type": "night_concentration",
+    "station_id": 2497,
+    "crime_head": 200,
+    "days_ago_start": 314.7252393481167,
+    "days_ago_end": 307.7252393481167,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-176",
+    "scenario_type": "repeat_offender",
+    "station_id": 2801,
+    "crime_head": 100,
+    "days_ago_start": 138.59503085013017,
+    "days_ago_end": 131.59503085013017,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-177",
+    "scenario_type": "repeat_offender",
+    "station_id": 2770,
+    "crime_head": 100,
+    "days_ago_start": 58.28394950037335,
+    "days_ago_end": 51.28394950037335,
+    "count": 13
+  },
+  {
+    "scenario_id": "SCN-178",
+    "scenario_type": "sustained_spike",
+    "station_id": 2739,
+    "crime_head": 600,
+    "days_ago_start": 305.3570836692115,
+    "days_ago_end": 291.3570836692115,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-179",
+    "scenario_type": "night_concentration",
+    "station_id": 2448,
+    "crime_head": 200,
+    "days_ago_start": 137.8770451972076,
+    "days_ago_end": 130.8770451972076,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-180",
+    "scenario_type": "gradual_increase",
+    "station_id": 2372,
+    "crime_head": 500,
+    "days_ago_start": 147.82493199141106,
+    "days_ago_end": 126.82493199141106,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-181",
+    "scenario_type": "night_concentration",
+    "station_id": 2052,
+    "crime_head": 200,
+    "days_ago_start": 76.44714743645054,
+    "days_ago_end": 69.44714743645054,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-182",
+    "scenario_type": "short_spike",
+    "station_id": 2436,
+    "crime_head": 600,
+    "days_ago_start": 216.47558295748692,
+    "days_ago_end": 209.47558295748692,
+    "count": 11
+  },
+  {
+    "scenario_id": "SCN-183",
+    "scenario_type": "sustained_spike",
+    "station_id": 2322,
+    "crime_head": 400,
+    "days_ago_start": 321.60680989596705,
+    "days_ago_end": 307.60680989596705,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-184",
+    "scenario_type": "repeat_offender",
+    "station_id": 2704,
+    "crime_head": 100,
+    "days_ago_start": 219.92098153640325,
+    "days_ago_end": 212.92098153640325,
+    "count": 12
+  },
+  {
+    "scenario_id": "SCN-185",
+    "scenario_type": "short_spike",
+    "station_id": 2038,
+    "crime_head": 500,
+    "days_ago_start": 37.93750182507704,
+    "days_ago_end": 30.937501825077042,
+    "count": 14
+  },
+  {
+    "scenario_id": "SCN-186",
+    "scenario_type": "sustained_spike",
+    "station_id": 2267,
+    "crime_head": 300,
+    "days_ago_start": 48.139685738032796,
+    "days_ago_end": 34.139685738032796,
+    "count": 22
+  },
+  {
+    "scenario_id": "SCN-187",
+    "scenario_type": "gradual_increase",
+    "station_id": 2726,
+    "crime_head": 400,
+    "days_ago_start": 242.80451845437892,
+    "days_ago_end": 221.80451845437892,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-188",
+    "scenario_type": "sustained_spike",
+    "station_id": 2856,
+    "crime_head": 200,
+    "days_ago_start": 163.86959315784122,
+    "days_ago_end": 149.86959315784122,
+    "count": 21
+  },
+  {
+    "scenario_id": "SCN-189",
+    "scenario_type": "short_spike",
+    "station_id": 2503,
+    "crime_head": 100,
+    "days_ago_start": 280.9927306840229,
+    "days_ago_end": 273.9927306840229,
+    "count": 8
+  },
+  {
+    "scenario_id": "SCN-190",
+    "scenario_type": "sustained_spike",
+    "station_id": 2371,
+    "crime_head": 200,
+    "days_ago_start": 137.4003584933284,
+    "days_ago_end": 123.40035849332841,
+    "count": 28
+  },
+  {
+    "scenario_id": "SCN-191",
+    "scenario_type": "sustained_spike",
+    "station_id": 2676,
+    "crime_head": 600,
+    "days_ago_start": 55.68361565639389,
+    "days_ago_end": 41.68361565639389,
+    "count": 18
+  },
+  {
+    "scenario_id": "SCN-192",
+    "scenario_type": "short_spike",
+    "station_id": 2460,
+    "crime_head": 400,
+    "days_ago_start": 89.67205999840537,
+    "days_ago_end": 82.67205999840537,
+    "count": 10
+  },
+  {
+    "scenario_id": "SCN-193",
+    "scenario_type": "short_spike",
+    "station_id": 2929,
+    "crime_head": 500,
+    "days_ago_start": 140.85697483818205,
+    "days_ago_end": 133.85697483818205,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-194",
+    "scenario_type": "repeat_offender",
+    "station_id": 2378,
+    "crime_head": 100,
+    "days_ago_start": 247.26955421347674,
+    "days_ago_end": 240.26955421347674,
+    "count": 11
+  },
+  {
+    "scenario_id": "SCN-195",
+    "scenario_type": "sustained_spike",
+    "station_id": 2459,
+    "crime_head": 500,
+    "days_ago_start": 41.57508933781461,
+    "days_ago_end": 27.57508933781461,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-196",
+    "scenario_type": "gradual_increase",
+    "station_id": 2567,
+    "crime_head": 200,
+    "days_ago_start": 207.1870496597565,
+    "days_ago_end": 186.1870496597565,
+    "count": 26
+  },
+  {
+    "scenario_id": "SCN-197",
+    "scenario_type": "night_concentration",
+    "station_id": 2209,
+    "crime_head": 200,
+    "days_ago_start": 271.6456123538586,
+    "days_ago_end": 264.6456123538586,
+    "count": 19
+  },
+  {
+    "scenario_id": "SCN-198",
+    "scenario_type": "repeat_offender",
+    "station_id": 2633,
+    "crime_head": 100,
+    "days_ago_start": 319.2176845152922,
+    "days_ago_end": 312.2176845152922,
+    "count": 10
+  },
+  {
+    "scenario_id": "SCN-199",
+    "scenario_type": "night_concentration",
+    "station_id": 2167,
+    "crime_head": 200,
+    "days_ago_start": 165.45113718920604,
+    "days_ago_end": 158.45113718920604,
+    "count": 20
+  },
+  {
+    "scenario_id": "SCN-200",
+    "scenario_type": "gradual_increase",
+    "station_id": 2444,
+    "crime_head": 100,
+    "days_ago_start": 73.71774390265091,
+    "days_ago_end": 52.71774390265091,
+    "count": 20
+  }
+]
