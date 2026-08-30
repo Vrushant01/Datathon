@@ -35,12 +35,36 @@ router.post('/chat', async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      await session.processMessage(req, question, (token) => {
-        res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
-      });
+      // AppSail kills requests after ~30s. We race the actual answer against a
+      // 25-second timeout so we can respond gracefully before the platform cuts us off.
+      const timeoutMs = 25000;
+      let timedOut = false;
 
-      res.write(`data: [DONE]\n\n`);
-      res.end();
+      const timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        aiLogger.warn(`Chat timeout after ${timeoutMs}ms for question: "${question}"`);
+        // Send a warm-up notice as text so the frontend shows it instead of an error
+        const warmupMsg = 'The crime database is still loading into memory (this takes ~30 seconds on a cold start). Please send your question again in a moment and it will answer instantly.';
+        warmupMsg.match(/.{1,6}/g)?.forEach((chunk: string) => {
+          res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+        });
+        res.write(`data: [DONE]\n\n`);
+        res.end();
+      }, timeoutMs);
+
+      try {
+        await session.processMessage(req, question, (token) => {
+          if (!timedOut) {
+            res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
+          }
+        });
+        if (!timedOut) {
+          res.write(`data: [DONE]\n\n`);
+          res.end();
+        }
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
     } else {
       const answer = await session.processMessage(req, question);
       res.json({ answer });
@@ -56,6 +80,7 @@ router.post('/chat', async (req, res) => {
     }
   }
 });
+
 
 router.get('/analytics', (req, res) => {
   res.json({
