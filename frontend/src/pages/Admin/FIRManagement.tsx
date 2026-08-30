@@ -2,12 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { mockDb, CaseMasterRow, EmployeeRow } from '../../utils/mockDb';
 import { API_BASE_URL } from '../../config/api';
-import { 
-  FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X,
-  AlertTriangle, MapPin, User, Calendar, ShieldCheck 
-} from 'lucide-react';
+import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
-
+import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { useLocation } from 'react-router-dom';
 
 export const FIRManagement: React.FC = () => {
@@ -38,7 +35,8 @@ export const FIRManagement: React.FC = () => {
   const [filterCrimeHead, setFilterCrimeHead] = useState<number | 'ALL'>(() => {
     const cParam = searchParams.get('crimeType');
     if (cParam) {
-      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName === cParam);
+      const typeStr = cParam.toLowerCase().replace(/[^a-z]/g, '');
+      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '')));
       if (ch) return ch.CrimeHeadID;
     }
     return 'ALL';
@@ -351,30 +349,34 @@ export const FIRManagement: React.FC = () => {
   };
 
   const filteredCases = cases.filter(c => {
-    if (filterDistrict !== 'ALL') {
-      const station = stations.find(s => s.UnitID === c.PoliceStationID);
-      if (station?.DistrictID !== filterDistrict) return false;
-    }
-    if (filterStation !== 'ALL' && c.PoliceStationID !== filterStation) return false;
-    if (filterStatus !== 'ALL' && c.CaseStatusID !== filterStatus) return false;
-    if (filterCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== filterCrimeHead) return false;
-    
-    if (filterDateFrom || filterDateTo) {
-      const crimeDate = new Date(c.CrimeRegisteredDate);
-      if (filterDateFrom && crimeDate < new Date(filterDateFrom)) return false;
-      if (filterDateTo && crimeDate > new Date(filterDateTo)) return false;
-    }
+    // 1. Core exact-match anomaly filters
+    const isAnomalyMatch = getCasesForAnomaly([c], {
+      district: filterDistrict,
+      station: filterStation,
+      crimeType: filterCrimeHead,
+      startDate: filterDateFrom,
+      endDate: filterDateTo,
+      status: filterStatus
+    }).length === 1;
 
-    const term = searchQuery.toLowerCase();
-    const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName.toLowerCase() || '';
-    const officerName = employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName.toLowerCase() || '';
-    return (
-      c.CrimeNo.toLowerCase().includes(term) ||
-      c.CaseNo.toLowerCase().includes(term) ||
-      stationName.includes(term) ||
-      officerName.includes(term) ||
-      c.BriefFacts.toLowerCase().includes(term)
-    );
+    if (!isAnomalyMatch) return false;
+
+    // 2. Extra local text search
+    if (searchQuery) {
+      const term = searchQuery.toLowerCase();
+      const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName.toLowerCase() || '';
+      const officerName = employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName.toLowerCase() || '';
+      
+      const matchID = c.CaseNo.toLowerCase().includes(term) || c.CrimeNo.toLowerCase().includes(term);
+      const matchFIR = c.FIRNo?.toLowerCase().includes(term);
+      const matchStation = stationName.includes(term);
+      const matchOfficer = officerName.includes(term);
+      const matchFacts = c.BriefFacts?.toLowerCase().includes(term);
+      
+      if (!matchID && !matchFIR && !matchStation && !matchOfficer && !matchFacts) return false;
+    }
+    
+    return true;
   });
 
   return (

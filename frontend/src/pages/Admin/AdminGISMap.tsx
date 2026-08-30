@@ -8,6 +8,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 maplibregl.setWorkerUrl(workerUrl);
 import { Filter, Layers, Info } from 'lucide-react';
 import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon, getDistance } from '../../utils/geoUtils';
+import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { API_BASE_URL } from '../../config/api';
 import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 
@@ -40,7 +41,8 @@ export const AdminGISMap: React.FC = () => {
   const [selectedCrimeHead, setSelectedCrimeHead] = useState<number | 'ALL'>(() => {
     const cParam = searchParams.get('crimeType');
     if (cParam) {
-      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName === cParam);
+      const typeStr = cParam.toLowerCase().replace(/[^a-z]/g, '');
+      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '')));
       if (ch) return ch.CrimeHeadID;
     }
     return 'ALL';
@@ -67,30 +69,26 @@ export const AdminGISMap: React.FC = () => {
     return cases.filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude));
   }, [cases]);
 
-  // 1. Base Filter (Ignores Viewport)
+  // 1. Base Filter (Ignores Viewport, uses strict Anomaly compatibility logic)
   const baseFilteredCases = useMemo(() => {
-    return validBaseCases.filter(c => {
-      const station = stations.find(s => s.UnitID === c.PoliceStationID);
-      
-      if (!station) return false;
-      if (selectedDistrict !== 'ALL' && station.DistrictID !== selectedDistrict) return false;
-      
-      if (selectedStation !== 'ALL' && c.PoliceStationID !== selectedStation) return false;
-      if (selectedCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== selectedCrimeHead) return false;
-      if (selectedStatus !== 'ALL') {
-        const statusName = mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName;
-        if (statusName !== selectedStatus) return false;
-      }
-      if (selectedGravity !== 'ALL' && c.GravityOffenceID !== selectedGravity) return false;
-      
-      if (dateFrom || dateTo) {
-         const crimeDate = new Date(c.CrimeRegisteredDate);
-         if (dateFrom && crimeDate < new Date(dateFrom)) return false;
-         if (dateTo && crimeDate > new Date(dateTo)) return false;
-      }
-      
-      return true;
-    });
+    const filters = {
+      district: selectedDistrict,
+      station: selectedStation,
+      crimeType: selectedCrimeHead,
+      startDate: dateFrom,
+      endDate: dateTo,
+      status: selectedStatus,
+    };
+    
+    // getCasesForAnomaly guarantees exact sync with backend logic
+    let casesSubset = getCasesForAnomaly(validBaseCases, filters);
+    
+    // Apply GIS-specific gravity filter if needed
+    if (selectedGravity !== 'ALL') {
+      casesSubset = casesSubset.filter(c => c.GravityOffenceID === selectedGravity);
+    }
+    
+    return casesSubset;
   }, [validBaseCases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo, stations]);
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
