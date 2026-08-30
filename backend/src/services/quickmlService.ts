@@ -46,10 +46,10 @@ export const predictStationRisk = async (features: StationFeatures) => {
 
     const mlData = response.data;
     
-    // Convert QuickML response to our expected format
-    if (mlData && typeof mlData.result !== 'undefined' && typeof mlData.likelihood_score !== 'undefined') {
-      const risk = mlData.result;
-      const likelihoodScore = mlData.likelihood_score;
+    // Convert QuickML response to our expected format (QuickML returns arrays for batch/single predictions)
+    if (mlData && Array.isArray(mlData.result) && Array.isArray(mlData.likelihood_score)) {
+      const risk = mlData.result[0];
+      const likelihoodScore = mlData.likelihood_score[0];
       
       return {
         success: true,

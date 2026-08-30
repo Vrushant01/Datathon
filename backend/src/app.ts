@@ -793,5 +793,37 @@ app.post('/api/network/entities/:type', async (req, res) => {
 
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on port ${PORT}`);
+
+  // ── Background Cache Warm-Up ─────────────────────────────────────────────
+  // On AppSail, CATALYST_CONFIG is always set. We pre-populate the 5-minute
+  // in-process caches for casemasters / districts / units immediately after
+  // startup so the first AI /chat request doesn't cold-scan 9,674 rows inside
+  // a 30-second AppSail request timeout window.
+  //
+  // This runs in the background (no await). If Catalyst isn't initialized yet
+  // the error is caught silently — the cache will populate on the first live request.
+  // ─────────────────────────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const { getCatalystApp } = await import('./repositories/CloudScaleRepository');
+      const app = getCatalystApp();
+      if (!app) {
+        console.log('[WarmUp] Catalyst app not available at startup, skipping pre-warm.');
+        return;
+      }
+      const { CloudScaleRepository } = await import('./repositories/CloudScaleRepository');
+      const repo = new CloudScaleRepository(null as any);
+      console.log('[WarmUp] Starting background cache warm-up for casemasters, districts, units...');
+      const start = Date.now();
+      await Promise.all([
+        repo.getDistricts().then(d => console.log(`[WarmUp] districts: ${d.length} records`)).catch(e => console.warn('[WarmUp] districts failed:', e.message)),
+        repo.getUnits().then(u => console.log(`[WarmUp] units: ${u.length} records`)).catch(e => console.warn('[WarmUp] units failed:', e.message)),
+        repo.getAllCases().then(c => console.log(`[WarmUp] casemasters: ${c.length} records`)).catch(e => console.warn('[WarmUp] casemasters failed:', e.message)),
+      ]);
+      console.log(`[WarmUp] Cache warm-up complete in ${Date.now() - start}ms`);
+    } catch (e: any) {
+      console.warn('[WarmUp] Background warm-up failed (will warm on first request):', e.message);
+    }
+  })();
 });
  
