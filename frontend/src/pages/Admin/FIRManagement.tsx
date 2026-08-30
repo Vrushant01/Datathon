@@ -8,11 +8,45 @@ import {
 } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
 
+import { useLocation } from 'react-router-dom';
+
 export const FIRManagement: React.FC = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  
   const [cases, setCases] = useState<CaseMasterRow[]>(mockDb.getCases());
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
-  const [filterStation, setFilterStation] = useState<number | 'ALL'>('ALL');
+  
+  const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>(() => {
+    const dParam = searchParams.get('district');
+    if (dParam) {
+      const dist = mockDb.getDistricts().find(d => d.DistrictName === dParam);
+      if (dist) return dist.DistrictID;
+    }
+    return 'ALL';
+  });
+  
+  const [filterStation, setFilterStation] = useState<number | 'ALL'>(() => {
+    const sParam = searchParams.get('station');
+    if (sParam) {
+      const stat = mockDb.getUnits().find(s => s.UnitName === sParam && s.TypeID === 1);
+      if (stat) return stat.UnitID;
+    }
+    return 'ALL';
+  });
+
+  const [filterCrimeHead, setFilterCrimeHead] = useState<number | 'ALL'>(() => {
+    const cParam = searchParams.get('crimeType');
+    if (cParam) {
+      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName === cParam);
+      if (ch) return ch.CrimeHeadID;
+    }
+    return 'ALL';
+  });
+
+  const [filterDateFrom, setFilterDateFrom] = useState<string>(searchParams.get('startDate') || '');
+  const [filterDateTo, setFilterDateTo] = useState<string>(searchParams.get('endDate') || '');
+
   const [filterStatus, setFilterStatus] = useState<number | 'ALL'>('ALL');
   
   // Master Lists
@@ -323,6 +357,13 @@ export const FIRManagement: React.FC = () => {
     }
     if (filterStation !== 'ALL' && c.PoliceStationID !== filterStation) return false;
     if (filterStatus !== 'ALL' && c.CaseStatusID !== filterStatus) return false;
+    if (filterCrimeHead !== 'ALL' && c.CrimeMajorHeadID !== filterCrimeHead) return false;
+    
+    if (filterDateFrom || filterDateTo) {
+      const crimeDate = new Date(c.CrimeRegisteredDate);
+      if (filterDateFrom && crimeDate < new Date(filterDateFrom)) return false;
+      if (filterDateTo && crimeDate > new Date(filterDateTo)) return false;
+    }
 
     const term = searchQuery.toLowerCase();
     const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName.toLowerCase() || '';
@@ -403,11 +444,51 @@ export const FIRManagement: React.FC = () => {
         <select 
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+          className="w-full md:w-36 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
           <option value="ALL">All Statuses</option>
           {caseStatuses.map(s => <option key={s.CaseStatusID} value={s.CaseStatusID}>{s.CaseStatusName}</option>)}
         </select>
+        
+        <select 
+          value={filterCrimeHead}
+          onChange={(e) => setFilterCrimeHead(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+        >
+          <option value="ALL">All Crime Types</option>
+          {crimeHeads.map(c => <option key={c.CrimeHeadID} value={c.CrimeHeadID}>{c.CrimeGroupName}</option>)}
+        </select>
+      </div>
+      
+      {/* Date Filters Row */}
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center mb-6">
+         <div className="flex items-center gap-2">
+           <Calendar size={14} className="text-slate-400" />
+           <span className="text-xs font-bold text-slate-600">From:</span>
+           <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-2 border rounded-lg text-xs" />
+         </div>
+         <div className="flex items-center gap-2">
+           <Calendar size={14} className="text-slate-400" />
+           <span className="text-xs font-bold text-slate-600">To:</span>
+           <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-2 border rounded-lg text-xs" />
+         </div>
+         
+         {(filterDistrict !== 'ALL' || filterStation !== 'ALL' || filterCrimeHead !== 'ALL' || filterStatus !== 'ALL' || filterDateFrom || filterDateTo || searchQuery) && (
+            <button 
+              onClick={() => {
+                setFilterDistrict('ALL');
+                setFilterStation('ALL');
+                setFilterStatus('ALL');
+                setFilterCrimeHead('ALL');
+                setFilterDateFrom('');
+                setFilterDateTo('');
+                setSearchQuery('');
+              }}
+              className="ml-auto text-xs font-bold text-red-500 hover:text-red-700 transition"
+            >
+              Clear All Filters
+            </button>
+         )}
       </div>
 
       {/* Roster Table Grid */}

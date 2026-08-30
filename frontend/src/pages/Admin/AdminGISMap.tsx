@@ -13,22 +13,48 @@ import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 
 export const AdminGISMap: React.FC = () => {
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const cases = mockDb.getCases();
   const districts = mockDb.getDistricts();
   const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
   const crimeHeads = mockDb.getCrimeHeads();
   const gravityOffences = mockDb.getGravityOffences();
 
+  const searchParams = new URLSearchParams(location.search);
+  
   // Filters
-  const [selectedDistrict, setSelectedDistrict] = useState<number | 'ALL'>('ALL');
-  const [selectedStation, setSelectedStation] = useState<number | 'ALL'>('ALL');
-  const [selectedCrimeHead, setSelectedCrimeHead] = useState<number | 'ALL'>('ALL');
+  const [selectedDistrict, setSelectedDistrict] = useState<number | 'ALL'>(() => {
+    const dParam = searchParams.get('district');
+    if (dParam) {
+      const dist = mockDb.getDistricts().find(d => d.DistrictName === dParam);
+      if (dist) return dist.DistrictID;
+    }
+    return 'ALL';
+  });
+  const [selectedStation, setSelectedStation] = useState<number | 'ALL'>(() => {
+    const sParam = searchParams.get('station');
+    if (sParam) {
+      const stat = mockDb.getUnits().find(s => s.UnitName === sParam && s.TypeID === 1);
+      if (stat) return stat.UnitID;
+    }
+    return 'ALL';
+  });
+  const [selectedCrimeHead, setSelectedCrimeHead] = useState<number | 'ALL'>(() => {
+    const cParam = searchParams.get('crimeType');
+    if (cParam) {
+      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName === cParam);
+      if (ch) return ch.CrimeHeadID;
+    }
+    return 'ALL';
+  });
   const [selectedStatus, setSelectedStatus] = useState<string | 'ALL'>('ALL');
   const [selectedGravity, setSelectedGravity] = useState<number | 'ALL'>('ALL');
   const [selectedHotspot, setSelectedHotspot] = useState<string>('ALL');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+
+
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -73,12 +99,22 @@ export const AdminGISMap: React.FC = () => {
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
 
   // Parent-Child Filter Cascades
+  const isFirstRenderDist = useRef(true);
   useEffect(() => {
+    if (isFirstRenderDist.current) {
+      isFirstRenderDist.current = false;
+      return;
+    }
     setSelectedStation('ALL');
     setSelectedHotspot('ALL');
   }, [selectedDistrict]);
 
+  const isFirstRenderStat = useRef(true);
   useEffect(() => {
+    if (isFirstRenderStat.current) {
+      isFirstRenderStat.current = false;
+      return;
+    }
     setSelectedHotspot('ALL');
   }, [selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo]);
 

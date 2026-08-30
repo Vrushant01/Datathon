@@ -36,11 +36,27 @@ export const AIAnomalyDetection: React.FC = () => {
   }, []);
 
   const handleViewGIS = (alert: any) => {
-    navigate('/admin-portal/gis');
+    const params = new URLSearchParams();
+    if (alert.district) params.set('district', alert.district);
+    if (alert.crimeType) params.set('crimeType', alert.crimeType);
+    if (alert.level === 'STATION' && alert.locationName) {
+      params.set('station', alert.locationName);
+    }
+    navigate(`/admin-portal/gis?${params.toString()}`);
   };
 
   const handleViewCases = (alert: any) => {
-    navigate('/admin-portal/fir-management');
+    const params = new URLSearchParams();
+    if (alert.district) params.set('district', alert.district);
+    if (alert.crimeType) params.set('crimeType', alert.crimeType);
+    if (alert.level === 'STATION' && alert.locationName) {
+      params.set('station', alert.locationName);
+    }
+    if (alert.windowStart && alert.windowEnd) {
+      params.set('startDate', alert.windowStart);
+      params.set('endDate', alert.windowEnd);
+    }
+    navigate(`/admin-portal/firs?${params.toString()}`);
   };
 
   return (

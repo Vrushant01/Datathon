@@ -188,7 +188,7 @@ export const getDashboardData = async (db: IDataRepository) => {
       severity: a.severity === 'CRITICAL' ? 'Critical' : 'High',
       confidence: Math.min(99, Math.round(70 + a.zScore * 5)),
       generatedTime: new Date().toISOString(),
-      district: a.level === 'DISTRICT' ? a.locationName : (a.level === 'STATE' ? 'Karnataka (State)' : 'Various'),
+      district: a.level === 'STATION' && a.locationId ? (districtNames.get(unitToDistrict.get(a.locationId) || 0) || 'Various') : (a.level === 'DISTRICT' ? a.locationName : (a.level === 'STATE' ? 'Karnataka (State)' : 'Various')),
       policeStation: a.level === 'STATION' ? a.locationName : 'Multiple',
       crimeType: a.crimeType,
       riskScore: Math.min(100, Math.round(50 + a.zScore * 10)),
