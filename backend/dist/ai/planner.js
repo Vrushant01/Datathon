@@ -89,31 +89,6 @@ const PLANNER_TOOLS = [
             },
         },
     },
-    {
-        type: 'function',
-        function: {
-            name: 'getCrimeStatsByCategory',
-            description: 'Get crime statistics or a list of cases for a specific crime category. ALWAYS use this tool when the user asks about a crime type. The category parameter accepts natural-language terms — the system will map them to the correct database category. Recognized keywords include: "theft", "robbery", "burglary", "larceny", "house breaking", "vehicle theft" (→ Crimes Against Property); "murder", "assault", "grievous hurt", "kidnapping" (→ Crimes Against Body); "rape", "dowry", "molestation" (→ Crimes Against Women); "cheating", "fraud", "forgery" (→ Economic Offences); "cyber", "phishing", "hacking" (→ Cyber Crimes); "ndps", "drugs", "excise" (→ SLL).',
-            parameters: {
-                type: 'object',
-                properties: {
-                    category: {
-                        type: 'string',
-                        description: 'The crime category keyword (e.g. "theft", "murder", "cyber", "robbery"). Use the natural-language term from the user — it will be mapped to the correct database category. "theft" maps to Crimes Against Property (Minor Head 201).'
-                    },
-                    dateRange: {
-                        type: 'object',
-                        properties: {
-                            start: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
-                            end: { type: 'string', description: 'End date in YYYY-MM-DD format' }
-                        }
-                    },
-                    reasoning: { type: 'string' }
-                },
-                required: ['category', 'reasoning']
-            }
-        }
-    },
     { type: 'function', function: getOfficerPerformance_1.getOfficerPerformanceDef },
     { type: 'function', function: getTopCrimeDistricts_1.getTopCrimeDistrictsDef },
     { type: 'function', function: getRecentAlerts_1.getRecentAlertsDef }
@@ -157,9 +132,6 @@ Decide which tool (if any) answers this message, and call it with the appropriat
         }
         if (call.function.name === 'getCaseDetail') {
             return { tool: call.function.name, caseId: Number(args.caseId), reasoning: args.reasoning };
-        }
-        if (call.function.name === 'getCrimeStatsByCategory') {
-            return { tool: call.function.name, category: args.category, dateRange: args.dateRange, reasoning: args.reasoning };
         }
         if (call.function.name === 'executeDatabaseQuery') {
             return {
