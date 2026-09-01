@@ -4,6 +4,7 @@ import { getAIDashboard } from '../../services/aiService';
 import { Zap, Activity, ShieldAlert, Shield, MapPin, ExternalLink } from 'lucide-react';
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { mockDb } from '../../utils/mockDb';
+import { API_BASE_URL } from '../../config/api';
 
 interface StationRiskResult {
   stationId: number;
@@ -78,11 +79,10 @@ export const AIAnomalyDetection: React.FC = () => {
   const [riskError, setRiskError] = useState(false);
   const riskFetchedRef = useRef(false);
 
-  useEffect(() => {
-    if (riskFetchedRef.current) return;
-    riskFetchedRef.current = true;
+  const fetchStationRisks = () => {
+    setRiskError(false);
     setRiskLoading(true);
-    fetch('/api/station-risk/batch-predict')
+    fetch(`${API_BASE_URL}/api/station-risk/batch-predict`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data) {
@@ -94,6 +94,12 @@ export const AIAnomalyDetection: React.FC = () => {
       })
       .catch(() => setRiskError(true))
       .finally(() => setRiskLoading(false));
+  };
+
+  useEffect(() => {
+    if (riskFetchedRef.current) return;
+    riskFetchedRef.current = true;
+    fetchStationRisks();
   }, []);
 
   const [selectedStation, setSelectedStation] = useState<StationRiskResult | null>(null);
@@ -307,7 +313,15 @@ export const AIAnomalyDetection: React.FC = () => {
           {riskLoading ? (
             <div className="text-sm text-slate-500 font-medium py-8 text-center animate-pulse">Loading predictive models...</div>
           ) : riskError ? (
-            <div className="text-sm text-red-500 font-medium py-8 text-center">Station risk prediction temporarily unavailable.</div>
+            <div className="text-sm text-red-500 font-medium py-8 text-center flex flex-col items-center gap-3">
+              Unable to load station risk predictions.
+              <button 
+                onClick={() => fetchStationRisks()}
+                className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
           ) : stationRisks.length === 0 ? (
             <div className="text-sm text-slate-500 font-medium py-8 text-center">No predictions available.</div>
           ) : (
