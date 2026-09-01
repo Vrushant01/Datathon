@@ -50,7 +50,7 @@ export const predictRiskBatch = async (req: Request, res: Response) => {
     const repo = RepositoryFactory.getRepository(req);
     const units = await repo.getUnits();
     // Only stations (TypeID === 1)
-    const stations = units.filter(u => u.TypeID === 1).slice(0, 50); // limit to 50 for performance
+    const stations = units.filter(u => Number(u.TypeID) === 1).slice(0, 50); // limit to 50 for performance
 
     const results = [];
     
