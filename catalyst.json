@@ -2,7 +2,9 @@
   "appsail": [
     {
       "source": "backend",
-      "name": "backend"
+      "name": "backend",
+      "build_command": "npm install && npm run build",
+      "run_command": "npm start"
     }
   ]
 }
