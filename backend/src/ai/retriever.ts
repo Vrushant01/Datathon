@@ -1,9 +1,7 @@
 import { QueryPlan } from './planner';
-import { findDocuments } from './tools/findDocuments';
-import { aggregate } from './tools/aggregate';
-import { countDocuments } from './tools/countDocuments';
 import { aiLogger } from './logger';
 import { CloudScaleRepository } from '../repositories/CloudScaleRepository';
+import { matchesFilter } from './queryEngine';
 
 const MAJOR_HEADS_MAP: Record<number, string> = {
   100: 'Crimes Against Body',
@@ -35,14 +33,130 @@ export const retrieveContext = async (plan: QueryPlan, req?: any): Promise<any> 
     }
 
     switch (plan.tool) {
-      case 'findDocuments':
-        return await findDocuments(plan.collection!, plan.query, undefined, undefined, req);
-      case 'aggregate':
-        return await aggregate(plan.collection!, plan.query, req);
-      case 'countDocuments': {
-        const count = await countDocuments(plan.collection!, plan.query, req);
-        aiLogger.info(`countDocuments returned: ${count}`);
-        return { count };
+      case 'executeDatabaseQuery': {
+        const repo = new CloudScaleRepository(req);
+        
+        let allData = [];
+        if (plan.collection === 'accuseds') allData = await repo.getAllAccused();
+        else if (plan.collection === 'victims') allData = await repo.getAllVictims();
+        else if (plan.collection === 'districts') allData = await repo.getDistricts();
+        else if (plan.collection === 'units') allData = await repo.getUnits();
+        else if (plan.collection === 'employees') allData = await repo.getEmployees();
+        else allData = await repo.getAllCases();
+
+        if (plan.dateRange?.start && plan.collection === 'casemasters') {
+          allData = allData.filter(c => c.CrimeRegisteredDate >= plan.dateRange!.start);
+        }
+        if (plan.dateRange?.end && plan.collection === 'casemasters') {
+          allData = allData.filter(c => c.CrimeRegisteredDate <= plan.dateRange!.end);
+        }
+
+        
+        // Enrich casemasters with DistrictID from units if needed
+        if (plan.collection === 'casemasters' || !plan.collection) {
+           const units = await repo.getUnits();
+           const districts = await repo.getDistricts();
+           const unitMap = new Map();
+           units.forEach(u => unitMap.set(Number(u.UnitID), u));
+           const distMap = new Map();
+           districts.forEach(d => distMap.set(Number(d.DistrictID), d));
+           
+           allData = allData.map(c => {
+              if (c.PoliceStationID && !c.DistrictID) {
+                 const u = unitMap.get(Number(c.PoliceStationID));
+                 if (u) {
+                    c.DistrictID = u.DistrictID;
+                    c.PoliceStationName = u.UnitName;
+                    const d = distMap.get(Number(u.DistrictID));
+                    if (d) c.DistrictName = d.DistrictName;
+                 }
+              }
+              return c;
+           });
+        }
+        let filtered = allData;
+
+        if (plan.filters && Object.keys(plan.filters).length > 0) {
+          filtered = allData.filter(d => matchesFilter(d, plan.filters));
+        }
+
+        if (plan.groupBy) {
+          console.log('GROUP BY:', plan.groupBy);
+          const counts: Record<string, number> = {};
+          filtered.forEach(d => {
+            let key: string = "Unknown";
+            if (plan.groupBy === 'month' && d.CrimeRegisteredDate) {
+              key = d.CrimeRegisteredDate.substring(0, 7);
+            } else if (plan.groupBy === 'year' && d.CrimeRegisteredDate) {
+              key = d.CrimeRegisteredDate.substring(0, 4);
+            } else if (plan.groupBy === 'day' && d.CrimeRegisteredDate) {
+              key = d.CrimeRegisteredDate.substring(0, 10);
+            } else if (plan.groupBy!.toLowerCase().includes('district')) {
+              key = d.DistrictName || d.DistrictID || 'Unknown';
+            } else if (plan.groupBy!.toLowerCase().includes('station')) {
+              key = d.PoliceStationName || d.PoliceStationID || 'Unknown';
+            } else {
+              key = d[plan.groupBy!] || 'Unknown';
+            }
+            counts[key] = (counts[key] || 0) + 1;
+          });
+
+          let trend = Object.entries(counts).map(([label, value]) => ({ label, value }));
+          
+          if (plan.sort) {
+             const [sortField, sortDir] = Object.entries(plan.sort)[0] as [string, number] || ["value", -1];
+             trend.sort((a, b) => ((a as any)[sortField] > (b as any)[sortField] ? 1 : -1) * (sortDir as number));
+          } else {
+             trend.sort((a, b) => (b.value as number) - (a.value as number));
+          }
+
+          if (plan.limit) {
+            trend = trend.slice(0, plan.limit);
+          } else {
+            trend = trend.slice(0, 50); // safety limit
+          }
+
+          return { 
+            intent: plan.intent,
+            isFollowUp: plan.isFollowUp,
+            totalMatched: filtered.length,
+            groupBy: plan.groupBy,
+            results: trend
+          };
+        } else {
+          // Just count/find
+          if (plan.limit) {
+             let results = filtered;
+             if (plan.sort) {
+               const [sortField, sortDir] = Object.entries(plan.sort)[0] as [string, number] || ["", 1];
+               if (sortField) {
+                 results.sort((a, b) => ((a as any)[sortField] > (b as any)[sortField] ? 1 : -1) * sortDir);
+               }
+             }
+             return {
+               intent: plan.intent,
+               isFollowUp: plan.isFollowUp,
+               totalMatched: filtered.length,
+               results: results.slice(0, plan.limit).map(c => {
+                 if (plan.collection === 'casemasters' || !plan.collection) {
+                   return {
+                     CaseNo: c.CaseMasterID,
+                     Date: c.CrimeRegisteredDate,
+                     MajorHead: MAJOR_HEADS_MAP[Number(c.CrimeMajorHeadID)] || c.CrimeMajorHeadID,
+                     Station: c.PoliceStationName || c.PoliceStationID
+                   };
+                 }
+                 return c;
+               })
+             };
+          } else {
+             return {
+               intent: plan.intent,
+               isFollowUp: plan.isFollowUp,
+               count: filtered.length
+             };
+          }
+        }
       }
       case 'getCaseCountByPerson':
       case 'listCasesByPerson': {
@@ -88,214 +202,6 @@ export const retrieveContext = async (plan: QueryPlan, req?: any): Promise<any> 
         const accused = await repo.getAccusedByCase(plan.caseId!);
         const victims = await repo.getVictimsByCase(plan.caseId!);
         return { caseRecord, accused, victims };
-      }
-      case 'getCrimeStatsByCategory': {
-        const repo = new CloudScaleRepository(req);
-        let cases = await repo.getAllCases();
-        
-        const cat = (plan.category || '').toLowerCase();
-        
-        // Date filtering
-        if (plan.dateRange?.start) {
-          cases = cases.filter(c => c.CrimeRegisteredDate >= plan.dateRange!.start);
-        }
-        if (plan.dateRange?.end) {
-          cases = cases.filter(c => c.CrimeRegisteredDate <= plan.dateRange!.end);
-        }
-
-        let isFuzzyMatch = false;
-        let unresolvedCategory = false;
-        let resolvedCategory = '';
-        
-        if (cat === 'all' || cat === '' || cat === 'all crimes' || cat === 'any') {
-          resolvedCategory = 'All Crimes';
-        } else if (cat.includes('vehicle theft')) {
-          cases = cases.filter(c => (c.StolenProperty || '').toLowerCase().includes('vehicle'));
-          isFuzzyMatch = true;
-          resolvedCategory = 'Crimes Against Property';
-        } else if (cat.includes('murder') && !cat.includes('attempt')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 101);
-          resolvedCategory = 'Crimes Against Body';
-        } else if (cat.includes('attempt to murder')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 102);
-          resolvedCategory = 'Crimes Against Body';
-        } else if (cat.includes('grievous hurt')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 103);
-          resolvedCategory = 'Crimes Against Body';
-        } else if (cat.includes('theft') || cat.includes('larceny')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 201);
-          resolvedCategory = 'Crimes Against Property';
-        } else if (cat.includes('robbery')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 202);
-          resolvedCategory = 'Crimes Against Property';
-        } else if (cat.includes('house breaking')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 203);
-          resolvedCategory = 'Crimes Against Property';
-        } else if (cat.includes('rape')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 301);
-          resolvedCategory = 'Crimes Against Women';
-        } else if (cat.includes('dowry')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 302);
-          resolvedCategory = 'Crimes Against Women';
-        } else if (cat.includes('cheating') || cat.includes('forgery')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 401);
-          resolvedCategory = 'Economic Offences';
-        } else if (cat.includes('phishing') || cat.includes('financial fraud')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 501);
-          resolvedCategory = 'Cyber Crimes';
-        } else if (cat.includes('cyber')) {
-          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 500);
-          resolvedCategory = 'Cyber Crimes';
-        } else if (cat.includes('ndps') || cat.includes('drug')) {
-          cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 601);
-          resolvedCategory = 'Special and Local Laws (SLL)';
-        } else if (cat.includes('property')) {
-          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 200);
-          resolvedCategory = 'Crimes Against Property';
-        } else if (cat.includes('body')) {
-          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 100);
-          resolvedCategory = 'Crimes Against Body';
-        } else if (cat.includes('women')) {
-          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 300);
-          resolvedCategory = 'Crimes Against Women';
-        } else if (cat.includes('economic')) {
-          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 400);
-          resolvedCategory = 'Economic Offences';
-        } else if (cat.includes('special') || cat.includes('sll')) {
-          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 600);
-          resolvedCategory = 'Special and Local Laws (SLL)';
-        } else {
-          // If no specific match, explicitly return unresolved
-          unresolvedCategory = true;
-          cases = [];
-        }
-
-        if (unresolvedCategory) {
-          return {
-            category: plan.category,
-            unresolvedCategory: true,
-            message: `Unrecognized crime category: '${plan.category}'. Cannot map this to a database schema.`
-          };
-        }
-
-        const trimmedCases = cases.slice(0, 50).map(c => ({
-          CaseNo: c.CaseMasterID,
-          Date: c.CrimeRegisteredDate,
-          MajorHead: MAJOR_HEADS_MAP[Number(c.CrimeMajorHeadID)] || c.CrimeMajorHeadID,
-          Station: c.PoliceStationName || c.PoliceStationID
-        }));
-
-        return { 
-          category: plan.category, 
-          resolvedCategory,
-          totalCases: cases.length, 
-          isFuzzyMatch,
-          cases: trimmedCases 
-        };
-      }
-      case 'getCaseTrend': {
-        const repo = new CloudScaleRepository(req);
-        let cases = await repo.getAllCases();
-        
-        let resolvedCategory = '';
-        if (plan.category) {
-          const cat = plan.category.toLowerCase();
-          
-          if (cat === 'all' || cat === '' || cat === 'all crimes' || cat === 'any') {
-            resolvedCategory = 'All Crimes';
-          } else if (cat.includes('vehicle theft')) {
-            cases = cases.filter(c => (c.StolenProperty || '').toLowerCase().includes('vehicle'));
-            resolvedCategory = 'Crimes Against Property';
-          } else if (cat.includes('murder') && !cat.includes('attempt')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 101);
-            resolvedCategory = 'Crimes Against Body';
-          } else if (cat.includes('attempt to murder')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 102);
-            resolvedCategory = 'Crimes Against Body';
-          } else if (cat.includes('grievous hurt')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 103);
-            resolvedCategory = 'Crimes Against Body';
-          } else if (cat.includes('theft') || cat.includes('larceny')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 201);
-            resolvedCategory = 'Crimes Against Property';
-          } else if (cat.includes('robbery')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 202);
-            resolvedCategory = 'Crimes Against Property';
-          } else if (cat.includes('house breaking')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 203);
-            resolvedCategory = 'Crimes Against Property';
-          } else if (cat.includes('rape')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 301);
-            resolvedCategory = 'Crimes Against Women';
-          } else if (cat.includes('dowry')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 302);
-            resolvedCategory = 'Crimes Against Women';
-          } else if (cat.includes('cheating') || cat.includes('forgery')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 401);
-            resolvedCategory = 'Economic Offences';
-          } else if (cat.includes('phishing') || cat.includes('financial fraud')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 501);
-            resolvedCategory = 'Cyber Crimes';
-          } else if (cat.includes('cyber')) {
-            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 500);
-            resolvedCategory = 'Cyber Crimes';
-          } else if (cat.includes('ndps') || cat.includes('drug')) {
-            cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 601);
-            resolvedCategory = 'Special and Local Laws (SLL)';
-          } else if (cat.includes('property')) {
-            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 200);
-            resolvedCategory = 'Crimes Against Property';
-          } else if (cat.includes('body')) {
-            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 100);
-            resolvedCategory = 'Crimes Against Body';
-          } else if (cat.includes('women')) {
-            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 300);
-            resolvedCategory = 'Crimes Against Women';
-          } else if (cat.includes('economic')) {
-            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 400);
-            resolvedCategory = 'Economic Offences';
-          } else if (cat.includes('special') || cat.includes('sll')) {
-            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 600);
-            resolvedCategory = 'Special and Local Laws (SLL)';
-          } else {
-             return {
-                category: plan.category,
-                unresolvedCategory: true,
-                message: `Unrecognized crime category: '${plan.category}'. Cannot map this to a database schema.`
-             };
-          }
-        }
-
-        // Date filtering
-        if (plan.dateRange?.start) {
-          cases = cases.filter(c => c.CrimeRegisteredDate >= plan.dateRange!.start);
-        }
-        if (plan.dateRange?.end) {
-          cases = cases.filter(c => c.CrimeRegisteredDate <= plan.dateRange!.end);
-        }
-
-        const counts: Record<string, number> = {};
-        
-        cases.forEach(c => {
-          if (!c.CrimeRegisteredDate) return;
-          let periodKey = c.CrimeRegisteredDate;
-          if (plan.groupBy === 'month') {
-            periodKey = c.CrimeRegisteredDate.substring(0, 7); // YYYY-MM
-          } else if (plan.groupBy === 'year') {
-            periodKey = c.CrimeRegisteredDate.substring(0, 4); // YYYY
-          }
-          counts[periodKey] = (counts[periodKey] || 0) + 1;
-        });
-
-        // Convert to array and sort chronologically, taking only the most recent 12 periods
-        // to avoid exceeding Catalyst LLM's strict token limits which can trigger a 500 Error.
-        const trend = Object.entries(counts)
-          .map(([period, count]) => ({ period, count }))
-          .sort((a, b) => b.period.localeCompare(a.period)) // Sort descending to get newest first
-          .slice(0, 12)
-          .sort((a, b) => a.period.localeCompare(b.period)); // Sort ascending again for the chart
-
-        return { groupBy: plan.groupBy, category: plan.category, resolvedCategory, trend };
       }
       case 'getOfficerPerformance': {
         const repo = new CloudScaleRepository(req);

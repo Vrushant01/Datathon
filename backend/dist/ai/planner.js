@@ -11,48 +11,21 @@ const PLANNER_TOOLS = [
     {
         type: 'function',
         function: {
-            name: 'findDocuments',
-            description: 'Fetch a small set of matching records from a CloudScale table (e.g. list the 5 most recent FIRs in a district).',
+            name: 'executeDatabaseQuery',
+            description: 'The master query tool. Execute a dynamic MongoDB-style query against the CloudScale database. Handles counts, finds, aggregations, trends, and rankings.',
             parameters: {
                 type: 'object',
                 properties: {
-                    collection: { type: 'string', description: 'Table name: casemasters, accuseds, victims, districts, units, employees' },
-                    query: { type: 'object', description: 'Mongo-style equality/$gte/$lte/$in filter object' },
+                    isFollowUp: { type: 'boolean', description: 'CRITICAL: True ONLY if the user is explicitly referring back to the previous question (e.g. "What about July?", "Which district had the most?"). False if this is a NEW standalone question (e.g. "How many cyber crimes are there?"). If False, DO NOT inherit filters from previous queries.' },
+                    intent: { type: 'string', description: 'Short summary of what you are querying (e.g., "count property crimes", "trend of cyber crimes per month", "rank districts by theft").' },
+                    collection: { type: 'string', description: 'Target table: casemasters, accuseds, victims, districts, units, employees' },
+                    filters: { type: 'object', description: 'MongoDB-style filter object (e.g., {"CrimeMajorHeadID": 200, "DistrictName": "Bengaluru"})' },
+                    groupBy: { type: 'string', description: 'Optional field to group by for aggregation (e.g. "DistrictName", "PoliceStationName", "month", "year")' },
+                    sort: { type: 'object', description: 'Optional sort object (e.g., {"count": -1} for descending count)' },
+                    limit: { type: 'number', description: 'Optional limit for results (e.g., 5 for Top 5)' },
                     reasoning: { type: 'string' },
                 },
-                required: ['collection', 'query', 'reasoning'],
-            },
-        },
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'aggregate',
-            description: 'Run a grouped aggregation (counts/sums/averages by field) over a CloudScale table, e.g. "FIR count by district".',
-            parameters: {
-                type: 'object',
-                properties: {
-                    collection: { type: 'string' },
-                    query: { type: 'array', description: 'Pipeline of $match/$group/$sort/$limit stages' },
-                    reasoning: { type: 'string' },
-                },
-                required: ['collection', 'query', 'reasoning'],
-            },
-        },
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'countDocuments',
-            description: 'Count records matching a filter, e.g. "how many FIRs were registered today".',
-            parameters: {
-                type: 'object',
-                properties: {
-                    collection: { type: 'string' },
-                    query: { type: 'object' },
-                    reasoning: { type: 'string' },
-                },
-                required: ['collection', 'query', 'reasoning'],
+                required: ['isFollowUp', 'intent', 'collection', 'filters', 'reasoning'],
             },
         },
     },
@@ -141,36 +114,6 @@ const PLANNER_TOOLS = [
             }
         }
     },
-    {
-        type: 'function',
-        function: {
-            name: 'getCaseTrend',
-            description: 'Get an aggregated trend of cases grouped by time (e.g. per month, per day).',
-            parameters: {
-                type: 'object',
-                properties: {
-                    groupBy: {
-                        type: 'string',
-                        enum: ['day', 'month', 'year'],
-                        description: 'The time period to group by'
-                    },
-                    category: {
-                        type: 'string',
-                        description: 'Optional. Filter by specific crime category (e.g. "cyber crimes") before grouping'
-                    },
-                    dateRange: {
-                        type: 'object',
-                        properties: {
-                            start: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
-                            end: { type: 'string', description: 'End date in YYYY-MM-DD format' }
-                        }
-                    },
-                    reasoning: { type: 'string' }
-                },
-                required: ['groupBy', 'reasoning']
-            }
-        }
-    },
     { type: 'function', function: getOfficerPerformance_1.getOfficerPerformanceDef },
     { type: 'function', function: getTopCrimeDistricts_1.getTopCrimeDistrictsDef },
     { type: 'function', function: getRecentAlerts_1.getRecentAlertsDef }
@@ -187,7 +130,17 @@ const planQuery = async (question, req, chatHistory = []) => {
             })),
             {
                 role: 'user',
-                content: `Based on the conversation history above, the user has a new follow-up question. If the new question implies previously established context (such as the same crime category, date range, district, or person), you MUST preserve and reuse those exact parameters from the previous [System Note] when calling tools, unless the user explicitly changes them.\n\nNew Question: ${question}\n\nDecide which tool (if any) answers this question, then call it with the fully resolved context. If no database/RAG lookup is needed, do not call any tool.`,
+                content: `Based on the conversation history above, evaluate the user's new message.
+
+CRITICAL INSTRUCTION FOR CONTEXT:
+1. Distinguish between a FOLLOW-UP and a NEW STANDALONE QUESTION.
+2. A FOLLOW-UP refers back to the previous query (e.g., "What about July?", "Which district had the most of those?", "Compare that with cyber crimes"). For follow-ups, INHERIT relevant filters from the previous query and only change what the user explicitly requested.
+3. A NEW STANDALONE QUESTION introduces a completely new topic or is fully self-contained (e.g., "Which district has the most property crimes?", "How many police officers are there?"). For new questions, DO NOT inherit previous filters (like date, district, or category) unless they are explicitly restated in the new question.
+4. "Overall" or "Total" can be a follow-up depending on context. But explicit category mentions like "property crimes" after asking about "cyber crimes" without linking words usually indicate a new query.
+
+New Message: ${question}
+
+Decide which tool (if any) answers this message, and call it with the appropriate, precisely-resolved context. If no database lookup is needed, do not call any tool.`,
             },
         ];
         const result = await (0, catalystLLM_1.chatComplete)(messages, { temperature: 0.1, tools: PLANNER_TOOLS, toolChoice: 'auto' });
@@ -197,7 +150,7 @@ const planQuery = async (question, req, chatHistory = []) => {
         }
         const args = JSON.parse(call.function.arguments || '{}');
         if (call.function.name === 'similaritySearch') {
-            return { tool: 'similaritySearch', query: args.query, reasoning: args.reasoning };
+            return { tool: 'similaritySearch', filters: args.query, reasoning: args.reasoning };
         }
         if (call.function.name === 'getCaseCountByPerson' || call.function.name === 'listCasesByPerson') {
             return { tool: call.function.name, personName: args.personName, reasoning: args.reasoning };
@@ -208,8 +161,18 @@ const planQuery = async (question, req, chatHistory = []) => {
         if (call.function.name === 'getCrimeStatsByCategory') {
             return { tool: call.function.name, category: args.category, dateRange: args.dateRange, reasoning: args.reasoning };
         }
-        if (call.function.name === 'getCaseTrend') {
-            return { tool: call.function.name, groupBy: args.groupBy, category: args.category, dateRange: args.dateRange, reasoning: args.reasoning };
+        if (call.function.name === 'executeDatabaseQuery') {
+            return {
+                tool: call.function.name,
+                isFollowUp: args.isFollowUp,
+                intent: args.intent,
+                collection: args.collection,
+                filters: args.filters,
+                groupBy: args.groupBy,
+                sort: args.sort,
+                limit: args.limit,
+                reasoning: args.reasoning
+            };
         }
         if (call.function.name === 'getOfficerPerformance') {
             return { tool: call.function.name, officerIdentifier: args.officerIdentifier, reasoning: args.reasoning };
@@ -223,8 +186,8 @@ const planQuery = async (question, req, chatHistory = []) => {
         return {
             tool: call.function.name,
             collection: args.collection,
-            query: args.query,
-            reasoning: args.reasoning,
+            filters: args.query,
+            reasoning: args.reasoning
         };
     }
     catch (err) {
