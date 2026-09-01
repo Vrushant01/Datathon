@@ -149,6 +149,21 @@ export const retrieveContext = async (plan: QueryPlan, req?: any): Promise<any> 
         } else if (cat.includes('ndps') || cat.includes('drug')) {
           cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 601);
           resolvedCategory = 'Special and Local Laws (SLL)';
+        } else if (cat.includes('property')) {
+          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 200);
+          resolvedCategory = 'Crimes Against Property';
+        } else if (cat.includes('body')) {
+          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 100);
+          resolvedCategory = 'Crimes Against Body';
+        } else if (cat.includes('women')) {
+          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 300);
+          resolvedCategory = 'Crimes Against Women';
+        } else if (cat.includes('economic')) {
+          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 400);
+          resolvedCategory = 'Economic Offences';
+        } else if (cat.includes('special') || cat.includes('sll')) {
+          cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 600);
+          resolvedCategory = 'Special and Local Laws (SLL)';
         } else {
           // If no specific match, explicitly return unresolved
           unresolvedCategory = true;
@@ -226,6 +241,21 @@ export const retrieveContext = async (plan: QueryPlan, req?: any): Promise<any> 
             resolvedCategory = 'Cyber Crimes';
           } else if (cat.includes('ndps') || cat.includes('drug')) {
             cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 601);
+            resolvedCategory = 'Special and Local Laws (SLL)';
+          } else if (cat.includes('property')) {
+            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 200);
+            resolvedCategory = 'Crimes Against Property';
+          } else if (cat.includes('body')) {
+            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 100);
+            resolvedCategory = 'Crimes Against Body';
+          } else if (cat.includes('women')) {
+            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 300);
+            resolvedCategory = 'Crimes Against Women';
+          } else if (cat.includes('economic')) {
+            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 400);
+            resolvedCategory = 'Economic Offences';
+          } else if (cat.includes('special') || cat.includes('sll')) {
+            cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 600);
             resolvedCategory = 'Special and Local Laws (SLL)';
           } else {
              return {
