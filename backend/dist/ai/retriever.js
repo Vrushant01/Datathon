@@ -91,48 +91,62 @@ const retrieveContext = async (plan, req) => {
                 }
                 let isFuzzyMatch = false;
                 let unresolvedCategory = false;
+                let resolvedCategory = '';
                 if (cat === 'all' || cat === '' || cat === 'all crimes' || cat === 'any') {
-                    // No category filtering needed
+                    resolvedCategory = 'All Crimes';
                 }
                 else if (cat.includes('vehicle theft')) {
                     cases = cases.filter(c => (c.StolenProperty || '').toLowerCase().includes('vehicle'));
                     isFuzzyMatch = true;
+                    resolvedCategory = 'Crimes Against Property';
                 }
                 else if (cat.includes('murder') && !cat.includes('attempt')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 101);
+                    resolvedCategory = 'Crimes Against Body';
                 }
                 else if (cat.includes('attempt to murder')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 102);
+                    resolvedCategory = 'Crimes Against Body';
                 }
                 else if (cat.includes('grievous hurt')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 103);
+                    resolvedCategory = 'Crimes Against Body';
                 }
                 else if (cat.includes('theft') || cat.includes('larceny')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 201);
+                    resolvedCategory = 'Crimes Against Property';
                 }
                 else if (cat.includes('robbery')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 202);
+                    resolvedCategory = 'Crimes Against Property';
                 }
                 else if (cat.includes('house breaking')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 203);
+                    resolvedCategory = 'Crimes Against Property';
                 }
                 else if (cat.includes('rape')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 301);
+                    resolvedCategory = 'Crimes Against Women';
                 }
                 else if (cat.includes('dowry')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 302);
+                    resolvedCategory = 'Crimes Against Women';
                 }
                 else if (cat.includes('cheating') || cat.includes('forgery')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 401);
+                    resolvedCategory = 'Economic Offences';
                 }
                 else if (cat.includes('phishing') || cat.includes('financial fraud')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 501);
+                    resolvedCategory = 'Cyber Crimes';
                 }
                 else if (cat.includes('cyber')) {
                     cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 500);
+                    resolvedCategory = 'Cyber Crimes';
                 }
                 else if (cat.includes('ndps') || cat.includes('drug')) {
                     cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 601);
+                    resolvedCategory = 'Special and Local Laws (SLL)';
                 }
                 else {
                     // If no specific match, explicitly return unresolved
@@ -154,6 +168,7 @@ const retrieveContext = async (plan, req) => {
                 }));
                 return {
                     category: plan.category,
+                    resolvedCategory,
                     totalCases: cases.length,
                     isFuzzyMatch,
                     cases: trimmedCases
@@ -162,26 +177,63 @@ const retrieveContext = async (plan, req) => {
             case 'getCaseTrend': {
                 const repo = new CloudScaleRepository_1.CloudScaleRepository(req);
                 let cases = await repo.getAllCases();
-                // Optional Category Filtering
+                let resolvedCategory = '';
                 if (plan.category) {
                     const cat = plan.category.toLowerCase();
                     if (cat === 'all' || cat === '' || cat === 'all crimes' || cat === 'any') {
-                        // No filtering needed
+                        resolvedCategory = 'All Crimes';
                     }
                     else if (cat.includes('vehicle theft')) {
                         cases = cases.filter(c => (c.StolenProperty || '').toLowerCase().includes('vehicle'));
+                        resolvedCategory = 'Crimes Against Property';
                     }
                     else if (cat.includes('murder') && !cat.includes('attempt')) {
                         cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 101);
+                        resolvedCategory = 'Crimes Against Body';
+                    }
+                    else if (cat.includes('attempt to murder')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 102);
+                        resolvedCategory = 'Crimes Against Body';
+                    }
+                    else if (cat.includes('grievous hurt')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 103);
+                        resolvedCategory = 'Crimes Against Body';
                     }
                     else if (cat.includes('theft') || cat.includes('larceny')) {
                         cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 201);
+                        resolvedCategory = 'Crimes Against Property';
                     }
                     else if (cat.includes('robbery')) {
                         cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 202);
+                        resolvedCategory = 'Crimes Against Property';
+                    }
+                    else if (cat.includes('house breaking')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 203);
+                        resolvedCategory = 'Crimes Against Property';
+                    }
+                    else if (cat.includes('rape')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 301);
+                        resolvedCategory = 'Crimes Against Women';
+                    }
+                    else if (cat.includes('dowry')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 302);
+                        resolvedCategory = 'Crimes Against Women';
+                    }
+                    else if (cat.includes('cheating') || cat.includes('forgery')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 401);
+                        resolvedCategory = 'Economic Offences';
+                    }
+                    else if (cat.includes('phishing') || cat.includes('financial fraud')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 501);
+                        resolvedCategory = 'Cyber Crimes';
                     }
                     else if (cat.includes('cyber')) {
                         cases = cases.filter(c => Number(c.CrimeMajorHeadID) === 500);
+                        resolvedCategory = 'Cyber Crimes';
+                    }
+                    else if (cat.includes('ndps') || cat.includes('drug')) {
+                        cases = cases.filter(c => Number(c.CrimeMinorHeadID) === 601);
+                        resolvedCategory = 'Special and Local Laws (SLL)';
                     }
                     else {
                         return {
@@ -218,7 +270,7 @@ const retrieveContext = async (plan, req) => {
                     .sort((a, b) => b.period.localeCompare(a.period)) // Sort descending to get newest first
                     .slice(0, 12)
                     .sort((a, b) => a.period.localeCompare(b.period)); // Sort ascending again for the chart
-                return { groupBy: plan.groupBy, category: plan.category, trend };
+                return { groupBy: plan.groupBy, category: plan.category, resolvedCategory, trend };
             }
             case 'getOfficerPerformance': {
                 const repo = new CloudScaleRepository_1.CloudScaleRepository(req);

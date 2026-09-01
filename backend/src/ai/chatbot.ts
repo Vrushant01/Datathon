@@ -29,10 +29,16 @@ export class ChatSession {
       // Store a brief note of the context that was retrieved so future turns know what data was loaded
       if (context && !context.useRag && plan.tool !== 'none') {
         const toolStr = plan.tool;
-        const argStr = plan.personName || plan.collection || '';
+        const argStr = JSON.stringify({
+          category: plan.category,
+          dateRange: plan.dateRange,
+          districtName: plan.districtName,
+          personName: plan.personName,
+          groupBy: plan.groupBy
+        });
         this.history.push({ 
           role: 'assistant', 
-          content: `[Internal Tool Execution: ${toolStr} on ${argStr} returned ${context.totalCases || context.count || (Array.isArray(context.cases || context) ? (context.cases || context).length : 1)} results]` 
+          content: `[System Note: I previously ran ${toolStr} with arguments ${argStr} and returned ${context.totalCases || context.count || (Array.isArray(context.cases || context) ? (context.cases || context).length : 1)} results]` 
         });
       }
 

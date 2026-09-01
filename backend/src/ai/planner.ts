@@ -205,7 +205,7 @@ export const planQuery = async (question: string, req?: any, chatHistory: any[] 
       })),
       {
         role: 'user',
-        content: `Decide which tool (if any) answers this question, then call it. If no database/RAG lookup is needed, do not call any tool.\n\nQuestion: ${question}`,
+        content: `Based on the conversation history above, the user has a new follow-up question. If the new question implies previously established context (such as the same crime category, date range, district, or person), you MUST preserve and reuse those exact parameters from the previous [System Note] when calling tools, unless the user explicitly changes them.\n\nNew Question: ${question}\n\nDecide which tool (if any) answers this question, then call it with the fully resolved context. If no database/RAG lookup is needed, do not call any tool.`,
       },
     ];
 
