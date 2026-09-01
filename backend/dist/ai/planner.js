@@ -120,13 +120,13 @@ const PLANNER_TOOLS = [
         type: 'function',
         function: {
             name: 'getCrimeStatsByCategory',
-            description: 'Get crime statistics or a list of cases for a specific crime category.',
+            description: 'Get crime statistics or a list of cases for a specific crime category. ALWAYS use this tool when the user asks about a crime type. The category parameter accepts natural-language terms — the system will map them to the correct database category. Recognized keywords include: "theft", "robbery", "burglary", "larceny", "house breaking", "vehicle theft" (→ Crimes Against Property); "murder", "assault", "grievous hurt", "kidnapping" (→ Crimes Against Body); "rape", "dowry", "molestation" (→ Crimes Against Women); "cheating", "fraud", "forgery" (→ Economic Offences); "cyber", "phishing", "hacking" (→ Cyber Crimes); "ndps", "drugs", "excise" (→ SLL).',
             parameters: {
                 type: 'object',
                 properties: {
                     category: {
                         type: 'string',
-                        description: 'The crime category to search for (e.g. "vehicle theft", "murder", "robbery")'
+                        description: 'The crime category keyword (e.g. "theft", "murder", "cyber", "robbery"). Use the natural-language term from the user — it will be mapped to the correct database category. "theft" maps to Crimes Against Property (Minor Head 201).'
                     },
                     dateRange: {
                         type: 'object',

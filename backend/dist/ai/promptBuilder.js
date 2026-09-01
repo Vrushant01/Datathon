@@ -41,14 +41,31 @@ Never write anything else inside the \`\`\`recharts block except raw JSON.`;
         const fields = Object.entries(info.fields).map(([k, v]) => `${k} (${v.type})`).join(', ');
         prompt += `  Fields: ${fields}\n`;
     }
-    prompt += `\nRULES:\n`;
+    prompt += `\nKSP DATABASE CRIME CATEGORY TAXONOMY:\n`;
+    prompt += `The KSP database has exactly SIX official top-level crime categories. These are the ONLY valid major categories:\n`;
+    prompt += `  1. Crimes Against Body      (Major Head 100) — murder, attempt to murder, grievous hurt, assault, kidnapping\n`;
+    prompt += `  2. Crimes Against Property  (Major Head 200) — THEFT, burglary, robbery, larceny, house breaking, stolen property, vehicle theft, chain snatching, pickpocketing\n`;
+    prompt += `  3. Crimes Against Women     (Major Head 300) — rape, dowry, molestation, domestic violence, harassment\n`;
+    prompt += `  4. Economic Offences        (Major Head 400) — cheating, forgery, fraud, embezzlement\n`;
+    prompt += `  5. Cyber Crimes             (Major Head 500) — phishing, online fraud, hacking, cyberstalking\n`;
+    prompt += `  6. Special and Local Laws (SLL) (Major Head 600) — NDPS/drugs, excise, gambling, arms act\n`;
+    prompt += `\n`;
+    prompt += `NATURAL LANGUAGE → DATABASE CATEGORY MAPPING (apply BEFORE calling any tool):\n`;
+    prompt += `  "theft" / "thefts" / "stolen" / "property theft" / "vehicle theft" / "bike theft" / "car theft" / "chain snatching" / "pickpocket" / "burglary" / "robbery" / "larceny" / "house breaking" → use category="theft" (maps to Crimes Against Property, Minor Head 201/202/203)\n`;
+    prompt += `  "murder" / "homicide" / "killing" / "assault" / "hurt" / "kidnap" → use category="murder" or "grievous hurt" (maps to Crimes Against Body, Major Head 100)\n`;
+    prompt += `  "rape" / "dowry" / "molestation" / "violence against women" → use category="rape" or "dowry" (maps to Crimes Against Women, Major Head 300)\n`;
+    prompt += `  "cheating" / "fraud" / "forgery" / "embezzlement" → use category="cheating" (maps to Economic Offences, Major Head 400)\n`;
+    prompt += `  "cyber" / "hacking" / "phishing" / "online fraud" / "cybercrime" → use category="cyber" (maps to Cyber Crimes, Major Head 500)\n`;
+    prompt += `  "drugs" / "NDPS" / "narcotic" / "excise" / "arms" / "gambling" → use category="ndps" (maps to SLL, Major Head 600)\n`;
+    prompt += `\n`;
+    prompt += `RULES:\n`;
     prompt += `1. Use the provided tools to query the database. For people, use getCaseCountByPerson or listCasesByPerson.\n`;
-    prompt += `2. For categorical questions (e.g. "vehicle thefts this month", "unicorn thefts"), ALWAYS use getCrimeStatsByCategory, even if the category seems like nonsense. The tool will handle unknown categories.\n`;
+    prompt += `2. For categorical questions, ALWAYS apply the NATURAL LANGUAGE → DATABASE CATEGORY MAPPING above first, then call getCrimeStatsByCategory with the mapped category keyword.\n`;
+    prompt += `   EXAMPLE: User says "theft cases in August 2026" → you call getCrimeStatsByCategory with category="theft" and appropriate dateRange. NEVER treat "theft" as an unrecognized category — it is a well-known alias for Crimes Against Property.\n`;
     prompt += `   *IMPORTANT:* If the user asks for a specific date or "today", you MUST include the \`dateRange\` parameter (e.g. {"start": "2026-08-30", "end": "2026-08-30"}) in getCrimeStatsByCategory or getCaseTrend.\n`;
-    prompt += `   *IMPORTANT:* There is no explicit minor head for "Vehicle Theft". It falls broadly under "Theft / Larceny" (Minor Head 201). If the user asks for "vehicle thefts", you must use getCrimeStatsByCategory with category="vehicle theft". The tool will filter the free-text \`StolenProperty\` field. When reporting this, explicitly state: "Based on records where stolen property matches vehicle-related terms...". Do not present it as a strict definitive count.
-
-  *CRITICAL:* If the database context contains \`"unresolvedCategory": true\`, you MUST state clearly that you do not recognize the crime category and cannot map it to the database schema. Do not output a count, do not output a chart, and do not default to 0. State exactly: "I don't recognize '[category]' as a valid crime category."
-  `;
+    prompt += `   *IMPORTANT:* There is no separate "Vehicle Theft" minor head — vehicle theft falls under "Theft / Larceny" (Minor Head 201). Use category="vehicle theft"; the tool will also filter the StolenProperty field. State: "Based on records where stolen property matches vehicle-related terms...".\n`;
+    prompt += `\n`;
+    prompt += `   *CRITICAL:* If the database context contains \`"unresolvedCategory": true\`, you MUST state clearly that you do not recognize the crime category and cannot map it to the database schema. Do not output a count, do not output a chart, and do not default to 0. State exactly: "I don't recognize '[category]' as a valid crime category."\n`;
     prompt += `3. For grouped time-series questions (e.g. "graph FIRs by month", "trend of cyber crimes per day"), you MUST use the getCaseTrend tool. Do NOT try to use aggregate for time-grouping.\n`;
     prompt += `4. Formulate your responses dynamically based on the user's intent. Do NOT force a single response template. For example, if asked for a simple count, provide a short, direct answer. If asked for a list of cases, return a clean, itemized list.\n`;
     prompt += `2. Formulate valid, read-only queries against the CloudScale data.\n`;
