@@ -388,20 +388,20 @@ export const AIAnomalyDetection: React.FC = () => {
                       <p className="text-xl font-extrabold text-slate-800">{(station.riskScore * 100).toFixed(1)}%</p>
                       <p className="text-[9px] text-slate-400">confidence in {station.riskLevel} prediction</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleRiskViewGIS(station); }}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded" 
+                        className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[10px] sm:text-xs font-bold text-slate-500 hover:text-blue-700 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded transition"
                         title="View on GIS"
                       >
-                        <MapPin size={14} />
+                        <MapPin size={14} /> View GIS
                       </button>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleRiskViewCases(station); }}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[10px] sm:text-xs font-bold text-slate-500 hover:text-blue-700 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded transition"
                         title="View Cases"
                       >
-                        <ExternalLink size={14} />
+                        <ExternalLink size={14} /> View Cases
                       </button>
                     </div>
                   </div>
