@@ -125,7 +125,7 @@ export const AdminLayout: React.FC = () => {
       <main className={`flex-grow flex flex-col max-w-full ${
         (location.pathname.includes('/network') || location.pathname.includes('/assistant')) 
           ? 'p-0 pb-0' 
-          : 'px-4 pt-4 pb-24 xl:p-8'
+          : 'px-4 pt-4 pb-safe-nav xl:pb-0 xl:p-8'
       }`}>
         <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'flex-grow flex flex-col w-full h-full' : 'container mx-auto'}>
           <Outlet />

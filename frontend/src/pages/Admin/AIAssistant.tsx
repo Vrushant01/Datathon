@@ -135,7 +135,7 @@ export const AIAssistant: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col flex-grow h-full bg-white shadow-lg border-x border-slate-200 overflow-hidden relative pb-20 xl:pb-0">
+    <div className="flex flex-col flex-grow h-full bg-white shadow-lg border-x border-slate-200 overflow-hidden relative pb-safe-nav xl:pb-0">
       {/* Header */}
       <div className="flex justify-between items-center px-6 py-4 bg-ksp-navy text-white">
         <div className="flex items-center gap-3">
