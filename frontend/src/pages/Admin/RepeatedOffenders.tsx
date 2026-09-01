@@ -137,13 +137,13 @@ export const RepeatedOffenders: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex justify-between items-end border-b pb-4">
+      <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-[clamp(16px,4vw,24px)] font-black text-slate-800 tracking-tight flex items-center gap-2 uppercase">
-            <Users size={24} className="text-ksp-gold shrink-0" />
+          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2 uppercase">
+            <Users size={24} className="text-ksp-gold" />
             Repeated Offender Intelligence
           </h1>
-          <p className="text-[clamp(10px,2vw,14px)] text-slate-500 font-medium tracking-wide mt-1 uppercase">
+          <p className="text-sm text-slate-500 font-medium tracking-wide mt-1 uppercase">
             Identify, Analyze and Monitor Recidivist Offenders
           </p>
         </div>
@@ -157,9 +157,9 @@ export const RepeatedOffenders: React.FC = () => {
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg shrink-0">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
             <Users size={24} />
           </div>
           <div>
@@ -169,7 +169,7 @@ export const RepeatedOffenders: React.FC = () => {
         </div>
         
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg shrink-0">
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
             <Database size={24} />
           </div>
           <div>
@@ -179,7 +179,7 @@ export const RepeatedOffenders: React.FC = () => {
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-red-50 text-red-600 rounded-lg shrink-0">
+          <div className="p-3 bg-red-50 text-red-600 rounded-lg">
             <ShieldAlert size={24} />
           </div>
           <div>
@@ -190,7 +190,7 @@ export const RepeatedOffenders: React.FC = () => {
         </div>
 
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-orange-50 text-orange-600 rounded-lg shrink-0">
+          <div className="p-3 bg-orange-50 text-orange-600 rounded-lg">
             <Activity size={24} />
           </div>
           <div className="overflow-hidden">

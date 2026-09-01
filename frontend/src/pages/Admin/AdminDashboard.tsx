@@ -162,12 +162,12 @@ export const AdminDashboard: React.FC = () => {
     <div className="space-y-6 select-none">
       
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
+      <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-[clamp(16px,4vw,20px)] font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Operations Control</h2>
-          <p className="text-[clamp(10px,2vw,12px)] text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Operations Control</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3">
           <select 
             value={timeFilter} 
             onChange={e => setTimeFilter(e.target.value as any)}
@@ -187,7 +187,7 @@ export const AdminDashboard: React.FC = () => {
               Retry Connection
             </button>
           )}
-          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-sm ${
+          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
             dbConnectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
             dbConnectionStatus === 'connecting' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
             'bg-red-50 text-red-700 border border-red-200'
@@ -200,55 +200,55 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
         
         <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-ksp-navy rounded-lg border border-blue-100 shrink-0">
+          <div className="p-3 bg-blue-50 text-ksp-navy rounded-lg border border-blue-100">
             <FileText size={20} />
           </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">Total FIRs</div>
-            <div className="text-xl font-extrabold text-ksp-navy truncate">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalFIR}</div>
+          <div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Total FIRs</div>
+            <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalFIR}</div>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-lg border border-amber-100 shrink-0">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-lg border border-amber-100">
             <Clock size={20} />
           </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">Pending Cases</div>
-            <div className="text-xl font-extrabold text-amber-600 truncate">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : underInvestigation}</div>
+          <div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Pending Cases</div>
+            <div className="text-xl font-extrabold text-amber-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : underInvestigation}</div>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 shrink-0">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
             <CheckCircle size={20} />
           </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">Solved / Closed</div>
-            <div className="text-xl font-extrabold text-emerald-600 truncate">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : solved}</div>
+          <div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Solved / Closed</div>
+            <div className="text-xl font-extrabold text-emerald-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : solved}</div>
           </div>
         </div>
 
         <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 shrink-0">
+          <div className="p-3 bg-slate-50 text-slate-700 rounded-lg border border-slate-200">
             <Users size={20} />
           </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">Active Officers</div>
-            <div className="text-xl font-extrabold text-slate-800 truncate">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : activeOfficersCount}</div>
+          <div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Active Officers</div>
+            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : activeOfficersCount}</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4 md:col-span-2 lg:col-span-1 xl:col-span-1">
-          <div className="p-3 bg-slate-50 text-slate-700 rounded-lg border border-slate-200 shrink-0">
+        <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4 col-span-2 xl:col-span-1">
+          <div className="p-3 bg-slate-50 text-slate-700 rounded-lg border border-slate-200">
             <MapPin size={20} />
           </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider truncate">Police Stations</div>
-            <div className="text-xl font-extrabold text-slate-800 truncate">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalStations}</div>
+          <div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Police Stations</div>
+            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalStations}</div>
           </div>
         </div>
 
