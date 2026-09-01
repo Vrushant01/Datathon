@@ -79,21 +79,61 @@ export const AIAnomalyDetection: React.FC = () => {
   const [riskError, setRiskError] = useState(false);
   const riskFetchedRef = useRef(false);
 
-  const fetchStationRisks = () => {
+  const fetchStationRisks = async () => {
     setRiskError(false);
     setRiskLoading(true);
-    fetch(`${API_BASE_URL}/api/station-risk/batch-predict`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.data) {
-          // Sort by riskScore descending
-          setStationRisks(data.data.sort((a: any, b: any) => b.riskScore - a.riskScore));
-        } else {
+    const url = `${API_BASE_URL}/api/station-risk/batch-predict`;
+    console.log(`[Station Risk] Request URL: ${url}`);
+    
+    try {
+      const response = await fetch(url);
+      console.log(`[Station Risk] HTTP status: ${response.status}`);
+      
+      const rawText = await response.text();
+      console.log(`[Station Risk] Raw response: ${rawText.substring(0, 150)}...`);
+      
+      let body;
+      try {
+        body = JSON.parse(rawText);
+      } catch (e) {
+        console.error('[Station Risk] Failed to parse JSON', e);
+        setRiskError(true);
+        return;
+      }
+      
+      console.log(`[Station Risk] Response type: ${typeof body}, isArray: ${Array.isArray(body)}`);
+      
+      const predictions =
+          Array.isArray(body)
+            ? body
+            : Array.isArray(body.predictions)
+              ? body.predictions
+              : Array.isArray(body.data)
+                ? body.data
+                : [];
+                
+      console.log(`[Station Risk] Prediction count: ${predictions.length}`);
+      if (predictions.length > 0) {
+        console.log(`[Station Risk] First prediction:`, predictions[0]);
+      }
+      
+      if (predictions.length > 0) {
+        const sorted = [...predictions].sort((a: any, b: any) => (b.riskScore || 0) - (a.riskScore || 0));
+        setStationRisks(sorted);
+      } else {
+        // If it's explicitly { success: false }, treat as error, otherwise empty
+        if (body && body.success === false) {
           setRiskError(true);
+        } else {
+          setStationRisks([]);
         }
-      })
-      .catch(() => setRiskError(true))
-      .finally(() => setRiskLoading(false));
+      }
+    } catch (e) {
+      console.error('[Station Risk] Fetch error', e);
+      setRiskError(true);
+    } finally {
+      setRiskLoading(false);
+    }
   };
 
   useEffect(() => {
