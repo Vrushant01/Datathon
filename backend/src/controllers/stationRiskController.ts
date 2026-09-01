@@ -91,7 +91,9 @@ export const predictRiskBatch = async (req: Request, res: Response) => {
     console.error('[StationRiskController] Batch prediction error:', error.message);
     return res.status(500).json({
       success: false,
-      error: 'An error occurred during batch prediction.'
+      error: 'An error occurred during batch prediction.',
+      details: error.message,
+      stack: error.stack
     });
   }
 };
