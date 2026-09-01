@@ -76,11 +76,11 @@ export const AIAnomalyDetection: React.FC = () => {
   // ── Station Risk Prediction ────────────────────────────────────────────────
   const [stationRisks, setStationRisks] = useState<StationRiskResult[]>([]);
   const [riskLoading, setRiskLoading] = useState(false);
-  const [riskError, setRiskError] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
   const riskFetchedRef = useRef(false);
 
   const fetchStationRisks = async () => {
-    setRiskError(false);
+    setRiskError(null);
     setRiskLoading(true);
     const url = `${API_BASE_URL}/api/station-risk/batch-predict`;
     console.log(`[Station Risk] Request URL: ${url}`);
@@ -97,7 +97,7 @@ export const AIAnomalyDetection: React.FC = () => {
         body = JSON.parse(rawText);
       } catch (e) {
         console.error('[Station Risk] Failed to parse JSON', e);
-        setRiskError(true);
+        setRiskError('NETWORK');
         return;
       }
       
@@ -112,25 +112,21 @@ export const AIAnomalyDetection: React.FC = () => {
                 ? body.data
                 : [];
                 
-      console.log(`[Station Risk] Prediction count: ${predictions.length}`);
+      console.log(`[Station Risk] Final prediction count: ${predictions.length}`);
       if (predictions.length > 0) {
         console.log(`[Station Risk] First prediction:`, predictions[0]);
       }
       
-      if (predictions.length > 0) {
+      if (body && body.success === false) {
+        // Backend explicitly returned success: false
+        setRiskError('API');
+      } else {
         const sorted = [...predictions].sort((a: any, b: any) => (b.riskScore || 0) - (a.riskScore || 0));
         setStationRisks(sorted);
-      } else {
-        // If it's explicitly { success: false }, treat as error, otherwise empty
-        if (body && body.success === false) {
-          setRiskError(true);
-        } else {
-          setStationRisks([]);
-        }
       }
     } catch (e) {
       console.error('[Station Risk] Fetch error', e);
-      setRiskError(true);
+      setRiskError('NETWORK');
     } finally {
       setRiskLoading(false);
     }
@@ -351,8 +347,18 @@ export const AIAnomalyDetection: React.FC = () => {
 
         <div className="p-5">
           {riskLoading ? (
-            <div className="text-sm text-slate-500 font-medium py-8 text-center animate-pulse">Loading predictive models...</div>
-          ) : riskError ? (
+            <div className="text-sm text-slate-500 font-medium py-8 text-center animate-pulse">Loading station risk predictions...</div>
+          ) : riskError === 'API' ? (
+            <div className="text-sm text-red-500 font-medium py-8 text-center flex flex-col items-center gap-3">
+              Station risk prediction temporarily unavailable.
+              <button 
+                onClick={() => fetchStationRisks()}
+                className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : riskError === 'NETWORK' ? (
             <div className="text-sm text-red-500 font-medium py-8 text-center flex flex-col items-center gap-3">
               Unable to load station risk predictions.
               <button 
@@ -363,7 +369,7 @@ export const AIAnomalyDetection: React.FC = () => {
               </button>
             </div>
           ) : stationRisks.length === 0 ? (
-            <div className="text-sm text-slate-500 font-medium py-8 text-center">No predictions available.</div>
+            <div className="text-sm text-slate-500 font-medium py-8 text-center">No police stations available for prediction.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {stationRisks.map((station, i) => (

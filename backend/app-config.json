@@ -15,6 +15,8 @@
     "ZOHO_CLIENT_SECRET": "2448506311377d7b59586f2481090dea0944747df0"
   },
   "memory": 512,
-  "scripts": {},
+  "scripts": {
+    "build": "npm install && npm run build"
+  },
   "raw": {}
 }

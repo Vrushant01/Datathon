@@ -23,33 +23,61 @@ export interface StationFeatures {
 
 export const predictStationRisk = async (features: StationFeatures) => {
   const endpoint = process.env.QUICKML_ENDPOINT_URL;
-  const token = process.env.QUICKML_ACCESS_TOKEN;
+  let token = process.env.QUICKML_ACCESS_TOKEN;
 
   if (!endpoint || !token) {
     throw new Error('QuickML configuration is missing in environment variables.');
   }
 
   try {
-    const response = await axios.post(
-      endpoint,
-      { data: features },
-      {
-        headers: {
-          'CATALYST-ORG': process.env.QUICKML_ORG_ID,
-          'X-QUICKML-ENDPOINT-KEY': process.env.QUICKML_ENDPOINT_KEY,
-          'Authorization': `Zoho-oauthtoken ${token}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000 // 10s timeout
+    const makeRequest = async (accessToken: string) => {
+      return await axios.post(
+        endpoint,
+        { data: features },
+        {
+          headers: {
+            'CATALYST-ORG': process.env.QUICKML_ORG_ID,
+            'X-QUICKML-ENDPOINT-KEY': process.env.QUICKML_ENDPOINT_KEY,
+            'Authorization': `Zoho-oauthtoken ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10s timeout
+        }
+      );
+    };
+
+    let response;
+    try {
+      response = await makeRequest(token as string);
+    } catch (error: any) {
+      if (error.response && error.response.data && error.response.data.code === 'INVALID_OAUTHTOKEN') {
+        console.log('[Station Risk] Access token expired. Attempting refresh...');
+        const refreshUrl = `https://accounts.zoho.in/oauth/v2/token?grant_type=refresh_token&client_id=${process.env.ZOHO_CLIENT_ID}&client_secret=${process.env.ZOHO_CLIENT_SECRET}&refresh_token=${process.env.QUICKML_REFRESH_TOKEN}`;
+        const refreshRes = await axios.post(refreshUrl);
+        if (refreshRes.data && refreshRes.data.access_token) {
+          token = refreshRes.data.access_token;
+          process.env.QUICKML_ACCESS_TOKEN = token; // Update for current process
+          console.log('[Station Risk] Token refreshed successfully.');
+          response = await makeRequest(token as string);
+        } else {
+          throw new Error('Failed to refresh token: ' + JSON.stringify(refreshRes.data));
+        }
+      } else {
+        throw error;
       }
-    );
+    }
 
     const mlData = response.data;
     
+    console.log(`[Station Risk] QuickML Response Type: ${typeof mlData}, Keys: ${mlData ? Object.keys(mlData).join(',') : 'none'}`);
+    
+    // Sometimes APIs wrap responses in a 'data' object. Handle both unwrapped and wrapped.
+    const payload = (mlData && mlData.result) ? mlData : (mlData && mlData.data ? mlData.data : null);
+
     // Convert QuickML response to our expected format (QuickML returns arrays for batch/single predictions)
-    if (mlData && Array.isArray(mlData.result) && Array.isArray(mlData.likelihood_score)) {
-      const risk = mlData.result[0];
-      const likelihoodScore = mlData.likelihood_score[0];
+    if (payload && Array.isArray(payload.result) && Array.isArray(payload.likelihood_score)) {
+      const risk = payload.result[0];
+      const likelihoodScore = payload.likelihood_score[0];
       
       return {
         success: true,
@@ -58,6 +86,7 @@ export const predictStationRisk = async (features: StationFeatures) => {
         likelihoodScore: likelihoodScore
       };
     } else {
+      console.error(`[Station Risk] Malformed QuickML response: ${JSON.stringify(mlData)}`);
       throw new Error('Malformed QuickML response.');
     }
   } catch (error: any) {

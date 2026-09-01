@@ -50,9 +50,24 @@ export const predictRiskBatch = async (req: Request, res: Response) => {
     const repo = RepositoryFactory.getRepository(req);
     const units = await repo.getUnits();
     // Only stations (TypeID === 1)
-    const stations = units.filter(u => Number(u.TypeID) === 1).slice(0, 50); // limit to 50 for performance
+    const stations = units.filter(u => Number(u.TypeID) === 1).slice(0, 10); // limit to 10 for performance in AppSail (timeout prevention)
+
+    console.log(`[Station Risk] Units fetched: ${units.length}`);
+    console.log(`[Station Risk] Police stations found: ${stations.length}`);
+    
+    if (stations.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
 
     const results = [];
+    let featureGenerationSuccess = 0;
+    let featureGenerationFailed = 0;
+    let quickmlSuccess = 0;
+    let quickmlFailures = 0;
+    let lastQuickMlError = '';
     
     // Batch process to avoid hitting QuickML too hard
     const batchSize = 5;
@@ -60,9 +75,19 @@ export const predictRiskBatch = async (req: Request, res: Response) => {
       const batch = stations.slice(i, i + batchSize);
       
       const batchPromises = batch.map(async (station) => {
+        let features;
         try {
-          const features = await calculateFeatures(req, station.UnitID);
+          features = await calculateFeatures(req, station.UnitID);
+          featureGenerationSuccess++;
+        } catch (e: any) {
+          console.error(`[StationRiskController] Feature generation failed for station ${station.UnitID}:`, e.message);
+          featureGenerationFailed++;
+          return null;
+        }
+
+        try {
           const prediction = await predictStationRisk(features);
+          quickmlSuccess++;
           return {
             stationId: station.UnitID,
             stationName: station.UnitName,
@@ -73,13 +98,32 @@ export const predictRiskBatch = async (req: Request, res: Response) => {
             explanation: (prediction as any).explanation
           };
         } catch (e: any) {
-          console.error(`[StationRiskController] Failed to predict for station ${station.UnitID}:`, e.message);
+          console.error(`[StationRiskController] QuickML failed for station ${station.UnitID}:`, e.message);
+          lastQuickMlError = e.message;
+          quickmlFailures++;
           return null; // Skip failed stations
         }
       });
       
       const batchResults = await Promise.all(batchPromises);
       results.push(...batchResults.filter(r => r !== null));
+    }
+    
+    console.log(`[Station Risk] Stations processed: ${stations.length}`);
+    console.log(`[Station Risk] Feature generation success: ${featureGenerationSuccess}`);
+    console.log(`[Station Risk] QuickML success: ${quickmlSuccess}`);
+    console.log(`[Station Risk] QuickML failures: ${quickmlFailures}`);
+    console.log(`[Station Risk] Predictions returned: ${results.length}`);
+
+    if (results.length === 0 && stations.length > 0) {
+      // All failed
+      return res.status(502).json({
+        success: false,
+        error: `Station risk prediction failed. Last error: ${lastQuickMlError}`,
+        stationsFound: stations.length,
+        predictionsSucceeded: quickmlSuccess,
+        predictionsFailed: quickmlFailures
+      });
     }
     
     return res.status(200).json({
