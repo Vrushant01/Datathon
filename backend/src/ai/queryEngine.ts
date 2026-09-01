@@ -31,6 +31,14 @@ export const matchesFilter = (doc: any, filter: Record<string, any> = {}): boole
           case '$lt':  if (!(value < opVal)) return false; break;
           case '$ne':  if (value === opVal) return false; break;
           case '$in':  if (!Array.isArray(opVal) || !opVal.includes(value)) return false; break;
+          case '$options': break; // handled by $regex
+          case '$regex':
+            if (typeof value !== 'string') return false;
+            try {
+              const flags = cond.$options || 'i';
+              if (!new RegExp(opVal, flags).test(value)) return false;
+            } catch (e) { return false; }
+            break;
           default: throw new Error(`Security Violation: operator ${op} is not permitted.`);
         }
       }
