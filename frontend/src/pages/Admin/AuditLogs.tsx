@@ -20,10 +20,10 @@ export const AuditLogs: React.FC = () => {
     <div className="space-y-6 select-none">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
+      <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-[clamp(16px,4vw,20px)] font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Audit Compliance Logs</h2>
-          <p className="text-[clamp(10px,2vw,12px)] text-slate-500 font-bold uppercase tracking-wider mt-1">Immutable session triggers and data modifications logs</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Audit Compliance Logs</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Immutable session triggers and data modifications logs</p>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export const AuditLogs: React.FC = () => {
       </div>
 
       {/* Roster Table Grid */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">

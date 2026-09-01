@@ -76,12 +76,6 @@
   }
 }
 
-@layer utilities {
-  .pb-safe-nav {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
-  }
-}
-
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;

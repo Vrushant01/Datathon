@@ -151,10 +151,10 @@ export const AdminAnalytics: React.FC = () => {
     <div className="space-y-6 select-none font-sans">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4">
+      <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-[clamp(16px,4vw,20px)] font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Statistical Analytics</h2>
-          <p className="text-[clamp(10px,2vw,12px)] text-slate-500 font-bold uppercase tracking-wider mt-1">Advanced aggregate charts and demographic filters</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Statistical Analytics</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Advanced aggregate charts and demographic filters</p>
         </div>
       </div>
 
