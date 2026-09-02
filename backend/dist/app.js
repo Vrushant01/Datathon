@@ -98,7 +98,7 @@ app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.get('/api/health', (req, res) => {
     try {
-        res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale' });
+        res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.1-pipeline-fix' });
     }
     catch (error) {
         res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
