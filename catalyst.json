@@ -6,5 +6,8 @@
       "build_command": "npm install && npm run build",
       "run_command": "npm start"
     }
-  ]
+  ],
+  "client": {
+    "source": "frontend/dist"
+  }
 }

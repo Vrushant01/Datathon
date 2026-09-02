@@ -243,7 +243,7 @@ class CloudScaleRepository {
     async getEmployees() {
         return await this.scanAll('Employee');
     }
-    async createCase(caseData) {
+    async createCase(caseData, actorId = 'system') {
         const nosql = this.app.nosql();
         const table = nosql.table('casemasters');
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
@@ -252,6 +252,14 @@ class CloudScaleRepository {
         await table.insertItems({ item });
         // Invalidate caches explicitly
         GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+        // Audit log
+        await this.createAuditLog({
+            Action: 'CREATE_CASE',
+            EntityType: 'CASE',
+            EntityID: String(caseData.CaseMasterID),
+            Description: `Case ${caseData.CaseNo} registered`,
+            ActorID: actorId
+        }).catch(e => console.error('[Audit] Failed to log createCase:', e));
         return caseData;
     }
     async getCases(filter) {
@@ -405,6 +413,15 @@ class CloudScaleRepository {
             });
             // Invalidate cache
             GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+            // Audit log
+            await this.createAuditLog({
+                Action: 'UPDATE_CASE_STATUS',
+                EntityType: 'CASE',
+                EntityID: String(caseId),
+                Description: `Case status updated to ${statusId}`,
+                ActorID: userEmail || 'system',
+                NewValue: String(statusId)
+            });
             return true;
         }
         catch (e) {
@@ -412,8 +429,107 @@ class CloudScaleRepository {
             return false;
         }
     }
+    async updateCase(caseId, updateData, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const table = nosql.table('casemasters');
+        const allowedKeys = new Set([
+            'PoliceStationID', 'CaseCategoryID', 'GravityOffenceID',
+            'CrimeMajorHeadID', 'CrimeMinorHeadID', 'CaseStatusID',
+            'CourtID', 'IncidentFromDate', 'IncidentToDate',
+            'InfoReceivedPSDate', 'latitude', 'longitude',
+            'BriefFacts', 'GDEntryNumber', 'GDEntryTimestamp',
+            'DelayInReporting', 'DelayReason', 'BNSApplicable',
+            'CrimeSceneLocation', 'DistanceDirection',
+            'JurisdictionFlag', 'StolenProperty'
+        ]);
+        const updateAttributes = [];
+        for (const [key, value] of Object.entries(updateData)) {
+            if (!allowedKeys.has(key)) {
+                throw new Error(`Field '${key}' is unsupported or immutable.`);
+            }
+            let marshalledValue;
+            if (typeof value === 'number') {
+                marshalledValue = NoSQLMarshall.makeNumber(value);
+            }
+            else if (typeof value === 'boolean') {
+                marshalledValue = NoSQLMarshall.makeBoolean(value);
+            }
+            else {
+                marshalledValue = NoSQLMarshall.make(value);
+            }
+            updateAttributes.push({
+                operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+                update_value: marshalledValue,
+                attribute_path: [key]
+            });
+        }
+        if (updateAttributes.length === 0) {
+            return this.getCaseById(caseId); // Nothing to update
+        }
+        try {
+            await table.updateItems({
+                keys: new NoSQLItem().addNumber('CaseMasterID', caseId),
+                update_attributes: updateAttributes
+            });
+            // Invalidate cache
+            GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+            // Audit log
+            await this.createAuditLog({
+                Action: 'UPDATE_CASE',
+                EntityType: 'CASE',
+                EntityID: String(caseId),
+                Description: 'Case fields updated',
+                ActorID: actorId,
+                NewValue: JSON.stringify(updateData)
+            });
+            return await this.getCaseById(caseId);
+        }
+        catch (e) {
+            console.error('updateCase error', e);
+            throw e;
+        }
+    }
+    async reassignCase(caseId, targetOfficerId, actorId = 'system') {
+        const employees = await this.getEmployees();
+        const officerExists = employees.find(e => Number(e.EmployeeID) === targetOfficerId);
+        if (!officerExists) {
+            throw new Error(`Invalid target officer ID: ${targetOfficerId}`);
+        }
+        const nosql = this.app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const table = nosql.table('casemasters');
+        try {
+            await table.updateItems({
+                keys: new NoSQLItem().addNumber('CaseMasterID', caseId),
+                update_attributes: [
+                    {
+                        operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+                        update_value: NoSQLMarshall.makeNumber(targetOfficerId),
+                        attribute_path: ['PolicePersonID']
+                    }
+                ]
+            });
+            // Invalidate cache
+            GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+            // Audit log
+            await this.createAuditLog({
+                Action: 'REASSIGN_CASE',
+                EntityType: 'CASE',
+                EntityID: String(caseId),
+                Description: `Case reassigned to officer ${targetOfficerId}`,
+                ActorID: actorId,
+                NewValue: String(targetOfficerId)
+            });
+            return true;
+        }
+        catch (e) {
+            console.error('reassignCase error', e);
+            throw e;
+        }
+    }
     // --- Timeline, Evidence, Chargesheets ---
-    async addTimelineNote(note) {
+    async addTimelineNote(note, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         // Ensure NoteID is present
@@ -421,6 +537,14 @@ class CloudScaleRepository {
             note.NoteID = Date.now();
         const item = NoSQLItem.from(note);
         await nosql.table('timelinenotes').insertItems({ item });
+        // Audit log
+        await this.createAuditLog({
+            Action: 'ADD_TIMELINE_NOTE',
+            EntityType: 'TIMELINE',
+            EntityID: String(note.NoteID),
+            Description: `Timeline note added to Case ${note.CaseMasterID}`,
+            ActorID: actorId || note.user_email || 'system'
+        });
         return note;
     }
     async getTimelineNotesByCase(caseId) {
@@ -444,13 +568,21 @@ class CloudScaleRepository {
             return [];
         }
     }
-    async uploadEvidence(evidence) {
+    async uploadEvidence(evidence, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         if (!evidence.EvidenceID)
             evidence.EvidenceID = Date.now();
         const item = NoSQLItem.from(evidence);
         await nosql.table('evidencefiles').insertItems({ item });
+        // Audit log
+        await this.createAuditLog({
+            Action: 'UPLOAD_EVIDENCE',
+            EntityType: 'EVIDENCE',
+            EntityID: String(evidence.EvidenceID),
+            Description: `Evidence uploaded for Case ${evidence.CaseMasterID}`,
+            ActorID: actorId || evidence.userEmail || 'system'
+        });
         return evidence;
     }
     async getEvidenceFilesByCase(caseId) {
@@ -471,13 +603,21 @@ class CloudScaleRepository {
             return [];
         }
     }
-    async submitChargesheet(cs) {
+    async submitChargesheet(cs, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         if (!cs.CSID)
             cs.CSID = Date.now();
         const item = NoSQLItem.from(cs);
         await nosql.table('chargesheets').insertItems({ item });
+        // Audit log
+        await this.createAuditLog({
+            Action: 'SUBMIT_CHARGESHEET',
+            EntityType: 'CHARGESHEET',
+            EntityID: String(cs.CSID),
+            Description: `Chargesheet submitted for Case ${cs.CaseMasterID}`,
+            ActorID: actorId || cs.user_email || 'system'
+        });
         return cs;
     }
     async getChargesheetsByCase(caseId) {
@@ -510,7 +650,7 @@ class CloudScaleRepository {
         await nosql.table('customedges').insertItems({ item });
         return edge;
     }
-    async addCaseEntity(entityType, entity) {
+    async addCaseEntity(entityType, entity, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         let table = 'accuseds';
@@ -521,6 +661,15 @@ class CloudScaleRepository {
         const item = NoSQLItem.from(entity);
         await nosql.table(table).insertItems({ item });
         GLOBAL_CACHE[table] = { data: null, promise: null, timestamp: 0 };
+        // Audit log
+        const entityId = entity.PersonID || entity.VictimID || entity.ComplainantID || Date.now();
+        await this.createAuditLog({
+            Action: 'CREATE_CASE_ENTITY',
+            EntityType: entityType.toUpperCase(),
+            EntityID: String(entityId),
+            Description: `${entityType} added to Case ${entity.CaseMasterID}`,
+            ActorID: actorId || entity.userEmail || 'system'
+        });
         return entity;
     }
     async getCaseStatistics(metric, filters) {
@@ -588,6 +737,66 @@ class CloudScaleRepository {
     }
     async deleteCaseEntity(entityType, entityId) {
         throw new Error('Delete entity not fully implemented in CloudScale repo mock');
+    }
+    // --- Audit Logs ---
+    async createAuditLog(log) {
+        try {
+            const nosql = this.app.nosql();
+            const table = nosql.table('auditlogs');
+            const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+            const logId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            const timestamp = new Date().toISOString();
+            const item = NoSQLItem.from({
+                AuditLogID: logId,
+                Timestamp: timestamp,
+                Action: log.Action,
+                EntityType: log.EntityType,
+                EntityID: log.EntityID,
+                Description: log.Description,
+                ActorID: log.ActorID,
+                OldValue: log.OldValue || null,
+                NewValue: log.NewValue || null
+            });
+            await table.insertItems({ item });
+        }
+        catch (e) {
+            // Do not re-throw here so the business operation succeeds even if auditing fails.
+            // But log heavily.
+            console.error('[Audit] Critical: Failed to persist audit log in CloudScale:', e);
+        }
+    }
+    async getAuditLogs(filter) {
+        const logs = await this.scanAll('auditlogs');
+        // Apply server-side filtering
+        let filtered = logs;
+        if (filter) {
+            if (filter.entityType) {
+                filtered = filtered.filter(l => l.EntityType === filter.entityType);
+            }
+            if (filter.entityId) {
+                filtered = filtered.filter(l => String(l.EntityID) === String(filter.entityId));
+            }
+            if (filter.actorId) {
+                filtered = filtered.filter(l => String(l.ActorID) === String(filter.actorId));
+            }
+            if (filter.action) {
+                filtered = filtered.filter(l => l.Action === filter.action);
+            }
+        }
+        // Server-side sorting (newest first)
+        filtered.sort((a, b) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+        // Server-side pagination
+        const total = filtered.length;
+        const page = filter?.page && filter.page >= 1 ? filter.page : 1;
+        const limit = filter?.limit && filter.limit >= 1 && filter.limit <= 100 ? filter.limit : 50;
+        const startIndex = (page - 1) * limit;
+        const paginatedData = filtered.slice(startIndex, startIndex + limit);
+        return {
+            data: paginatedData,
+            total,
+            page,
+            limit
+        };
     }
 }
 exports.CloudScaleRepository = CloudScaleRepository;
