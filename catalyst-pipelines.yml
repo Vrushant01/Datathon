@@ -55,14 +55,11 @@ jobs:
       # and does not reliably include node_modules/dist in the archive.
       - npm install -g zcatalyst-cli@1.27.0
 
-      # Initialized-project deploy: CLI walks up from /catalyst/backend
-      # to find /catalyst/catalyst.json, reads appsail entry
-      # {source: "backend", name: "backend"}, then reads
-      # backend/app-config.json for stack/command/buildPath.
-      # Archive is built from /catalyst/backend including node_modules/ + dist/.
       - >-
-        cd .. && catalyst deploy
-        --only appsail
+        catalyst deploy appsail --name backend
+        --build-path "."
+        --stack "node20"
+        --command "node dist/app.js"
         --token "$CATALYST_TOKEN"
         --verbose
 
