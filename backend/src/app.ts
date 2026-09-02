@@ -215,7 +215,7 @@ app.get('/api/cases', requireAuth, async (req, res) => {
 });
 
 // Backend Audit Logs API
-app.get('/api/audit-logs', requireRole('Admin', 'Analytics'), async (req, res) => {
+app.get('/api/audit-logs', requireAuth, requireRole('Admin', 'Analytics'), async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
 
@@ -240,7 +240,7 @@ app.get('/api/audit-logs', requireRole('Admin', 'Analytics'), async (req, res) =
     res.json(result);
   } catch (error: any) {
     console.error('Failed to fetch audit logs:', error);
-    res.status(500).json({ error: 'Failed to fetch audit logs' });
+    res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message, stack: error.stack });
   }
 });
 
@@ -569,7 +569,7 @@ app.patch('/api/cases/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/cases/:id', requireRole('Admin'), async (req, res) => {
+app.delete('/api/cases/:id', requireAuth, requireRole('Admin'), async (req, res) => {
   res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
 });
 

@@ -387,10 +387,10 @@ export const RepeatedOffenders: React.FC = () => {
       {/* Details Modal */}
       {selectedOffender && (
         <div className="fixed inset-0 z-50 flex justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-auto flex flex-col overflow-hidden animate-fade-in-up max-h-[calc(100vh-48px)]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-auto flex flex-col overflow-y-auto animate-fade-in-up max-h-[calc(100vh-48px)] relative">
             
             {/* Modal Header */}
-            <div className="bg-ksp-navy text-white p-5 flex justify-between items-center shrink-0 border-b-4 border-ksp-gold">
+            <div className="sticky top-0 z-20 bg-ksp-navy text-white p-5 flex justify-between items-center shrink-0 border-b-4 border-ksp-gold shadow-md">
               <div>
                 <h2 className="text-xl font-black uppercase tracking-wide flex items-center gap-2">
                   <User size={20} className="text-ksp-gold" />
@@ -421,7 +421,7 @@ export const RepeatedOffenders: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto bg-slate-50 flex-grow min-h-0 relative">
+            <div className="p-6 bg-slate-50 flex-grow min-h-0 relative">
               
               {casesLoading && (
                 <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-sm flex items-center justify-center z-10 flex-col gap-3">
