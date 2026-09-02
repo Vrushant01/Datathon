@@ -4,6 +4,38 @@ exports.predictRiskBatch = exports.predictRisk = void 0;
 const quickmlService_1 = require("../services/quickmlService");
 const stationFeatureService_1 = require("../services/stationFeatureService");
 const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
+// Helper to extract human-readable risk drivers from the feature set
+const extractRiskDrivers = (f) => {
+    const drivers = [];
+    if (f.growth_vs_previous_week && f.growth_vs_previous_week > 0.1) {
+        drivers.push(`7-day crime count is ${(f.growth_vs_previous_week * 100).toFixed(0)}% above the previous week.`);
+    }
+    else if (f.case_count_7d > 0 && f.case_count_previous_7d === 0) {
+        drivers.push(`Recent spike: ${f.case_count_7d} cases in last 7 days vs 0 in previous week.`);
+    }
+    if (f.historical_z_score && f.historical_z_score > 1.0) {
+        drivers.push(`Recent activity is ${f.historical_z_score.toFixed(1)} standard deviations above the historical mean.`);
+    }
+    if (f.night_case_ratio && f.night_case_ratio > 0.4) {
+        drivers.push(`High proportion of nighttime incidents (${(f.night_case_ratio * 100).toFixed(0)}%).`);
+    }
+    if (f.repeat_offender_case_count && f.repeat_offender_case_count > 0) {
+        drivers.push(`${f.repeat_offender_case_count} recent cases involve known repeat offenders.`);
+    }
+    // Volume drivers
+    const categories = [
+        { name: 'property', count: f.property_cases || 0 },
+        { name: 'women-related', count: f.women_cases || 0 },
+        { name: 'bodily harm', count: f.body_cases || 0 }
+    ].sort((a, b) => b.count - a.count);
+    if (categories[0].count > 10) {
+        drivers.push(`Elevated history of ${categories[0].name} crimes (${categories[0].count} total).`);
+    }
+    if (f.case_count_7d && f.case_count_7d >= 10) {
+        drivers.push(`High absolute volume (${f.case_count_7d} cases in 7 days).`);
+    }
+    return drivers;
+};
 const predictRisk = async (req, res) => {
     try {
         const data = req.body;
@@ -15,10 +47,13 @@ const predictRisk = async (req, res) => {
         const features = await (0, stationFeatureService_1.calculateFeatures)(req, stationId);
         // 2. Predict risk using QuickML
         const prediction = await (0, quickmlService_1.predictStationRisk)(features);
-        // 3. Return prediction and the generated features for transparency
+        // 3. Extract Risk Drivers
+        const riskDrivers = extractRiskDrivers(features);
+        // 4. Return prediction and the generated features for transparency
         return res.status(200).json({
             ...prediction,
-            features
+            features,
+            riskDrivers
         });
     }
     catch (error) {
@@ -27,14 +62,17 @@ const predictRisk = async (req, res) => {
         const statusCode = error.message.includes('missing in environment') ? 500 : 502;
         // If features were calculated, try to include them in the response for transparency
         let features;
+        let riskDrivers = [];
         try {
             features = await (0, stationFeatureService_1.calculateFeatures)(req, Number(req.body.stationId));
+            riskDrivers = extractRiskDrivers(features);
         }
         catch (e) { }
         return res.status(statusCode).json({
             success: false,
             error: error.message || 'An error occurred during prediction.',
-            features
+            features,
+            riskDrivers
         });
     }
 };
@@ -77,6 +115,7 @@ const predictRiskBatch = async (req, res) => {
                 try {
                     const prediction = await (0, quickmlService_1.predictStationRisk)(features);
                     quickmlSuccess++;
+                    const riskDrivers = extractRiskDrivers(features);
                     return {
                         stationId: station.UnitID,
                         stationName: station.UnitName,
@@ -84,6 +123,7 @@ const predictRiskBatch = async (req, res) => {
                         riskScore: prediction.likelihoodScore || 0,
                         riskLevel: prediction.riskLabel || 'UNKNOWN',
                         features,
+                        riskDrivers,
                         explanation: prediction.explanation
                     };
                 }

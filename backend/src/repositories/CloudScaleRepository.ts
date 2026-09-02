@@ -16,7 +16,8 @@ const GLOBAL_CACHE: Record<string, AppCacheState> = {
   victims: { data: null, promise: null, timestamp: 0 },
   customedges: { data: null, promise: null, timestamp: 0 },
   complainants: { data: null, promise: null, timestamp: 0 },
-  actsections: { data: null, promise: null, timestamp: 0 }
+  actsections: { data: null, promise: null, timestamp: 0 },
+  auditlogs: { data: null, promise: null, timestamp: 0 }
 };
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -792,41 +793,54 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
   async getAuditLogs(filter?: AuditLogFilter): Promise<AuditLogResult> {
-    const logs = await this.scanAll('auditlogs');
-    
-    // Apply server-side filtering
-    let filtered = logs;
-    if (filter) {
-      if (filter.entityType) {
-        filtered = filtered.filter(l => l.EntityType === filter.entityType);
+    try {
+      const zcql = this.app.zcql();
+      
+      const page = filter?.page && filter.page >= 1 ? filter.page : 1;
+      const limit = filter?.limit && filter.limit >= 1 && filter.limit <= 100 ? filter.limit : 50;
+      
+      let whereClause = '';
+      if (filter) {
+        let conditions = [];
+        if (filter.entityType) conditions.push(`EntityType = '${filter.entityType}'`);
+        if (filter.entityId) conditions.push(`EntityID = '${filter.entityId}'`);
+        if (filter.actorId) conditions.push(`ActorID = '${filter.actorId}'`);
+        if (filter.action) conditions.push(`Action = '${filter.action}'`);
+        if (conditions.length > 0) {
+          whereClause = 'WHERE ' + conditions.join(' AND ');
+        }
       }
-      if (filter.entityId) {
-        filtered = filtered.filter(l => String(l.EntityID) === String(filter.entityId));
+      
+      // 1. Get total count
+      const countQuery = `SELECT COUNT(ROWID) FROM auditlogs ${whereClause}`;
+      const countRes = await zcql.executeZCQLQuery(countQuery);
+      let total = 0;
+      if (countRes && countRes.length > 0) {
+        // ZCQL returns count in the ROWID field of the table object
+        total = parseInt(countRes[0].auditlogs.ROWID) || 0;
       }
-      if (filter.actorId) {
-        filtered = filtered.filter(l => String(l.ActorID) === String(filter.actorId));
-      }
-      if (filter.action) {
-        filtered = filtered.filter(l => l.Action === filter.action);
-      }
+      
+      // 2. Fetch paginated data (ZCQL uses 1-based indexing for LIMIT start_index, num_records)
+      const startIndex = ((page - 1) * limit) + 1;
+      const dataQuery = `SELECT * FROM auditlogs ${whereClause} ORDER BY Timestamp DESC LIMIT ${startIndex}, ${limit}`;
+      const dataRes = await zcql.executeZCQLQuery(dataQuery);
+      
+      const paginatedData = dataRes.map((r: any) => r.auditlogs);
+      
+      return {
+        data: paginatedData,
+        total,
+        page,
+        limit
+      };
+    } catch (e: any) {
+      console.error('[Audit] ZCQL Error fetching audit logs:', e.message);
+      return {
+        data: [],
+        total: 0,
+        page: filter?.page || 1,
+        limit: filter?.limit || 50
+      };
     }
-    
-    // Server-side sorting (newest first)
-    filtered.sort((a, b) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
-    
-    // Server-side pagination
-    const total = filtered.length;
-    const page = filter?.page && filter.page >= 1 ? filter.page : 1;
-    const limit = filter?.limit && filter.limit >= 1 && filter.limit <= 100 ? filter.limit : 50;
-    
-    const startIndex = (page - 1) * limit;
-    const paginatedData = filtered.slice(startIndex, startIndex + limit);
-    
-    return {
-      data: paginatedData,
-      total,
-      page,
-      limit
-    };
   }
 }

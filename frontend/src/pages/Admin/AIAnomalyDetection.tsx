@@ -14,6 +14,7 @@ interface StationRiskResult {
   riskScore: number;
   riskLevel: string;
   features: any;
+  riskDrivers?: string[];
   explanation?: string;
 }
 
@@ -459,7 +460,21 @@ export const AIAnomalyDetection: React.FC = () => {
                 </div>
               )}
 
-              <h4 className="text-sm font-bold text-slate-800 mb-3 border-b pb-2">XGBoost Input Features</h4>
+              {selectedStation.riskDrivers && selectedStation.riskDrivers.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-bold text-slate-800 mb-3 border-b pb-2">Risk Drivers / Indicators</h4>
+                  <ul className="space-y-2">
+                    {selectedStation.riskDrivers.map((driver, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-slate-700">
+                        <span className="text-red-500 mt-0.5">•</span>
+                        <span>{driver}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <h4 className="text-sm font-bold text-slate-800 mb-3 border-b pb-2">Raw XGBoost Input Features</h4>
               
               <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6 text-sm">
                 <div>

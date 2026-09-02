@@ -190,7 +190,7 @@ app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
     }
 });
 // Backend Audit Logs API
-app.get('/api/audit-logs', (0, authMiddleware_1.requireRole)('Admin', 'Analytics'), async (req, res) => {
+app.get('/api/audit-logs', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)('Admin', 'Analytics'), async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         // Parse query parameters
@@ -212,7 +212,7 @@ app.get('/api/audit-logs', (0, authMiddleware_1.requireRole)('Admin', 'Analytics
     }
     catch (error) {
         console.error('Failed to fetch audit logs:', error);
-        res.status(500).json({ error: 'Failed to fetch audit logs' });
+        res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message, stack: error.stack });
     }
 });
 let repeatedOffendersCache = { data: null, timestamp: 0 };
@@ -521,7 +521,7 @@ app.patch('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: 'Failed to patch case' });
     }
 });
-app.delete('/api/cases/:id', (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
+app.delete('/api/cases/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
     res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
 });
 app.get('/api/victims', authMiddleware_1.requireAuth, async (req, res) => {
