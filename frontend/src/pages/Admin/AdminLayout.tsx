@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, Users, FileText, BarChart3, MapPin, 
-  History, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat, MoreHorizontal
+  History, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat, MoreHorizontal, Crosshair
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -35,7 +35,8 @@ export const AdminLayout: React.FC = () => {
 
   const menuItems = [
     { label: 'Dashboard', path: '/admin-portal', icon: <LayoutDashboard size={18} />, primary: true },
-    { label: 'Stations', path: '/admin-portal/stations', icon: <Building size={18} />, primary: true },
+    { label: 'Intell Center', path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
+    { label: 'Stations', path: '/admin-portal/stations', icon: <Building size={18} />, primary: false },
     { label: 'FIRs & Cases', path: '/admin-portal/firs', icon: <FileText size={18} />, primary: true },
     { label: 'Analytics', path: '/admin-portal/analytics', icon: <BarChart3 size={18} />, primary: true },
     { label: 'Officers', path: '/admin-portal/officers', icon: <Users size={18} />, primary: false },

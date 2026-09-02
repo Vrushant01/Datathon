@@ -889,46 +889,49 @@ export const mockDb = {
     return newCase;
   },
 
-  updateCaseStatus: (caseId: number, statusId: number, officerEmail: string) => {
+  updateCaseStatus: (caseId: number, statusId: number, officerEmail: string, skipAuditLog: boolean = false) => {
     const state = loadDbState();
-    const cIdx = state.cases.findIndex(item => item.CaseMasterID === caseId);
-    if (cIdx === -1) return false;
+    const c = state.cases.find(item => item.CaseMasterID === caseId);
+    if (!c) return false;
 
-    const oldStatus = state.caseStatuses.find(s => s.CaseStatusID === state.cases[cIdx].CaseStatusID)?.CaseStatusName;
-    state.cases[cIdx].CaseStatusID = statusId;
-    const newStatus = state.caseStatuses.find(s => s.CaseStatusID === statusId)?.CaseStatusName;
+    const oldStatus = mockDb.getCaseStatuses().find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName || c.CaseStatusID;
+    const newStatus = mockDb.getCaseStatuses().find(s => s.CaseStatusID === statusId)?.CaseStatusName || statusId;
 
-    // Add timeline note
-    const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
-    const timelineEntry = {
-      NoteID: noteId,
-      CaseMasterID: caseId,
-      event_type: 'Status Changed',
-      event_title: `Status Updated to: ${newStatus}`,
-      description: `Investigation status changed from "${oldStatus}" to "${newStatus}".`,
-      created_by: null,
-      created_at: new Date().toISOString()
-    };
-    state.timelineNotes.push({
-      ...timelineEntry,
-      created_by: officerEmail
-    });
+    c.CaseStatusID = statusId;
 
-    // Add log
-    const logId = state.auditLogs.length > 0 ? Math.max(...state.auditLogs.map(l => l.LogID)) + 1 : 1;
-    const auditEntry = {
-      LogID: logId,
-      user_id: null,
-      action: 'UPDATE_CASE_STATUS',
-      table_name: 'CaseMaster',
-      record_id: caseId.toString(),
-      timestamp: new Date().toISOString(),
-      details: `Status updated from ${oldStatus} to ${newStatus}`
-    };
-    state.auditLogs.push({
-      ...auditEntry,
-      user_email: officerEmail
-    });
+    if (!skipAuditLog) {
+      // Add timeline note
+      const noteId = state.timelineNotes.length > 0 ? Math.max(...state.timelineNotes.map(n => n.NoteID)) + 1 : 1001;
+      const timelineEntry = {
+        NoteID: noteId,
+        CaseMasterID: caseId,
+        event_type: 'Status Changed',
+        event_title: `Status Updated to: ${newStatus}`,
+        description: `Investigation status changed from "${oldStatus}" to "${newStatus}".`,
+        created_by: null,
+        created_at: new Date().toISOString()
+      };
+      state.timelineNotes.push({
+        ...timelineEntry,
+        created_by: officerEmail
+      });
+
+      // Add log
+      const logId = state.auditLogs.length > 0 ? Math.max(...state.auditLogs.map(l => l.LogID)) + 1 : 1;
+      const auditEntry = {
+        LogID: logId,
+        user_id: null,
+        action: 'UPDATE_CASE_STATUS',
+        table_name: 'CaseMaster',
+        record_id: caseId.toString(),
+        timestamp: new Date().toISOString(),
+        details: `Status updated from ${oldStatus} to ${newStatus}`
+      };
+      state.auditLogs.push({
+        ...auditEntry,
+        user_email: officerEmail
+      });
+    }
 
     saveDbState(state);
 
@@ -972,7 +975,18 @@ export const mockDb = {
     return true;
   },
 
-  transferCase: (caseId: number, targetOfficerId: number) => {
+  transferCase: async (caseId: number, targetOfficerId: number) => {
+    const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ officerId: targetOfficerId })
+    });
+    
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to transfer case');
+    }
+
     const state = loadDbState();
     const cIdx = state.cases.findIndex(item => item.CaseMasterID === caseId);
     if (cIdx === -1) return false;
@@ -1018,19 +1032,30 @@ export const mockDb = {
     });
 
     saveDbState(state);
-
-    // Persist change to CloudScale
-    
-    try {
-      fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ officerId: targetOfficerId })
-      }).catch(err => console.error('Failed to update Mongo DB', err));
-    } catch (error) { console.error(error); }
-
     return true;
   },
+
+  updateCase: async (caseId: number, updateData: any) => {
+    const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData)
+    });
+    
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to update case');
+    }
+
+    const state = loadDbState();
+    const cIdx = state.cases.findIndex(item => item.CaseMasterID === caseId);
+    if (cIdx === -1) return false;
+
+    state.cases[cIdx] = { ...state.cases[cIdx], ...updateData };
+    saveDbState(state);
+    return state.cases[cIdx];
+  },
+
 
   // Timeline / Notes Queries
   addTimelineNote: async (caseId: number, note: Omit<TimelineNoteRow, 'NoteID' | 'CaseMasterID'>) => {

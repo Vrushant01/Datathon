@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { adminJwtMiddleware } from '../middleware/adminJwt';
+import { authMiddleware } from '../middleware/authMiddleware';
 import { getSession } from '../ai/chatbot';
 import { aiLogger } from '../ai/logger';
 import { discoverSchema } from '../ai/schemaCache';
 
 const router = Router();
 
-router.use(adminJwtMiddleware);
+router.use(authMiddleware);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'healthy', module: 'AI Assistant', version: '1.0' });
@@ -82,6 +82,62 @@ const chatbotHandler = async (req: Request, res: Response) => {
 
 router.get('/chat', chatbotHandler);
 router.post('/chat', chatbotHandler);
+
+import { generateAnswer } from '../ai/rag';
+import { getVerifiedIntelligenceContext, IntelligenceDimensions } from '../services/intelligenceService';
+
+router.post('/investigation-summary', async (req: Request, res: Response) => {
+  try {
+    const { alertDetails } = req.body;
+    
+    if (!alertDetails || !alertDetails.type) {
+      return res.status(400).json({ error: 'Valid alertDetails with type is required' });
+    }
+
+    const dimensions: IntelligenceDimensions = {
+      type: alertDetails.type,
+      districtId: alertDetails.districtId ? Number(alertDetails.districtId) : undefined,
+      stationId: alertDetails.stationId ? Number(alertDetails.stationId) : undefined,
+      crimeHeadId: alertDetails.crimeHeadId ? Number(alertDetails.crimeHeadId) : undefined,
+      dateFrom: alertDetails.dateFrom,
+      dateTo: alertDetails.dateTo
+    };
+
+    // 1. Fetch completely verified facts from backend service (ignoring any client-provided facts)
+    const verifiedData = await getVerifiedIntelligenceContext(req, dimensions);
+
+    const fullContext = {
+      alertDetails: {
+        id: alertDetails.id,
+        type: alertDetails.type,
+        severity: alertDetails.severity,
+        locationName: alertDetails.locationName,
+        explanation: alertDetails.explanation,
+        score: alertDetails.score
+      },
+      ...verifiedData
+    };
+
+    const question = `Please provide a concise investigation summary of this intelligence alert. 
+    
+    CRITICAL INSTRUCTIONS:
+    1. Use ONLY the supplied structured context.
+    2. Do not invent case details, people, relationships, or crime statistics.
+    3. Clearly separate FACTS from RECOMMENDATIONS.
+    4. If information is unavailable, explicitly state "Information unavailable".
+    5. Do not claim an investigation action has occurred unless the context proves it.
+    6. Use language such as "Based on the available case data...".
+    `;
+
+    // Bypass standard history/retrieval - directly pass the context to generateAnswer
+    const answer = await generateAnswer(question, fullContext, [], req);
+    
+    res.json({ answer });
+  } catch (err: any) {
+    aiLogger.error(`Investigation Summary error: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 router.get('/analytics', (req, res) => {

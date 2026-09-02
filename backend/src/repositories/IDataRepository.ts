@@ -45,4 +45,75 @@ export interface IDataRepository {
   addCaseEntity(entityType: string, entity: any): Promise<any>;
   updateCaseEntity(entityType: string, entity: any): Promise<any>;
   deleteCaseEntity(entityType: string, entityId: number): Promise<boolean>;
+  
+  // New Case Update Operations
+  updateCase(caseId: number, updateData: CaseUpdatePayload, actorId?: string): Promise<any>;
+  reassignCase(caseId: number, targetOfficerId: number, actorId?: string): Promise<boolean>;
+
+  // Audit Logs
+  createAuditLog(log: AuditLogPayload): Promise<void>;
+  getAuditLogs(filter?: AuditLogFilter): Promise<AuditLogResult>;
+}
+
+export interface AuditLogPayload {
+  Action: string;
+  EntityType: string;
+  EntityID: string;
+  Description: string;
+  ActorID: string;
+  OldValue?: string;
+  NewValue?: string;
+}
+
+export interface AuditLogFilter {
+  entityType?: string;
+  entityId?: string;
+  actorId?: string;
+  action?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AuditLog {
+  AuditLogID: string;
+  Timestamp: string;
+  Action: string;
+  EntityType: string;
+  EntityID: string;
+  Description: string;
+  ActorID: string;
+  OldValue?: string;
+  NewValue?: string;
+}
+
+export interface AuditLogResult {
+  data: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CaseUpdatePayload {
+  PoliceStationID?: number;
+  CaseCategoryID?: number;
+  GravityOffenceID?: number;
+  CrimeMajorHeadID?: number;
+  CrimeMinorHeadID?: number;
+  CaseStatusID?: number;
+  CourtID?: number;
+  IncidentFromDate?: string;
+  IncidentToDate?: string;
+  InfoReceivedPSDate?: string;
+  latitude?: number;
+  longitude?: number;
+  BriefFacts?: string;
+  GDEntryNumber?: string;
+  GDEntryTimestamp?: string;
+  DelayInReporting?: boolean;
+  DelayReason?: string;
+  BNSApplicable?: boolean;
+  CrimeSceneLocation?: string;
+  DistanceDirection?: string;
+  JurisdictionFlag?: 'Inside' | 'Outside';
+  StolenProperty?: string;
 }

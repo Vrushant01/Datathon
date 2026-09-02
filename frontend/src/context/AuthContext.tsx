@@ -77,97 +77,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     passcode: string,
     loginType: 'admin' | 'officer' | 'analytics'
   ): Promise<{ success: boolean; message: string }> => {
-    // Artificial slight delay for professional feel
-    await new Promise(resolve => setTimeout(resolve, 600));
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idOrEmail, passcode, loginType })
+      });
 
-    if (loginType === 'admin') {
-      // Admin Login Check
-      // Standard credentials for Admin Portal
-      if (
-        (idOrEmail.toLowerCase() === 'admin@ksp.gov.in' || idOrEmail.toLowerCase() === 'admin') &&
-        passcode === 'admin123'
-      ) {
-        const adminUser: AuthUser = {
-          email: 'admin@ksp.gov.in',
-          role: 'Admin',
-          firstName: 'Administrator KSP'
-        };
-        setUser(adminUser);
-        return { success: true, message: 'Admin authenticated successfully' };
+      const data = await response.json();
+
+      if (data.success && data.token) {
+        localStorage.setItem('token', data.token);
+        setUser(data.user);
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, message: data.message || 'Authentication failed' };
       }
-      return { success: false, message: 'Invalid Admin credentials' };
-    } else if (loginType === 'analytics') {
-      // Analytics Login Check
-      const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
-      
-      if (passcode !== 'analytics123') {
-        return { success: false, message: 'Invalid Analytics passcode. Try "analytics123"' };
-      }
-
-      // Find station by UnitID or partial name
-      const targetStation = stations.find(s => 
-        s.UnitID.toString() === idOrEmail || 
-        s.UnitName.toLowerCase().includes(idOrEmail.toLowerCase().replace('analytics_', '').replace('_analytics', ''))
-      );
-
-      if (!targetStation) {
-        return { success: false, message: 'Station not found for analytics access.' };
-      }
-
-      const districts = mockDb.getDistricts();
-      const district = districts.find(d => d.DistrictID === targetStation.DistrictID)?.DistrictName || 'Unknown District';
-
-      const analyticsUser = {
-        email: `analytics_${targetStation.UnitID}@ksp.gov.in`,
-        role: 'Analytics' as UserRole,
-        firstName: 'Station Analytics',
-        stationName: targetStation.UnitName,
-        districtName: district,
-        unitId: targetStation.UnitID
-      };
-      setUser(analyticsUser);
-      return { success: true, message: 'Analytics portal authenticated successfully' };
-      
-    } else {
-      // Officer Login Check
-      // Accepts EmployeeID or KGID, password check is simple 'password' for demo
-      const employees = mockDb.getEmployees();
-      const emp = employees.find(
-        e => e.EmployeeID.toString() === idOrEmail || e.KGID.toLowerCase() === idOrEmail.toLowerCase()
-      );
-
-      if (!emp) {
-        return { success: false, message: 'Employee ID or KGID not found' };
-      }
-
-      if (emp.status === 'Suspended') {
-        return { success: false, message: 'This officer profile has been suspended. Contact Admin.' };
-      }
-
-      if (passcode === 'password' || passcode === 'ksp123') {
-        const stations = mockDb.getUnits();
-        const districts = mockDb.getDistricts();
-        const station = stations.find(s => s.UnitID === emp.UnitID)?.UnitName || 'Unknown Station';
-        const district = districts.find(d => d.DistrictID === emp.DistrictID)?.DistrictName || 'Unknown District';
-
-        const officerUser: AuthUser = {
-          email: emp.email || `${emp.EmployeeID}@ksp.gov.in`,
-          role: 'Officer',
-          employeeId: emp.EmployeeID,
-          kgid: emp.KGID,
-          firstName: emp.FirstName,
-          stationName: station,
-          districtName: district
-        };
-        setUser(officerUser);
-        return { success: true, message: 'Officer authenticated successfully' };
-      }
-
-      return { success: false, message: 'Invalid password. Try "password"' };
+    } catch (error) {
+      console.error('Login request failed', error);
+      return { success: false, message: 'Network error or backend unreachable.' };
     }
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
     setUser(null);
   };
 

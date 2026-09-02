@@ -1,6 +1,6 @@
 export const getOfficerPerformanceDef = {
   name: 'getOfficerPerformance',
-  description: 'Retrieves performance metrics and case statistics for a specific police officer by their name or Employee ID.',
+  description: 'ONLY use this when the user asks for a SPECIFIC individual police officer by name or ID (e.g., "How many cases did Kiran Desai handle?"). DO NOT use this tool for general officer performance questions like "top officers", "officer performance", or "who handled the most cases" (use executeDatabaseQuery instead).',
   parameters: {
     type: 'object',
     properties: {

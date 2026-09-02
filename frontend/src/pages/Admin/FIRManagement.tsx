@@ -335,17 +335,21 @@ export const FIRManagement: React.FC = () => {
     setTransferModalOpen(true);
   };
 
-  const handleTransferSubmit = (e: React.FormEvent) => {
+  const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCase) return;
 
-    const success = mockDb.transferCase(selectedCase.CaseMasterID, transferOfficerId);
-    if (success) {
-      showNotification('success', `Case assigned successfully to new IO.`);
-      setTransferModalOpen(false);
-      setCases(mockDb.getCases());
-    } else {
-      showNotification('error', 'Transfer failed.');
+    try {
+      const success = await mockDb.transferCase(selectedCase.CaseMasterID, transferOfficerId);
+      if (success) {
+        showNotification('success', `Case assigned successfully to new IO.`);
+        setTransferModalOpen(false);
+        setCases(mockDb.getCases());
+      } else {
+        showNotification('error', 'Transfer failed.');
+      }
+    } catch (error: any) {
+      showNotification('error', `Transfer failed: ${error.message}`);
     }
   };
 
