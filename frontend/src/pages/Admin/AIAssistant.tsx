@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -48,7 +49,7 @@ export const AIAssistant: React.FC = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/chatbot/analytics`, {
+      const res = await authFetch(`${API_BASE_URL}/api/chatbot/analytics`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -80,7 +81,7 @@ export const AIAssistant: React.FC = () => {
     try {
       const q = encodeURIComponent(question);
       const sid = encodeURIComponent('admin-session-1');
-      const response = await fetch(`${API_BASE_URL}/api/chatbot/chat?question=${q}&sessionId=${sid}`, {
+      const response = await authFetch(`${API_BASE_URL}/api/chatbot/chat?question=${q}&sessionId=${sid}`, {
         method: 'GET',
         headers: {
           'Accept': 'text/event-stream'

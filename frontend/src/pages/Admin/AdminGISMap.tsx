@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { mockDb } from '../../utils/mockDb';
@@ -163,7 +164,7 @@ export const AdminGISMap: React.FC = () => {
         if (dateTo) query.append('dateTo', dateTo);
 
         
-        const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
+        const res = await authFetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
           signal: controller.signal
         });
         

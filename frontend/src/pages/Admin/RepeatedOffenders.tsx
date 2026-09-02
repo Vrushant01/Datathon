@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, AlertTriangle, Activity, Database, 
@@ -56,7 +57,7 @@ export const RepeatedOffenders: React.FC = () => {
         status: filterStatus !== 'ALL' ? filterStatus : ''
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/repeated-offenders?${params.toString()}`);
+      const response = await authFetch(`${API_BASE_URL}/api/repeated-offenders?${params.toString()}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -98,7 +99,7 @@ export const RepeatedOffenders: React.FC = () => {
       const fetchCases = async () => {
         setCasesLoading(true);
         try {
-          const res = await fetch(`${API_BASE_URL}/api/repeated-offenders/${selectedOffender.PersonID}`);
+          const res = await authFetch(`${API_BASE_URL}/api/repeated-offenders/${selectedOffender.PersonID}`);
           if (res.ok) {
             setOffenderCases(await res.json());
           } else {

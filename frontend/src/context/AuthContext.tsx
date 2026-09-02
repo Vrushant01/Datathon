@@ -1,3 +1,4 @@
+import { authFetch } from '../utils/authFetch';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { mockDb, EmployeeRow } from '../utils/mockDb';
 
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginType: 'admin' | 'officer' | 'analytics'
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/auth/login`, {
+      const response = await authFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idOrEmail, passcode, loginType })

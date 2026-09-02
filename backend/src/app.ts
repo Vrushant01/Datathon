@@ -185,7 +185,7 @@ app.get('/api/units', async (req, res) => {
   }
 });
 
-app.get('/api/employees', async (req, res) => {
+app.get('/api/employees', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getEmployees();
@@ -195,7 +195,7 @@ app.get('/api/employees', async (req, res) => {
   }
 });
 
-app.get('/api/cases', async (req, res) => {
+app.get('/api/cases', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getCases({});
@@ -207,7 +207,7 @@ app.get('/api/cases', async (req, res) => {
 });
 
 // Backend Audit Logs API
-app.get('/api/audit-logs', async (req, res) => {
+app.get('/api/audit-logs', requireRole('Admin', 'Analytics'), async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     
@@ -238,7 +238,7 @@ app.get('/api/audit-logs', async (req, res) => {
 
 let repeatedOffendersCache: { data: any[] | null, timestamp: number } = { data: null, timestamp: 0 };
 
-app.get('/api/repeated-offenders', async (req, res) => {
+app.get('/api/repeated-offenders', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const now = Date.now();
@@ -380,7 +380,7 @@ app.get('/api/repeated-offenders', async (req, res) => {
   }
 });
 
-app.get('/api/repeated-offenders/:personId', async (req, res) => {
+app.get('/api/repeated-offenders/:personId', requireAuth, async (req, res) => {
   try {
     const personId = req.params.personId;
     if (!repeatedOffendersCache.data) {
@@ -395,7 +395,7 @@ app.get('/api/repeated-offenders/:personId', async (req, res) => {
   }
 });
 
-app.get('/api/customedges', async (req, res) => {
+app.get('/api/customedges', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getAllCustomEdges();
@@ -405,7 +405,7 @@ app.get('/api/customedges', async (req, res) => {
   }
 });
 
-app.get('/api/complainants', async (req, res) => {
+app.get('/api/complainants', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getComplainants();
@@ -565,7 +565,7 @@ app.delete('/api/cases/:id', requireRole('Admin'), async (req, res) => {
   res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
 });
 
-app.get('/api/victims', async (req, res) => {
+app.get('/api/victims', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getAllVictims();
@@ -575,7 +575,7 @@ app.get('/api/victims', async (req, res) => {
   }
 });
 
-app.get('/api/accused', async (req, res) => {
+app.get('/api/accused', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getAllAccused();
@@ -587,7 +587,7 @@ app.get('/api/accused', async (req, res) => {
 
 
 
-app.get('/api/cases/officer/:officerId', async (req, res) => {
+app.get('/api/cases/officer/:officerId', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getCasesByOfficer(Number(req.params.officerId));
@@ -597,7 +597,7 @@ app.get('/api/cases/officer/:officerId', async (req, res) => {
   }
 });
 
-app.get('/api/cases/station/:stationId', async (req, res) => {
+app.get('/api/cases/station/:stationId', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getCasesByStation(Number(req.params.stationId));
@@ -607,7 +607,7 @@ app.get('/api/cases/station/:stationId', async (req, res) => {
   }
 });
 
-app.get('/api/network/:caseId', async (req, res) => {
+app.get('/api/network/:caseId', requireAuth, async (req, res) => {
   try {
     const caseId = Number(req.params.caseId);
     const db = RepositoryFactory.getRepository(req);
@@ -667,7 +667,7 @@ app.post('/api/ai/predict-risk', (req, res) => {
 });
 
 // Report Generation: Export case details as PDF Document
-app.get('/api/reports/case/:id', (req, res) => {
+app.get('/api/reports/case/:id', requireAuth, (req, res) => {
   const caseId = req.params.id;
 
   // Set response headers to prompt download of pdf file
@@ -757,7 +757,7 @@ app.post('/api/cases/:caseId/timeline', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/cases/:caseId/timeline', async (req, res) => {
+app.get('/api/cases/:caseId/timeline', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const notes = await db.getTimelineNotesByCase(Number(req.params.caseId));
@@ -804,7 +804,7 @@ app.post('/api/cases/:caseId/evidence', requireAuth, upload.single('file'), asyn
   }
 });
 
-app.get('/api/cases/:caseId/evidence', async (req, res) => {
+app.get('/api/cases/:caseId/evidence', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const files = await db.getEvidenceFilesByCase(Number(req.params.caseId));
@@ -825,7 +825,7 @@ app.post('/api/cases/:caseId/chargesheet', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/cases/:caseId/chargesheet', async (req, res) => {
+app.get('/api/cases/:caseId/chargesheet', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const cs = await db.getChargesheetsByCase(Number(req.params.caseId));

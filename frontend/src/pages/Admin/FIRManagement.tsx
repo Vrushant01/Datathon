@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { mockDb, CaseMasterRow, EmployeeRow } from '../../utils/mockDb';
@@ -298,7 +299,7 @@ export const FIRManagement: React.FC = () => {
           }]
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/cases`, {
+      const res = await authFetch(`${API_BASE_URL}/api/cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(casePayload)

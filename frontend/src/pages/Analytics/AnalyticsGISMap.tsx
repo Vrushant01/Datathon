@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { mockDb } from '../../utils/mockDb';
 import { API_BASE_URL } from '../../config/api';
@@ -97,7 +98,7 @@ export const AnalyticsGISMap: React.FC = () => {
         if (selectedGravity !== 'ALL') query.append('gravity', selectedGravity.toString());
 
         
-        const res = await fetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
+        const res = await authFetch(`${API_BASE_URL}/api/hotspots?${query.toString()}`, {
           signal: controller.signal
         });
         

@@ -5,10 +5,12 @@ const router = express.Router();
 
 import { getVerifiedIntelligenceContext, IntelligenceDimensions } from '../services/intelligenceService';
 
-router.get('/dashboard', aiController.getDashboard);
-router.get('/report/pdf', aiController.generatePdfReport);
+import { requireAuth } from '../middleware/authMiddleware';
 
-router.get('/intelligence-context', async (req, res) => {
+router.get('/dashboard', requireAuth, aiController.getDashboard);
+router.get('/report/pdf', requireAuth, aiController.generatePdfReport);
+
+router.get('/intelligence-context', requireAuth, async (req, res) => {
   try {
     const dimensions: IntelligenceDimensions = {
       type: req.query.type as 'ANOMALY' | 'RISK',

@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, ShieldAlert, MapPin, Repeat, Share2, FileText, ChevronRight, CheckCircle2, XCircle, Search, Bot, AlertTriangle, AlertCircle } from 'lucide-react';
@@ -36,7 +37,7 @@ export const IntelligenceCenter: React.FC = () => {
       try {
         const [aiData, riskRes] = await Promise.all([
           getAIDashboard(),
-          fetch(`${API_BASE_URL}/api/station-risk/batch-predict`).catch(() => null)
+          authFetch(`${API_BASE_URL}/api/station-risk/batch-predict`).catch(() => null)
         ]);
 
         const newAlerts: IntelligenceAlert[] = [];
@@ -204,7 +205,7 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
         if (alert.dateFrom) query.append('dateFrom', alert.dateFrom);
         if (alert.dateTo) query.append('dateTo', alert.dateTo);
 
-        const res = await fetch(`${API_BASE_URL}/api/ai/intelligence-context?${query.toString()}`, {
+        const res = await authFetch(`${API_BASE_URL}/api/ai/intelligence-context?${query.toString()}`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         
@@ -245,7 +246,7 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
         score: alert.score
       };
 
-      const res = await fetch(`${API_BASE_URL}/api/chatbot/investigation-summary`, {
+      const res = await authFetch(`${API_BASE_URL}/api/chatbot/investigation-summary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
