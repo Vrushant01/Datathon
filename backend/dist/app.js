@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 // ── Startup dependency diagnostic ────────────────────────────────────────────
 // Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
@@ -43,8 +42,11 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     credentials: true
 };
-app.use((0, cors_1.default)(corsOptions));
-app.options('*', (0, cors_1.default)(corsOptions)); // Handle preflight for all routes
+// CORS is handled entirely by Catalyst's Authorized Domains layer (Authentication → Authorized Domains in console).
+// Do NOT add Express cors() middleware here — it causes duplicate Access-Control-Allow-Origin headers
+// which browsers reject as a CORS violation even when both values are identical.
+// app.use(cors(corsOptions));
+// app.options('*', cors(corsOptions));
 app.use(express_1.default.json());
 // Mount the new dedicated routers
 app.use('/api/ai', aiRoutes_1.default);

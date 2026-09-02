@@ -587,12 +587,13 @@ export const syncData = async (): Promise<void> => {
     // 1. Health check with retries
     console.log(`[DB] health check started URL: ${API_BASE_URL}/api/health`);
     let isHealthy = false;
-    const backoff = [1000, 2000, 4000, 8000];
+    // Backoff accounts for AppSail cold starts (can take 15-45s on dev tier)
+    const backoff = [5000, 10000, 15000, 20000];
     for (let attempt = 1; attempt <= 5; attempt++) {
       try {
         // Use plain fetch without Authorization header to avoid OPTIONS preflight
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 10000);
+        const id = setTimeout(() => controller.abort(), 30000); // 30s timeout for cold starts
         const healthRes = await fetch(`${API_BASE_URL}/api/health`, { signal: controller.signal });
         clearTimeout(id);
         
@@ -610,13 +611,18 @@ export const syncData = async (): Promise<void> => {
         console.warn(`[DB] health check failed attempt ${attempt}:`, e.message);
       }
       if (attempt < 5) {
-        console.log(`[DB] retry #${attempt + 1}...`);
-        await wait(backoff[attempt - 1] || 8000);
+        console.log(`[DB] retry #${attempt + 1}... (waiting for AppSail warm-up)`);
+        await wait(backoff[attempt - 1] || 20000);
       }
     }
 
     if (!isHealthy) {
-      throw new Error('Unable to verify database connection after 5 attempts.');
+      // Don't hard-throw — set degraded mode so login can still be attempted.
+      // AppSail may still be cold-starting; user can retry login manually.
+      console.warn('[DB] Health check failed after 5 attempts — setting degraded mode.');
+      setDbStatus('error', 'Backend unreachable after 5 attempts. Login may still work — try signing in.', false);
+      isSyncing = false;
+      return; // exit gracefully instead of throwing
     }
 
     // Health check succeeded - mark as LIVE immediately

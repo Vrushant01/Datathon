@@ -51,8 +51,11 @@ const corsOptions = {
   credentials: true
 };
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight for all routes
+// CORS is handled entirely by Catalyst's Authorized Domains layer (Authentication → Authorized Domains in console).
+// Do NOT add Express cors() middleware here — it causes duplicate Access-Control-Allow-Origin headers
+// which browsers reject as a CORS violation even when both values are identical.
+// app.use(cors(corsOptions));
+// app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Mount the new dedicated routers
