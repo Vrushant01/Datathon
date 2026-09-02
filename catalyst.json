@@ -4,10 +4,57 @@
       "source": "backend",
       "name": "backend",
       "build_command": "npm install && npm run build",
-      "run_command": "npm start"
+      "run_command": "npm start",
+      "cors": {
+        "origins": [
+          "https://datathon-vnegltof.onslate.in"
+        ],
+        "methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE",
+          "OPTIONS"
+        ],
+        "headers": [
+          "Content-Type",
+          "Authorization",
+          "X-Requested-With",
+          "Accept",
+          "Origin"
+        ],
+        "max_age": 86400,
+        "credentials": true
+      }
     }
   ],
   "client": {
     "source": "frontend/dist"
+  },
+  "apig": {
+    "enabled": true
+  },
+  "cors": {
+    "origins": [
+      "https://datathon-vnegltof.onslate.in"
+    ],
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS"
+    ],
+    "headers": [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin"
+    ],
+    "max_age": 86400,
+    "credentials": true
   }
 }
