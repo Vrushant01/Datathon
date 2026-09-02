@@ -28,21 +28,42 @@ const pdfkit_1 = __importDefault(require("pdfkit"));
 const aiRoutes_1 = __importDefault(require("./routes/aiRoutes"));
 const chatbotRoutes_1 = __importDefault(require("./routes/chatbotRoutes"));
 const hotspotRoutes_1 = __importDefault(require("./routes/hotspotRoutes"));
+const authMiddleware_1 = require("./middleware/authMiddleware");
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const stationRiskRoutes_1 = __importDefault(require("./routes/stationRiskRoutes"));
+const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const hotspotController_1 = require("./controllers/hotspotController");
 const fixDatesRoute_1 = __importDefault(require("./routes/fixDatesRoute"));
 const fixDistrictsRoute_1 = __importDefault(require("./routes/fixDistrictsRoute"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
+const corsOptions = {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: false
+};
+// Manual CORS headers — set before cors() in case the Catalyst ZGS proxy
+// intercepts the cors() library output. Raw res.setHeader calls are lower-level.
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    next();
+});
+app.use((0, cors_1.default)(corsOptions));
+app.options('*', (0, cors_1.default)(corsOptions)); // Handle preflight for all routes
 app.use(express_1.default.json());
-app.use((0, cors_1.default)());
 // Mount the new dedicated routers
 app.use('/api/ai', aiRoutes_1.default);
 app.use('/api/chatbot', chatbotRoutes_1.default);
 app.use('/api/hotspots', hotspotRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use('/api/station-risk', stationRiskRoutes_1.default);
+app.use('/api/auth', authRoutes_1.default);
 app.use('/api/admin/fix-dates', fixDatesRoute_1.default);
 app.use('/api/admin/fix-districts', fixDistrictsRoute_1.default);
 app.get("/", (req, res) => {
@@ -73,7 +94,7 @@ app.use((req, res, next) => {
     };
     next();
 });
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.get('/api/health', (req, res) => {
     try {
@@ -158,7 +179,7 @@ app.get('/api/units', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch units' });
     }
 });
-app.get('/api/employees', async (req, res) => {
+app.get('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getEmployees();
@@ -168,7 +189,7 @@ app.get('/api/employees', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch employees' });
     }
 });
-app.get('/api/cases', async (req, res) => {
+app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getCases({});
@@ -179,8 +200,34 @@ app.get('/api/cases', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch cases', details: error?.message });
     }
 });
+// Backend Audit Logs API
+app.get('/api/audit-logs', (0, authMiddleware_1.requireRole)('Admin', 'Analytics'), async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        // Parse query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        // Validate pagination limits
+        const validPage = page > 0 ? page : 1;
+        const validLimit = Math.min(limit > 0 ? limit : 50, 500); // capped at 500
+        const filter = {
+            entityType: req.query.entityType,
+            entityId: req.query.entityId,
+            actorId: req.query.actorId,
+            action: req.query.action,
+            page: validPage,
+            limit: validLimit
+        };
+        const result = await db.getAuditLogs(filter);
+        res.json(result);
+    }
+    catch (error) {
+        console.error('Failed to fetch audit logs:', error);
+        res.status(500).json({ error: 'Failed to fetch audit logs' });
+    }
+});
 let repeatedOffendersCache = { data: null, timestamp: 0 };
-app.get('/api/repeated-offenders', async (req, res) => {
+app.get('/api/repeated-offenders', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const now = Date.now();
@@ -314,7 +361,7 @@ app.get('/api/repeated-offenders', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch repeated offenders', details: error?.message });
     }
 });
-app.get('/api/repeated-offenders/:personId', async (req, res) => {
+app.get('/api/repeated-offenders/:personId', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const personId = req.params.personId;
         if (!repeatedOffendersCache.data) {
@@ -329,7 +376,7 @@ app.get('/api/repeated-offenders/:personId', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch offender cases' });
     }
 });
-app.get('/api/customedges', async (req, res) => {
+app.get('/api/customedges', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getAllCustomEdges();
@@ -339,7 +386,7 @@ app.get('/api/customedges', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch customedges' });
     }
 });
-app.get('/api/complainants', async (req, res) => {
+app.get('/api/complainants', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getComplainants();
@@ -360,10 +407,28 @@ app.get('/api/actsections', async (req, res) => {
     }
 });
 app.put('/api/cases/:caseId/reassign', async (req, res) => {
-    res.status(501).json({ error: 'Reassign case is not implemented in CloudScale yet' });
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const caseId = Number(req.params.caseId);
+        const officerId = Number(req.body.officerId);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        if (!officerId) {
+            return res.status(400).json({ error: 'officerId is required' });
+        }
+        await db.reassignCase(caseId, officerId, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json({ success: true });
+    }
+    catch (error) {
+        if (error.message && error.message.includes('Invalid target officer ID')) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error('Failed to reassign case:', error);
+        res.status(500).json({ error: 'Failed to reassign case' });
+    }
 });
 // Basic CRUD for Cases to trigger invalidation
-app.post('/api/cases', async (req, res) => {
+app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const caseData = { ...req.body };
@@ -399,24 +464,25 @@ app.post('/api/cases', async (req, res) => {
             const serial = (newCaseId % 10000) + 1;
             caseData.CrimeNo = `${serial.toString().padStart(4, '0')}/${year}`;
         }
-        const newCase = await db.createCase(caseData);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const newCase = await db.createCase(caseData, actorId);
         // Save Complainant if provided
         if (complainantData) {
             complainantData.CaseMasterID = newCaseId;
             complainantData.ComplainantID = newCaseId; // Mock ID
-            await db.addCaseEntity('Complainant', complainantData);
+            await db.addCaseEntity('Complainant', complainantData, actorId);
         }
         // Save Victim if provided
         if (victimData) {
             victimData.CaseMasterID = newCaseId;
             victimData.VictimMasterID = newCaseId; // Mock ID
-            await db.addCaseEntity('Victim', victimData);
+            await db.addCaseEntity('Victim', victimData, actorId);
         }
         // Save Accused if provided
         if (accusedData) {
             accusedData.CaseMasterID = newCaseId;
             accusedData.AccusedMasterID = newCaseId; // Mock ID
-            await db.addCaseEntity('Accused', accusedData);
+            await db.addCaseEntity('Accused', accusedData, actorId);
         }
         // Save Acts if provided
         if (actsData && Array.isArray(actsData)) {
@@ -432,16 +498,44 @@ app.post('/api/cases', async (req, res) => {
         res.status(500).json({ error: 'Failed to create case' });
     }
 });
-app.put('/api/cases/:id', async (req, res) => {
-    res.status(501).json({ error: 'Update case is not implemented in CloudScale yet' });
+app.put('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const caseId = Number(req.params.id);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const updatedCase = await db.updateCase(caseId, req.body, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json(updatedCase);
+    }
+    catch (error) {
+        if (error.message && error.message.includes('unsupported or immutable')) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error('Failed to update case:', error);
+        res.status(500).json({ error: 'Failed to update case' });
+    }
 });
-app.patch('/api/cases/:id', async (req, res) => {
-    res.status(501).json({ error: 'Update case is not implemented in CloudScale yet' });
+app.patch('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const caseId = Number(req.params.id);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const updatedCase = await db.updateCase(caseId, req.body, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json(updatedCase);
+    }
+    catch (error) {
+        if (error.message && error.message.includes('unsupported or immutable')) {
+            return res.status(400).json({ error: error.message });
+        }
+        console.error('Failed to patch case:', error);
+        res.status(500).json({ error: 'Failed to patch case' });
+    }
 });
-app.delete('/api/cases/:id', async (req, res) => {
+app.delete('/api/cases/:id', (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
     res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
 });
-app.get('/api/victims', async (req, res) => {
+app.get('/api/victims', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getAllVictims();
@@ -451,7 +545,7 @@ app.get('/api/victims', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch victims' });
     }
 });
-app.get('/api/accused', async (req, res) => {
+app.get('/api/accused', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getAllAccused();
@@ -461,7 +555,7 @@ app.get('/api/accused', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch accused' });
     }
 });
-app.get('/api/cases/officer/:officerId', async (req, res) => {
+app.get('/api/cases/officer/:officerId', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getCasesByOfficer(Number(req.params.officerId));
@@ -471,7 +565,7 @@ app.get('/api/cases/officer/:officerId', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch officer cases' });
     }
 });
-app.get('/api/cases/station/:stationId', async (req, res) => {
+app.get('/api/cases/station/:stationId', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const data = await db.getCasesByStation(Number(req.params.stationId));
@@ -481,7 +575,7 @@ app.get('/api/cases/station/:stationId', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch station cases' });
     }
 });
-app.get('/api/network/:caseId', async (req, res) => {
+app.get('/api/network/:caseId', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const caseId = Number(req.params.caseId);
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
@@ -536,7 +630,7 @@ app.post('/api/ai/predict-risk', (req, res) => {
     });
 });
 // Report Generation: Export case details as PDF Document
-app.get('/api/reports/case/:id', (req, res) => {
+app.get('/api/reports/case/:id', authMiddleware_1.requireAuth, (req, res) => {
     const caseId = req.params.id;
     // Set response headers to prompt download of pdf file
     res.setHeader('Content-Type', 'application/pdf');
@@ -600,7 +694,7 @@ app.get('/api/reports/case/:id', (req, res) => {
     doc.end();
 });
 // --- NEW ROUTES FOR TIMELINE, EVIDENCE, CHARGESHEET, NETWORK ---
-app.post('/api/cases/:caseId/timeline', async (req, res) => {
+app.post('/api/cases/:caseId/timeline', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const note = { ...req.body, CaseMasterID: Number(req.params.caseId) };
@@ -612,7 +706,7 @@ app.post('/api/cases/:caseId/timeline', async (req, res) => {
         res.status(500).json({ error: 'Failed to add timeline note' });
     }
 });
-app.get('/api/cases/:caseId/timeline', async (req, res) => {
+app.get('/api/cases/:caseId/timeline', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const notes = await db.getTimelineNotesByCase(Number(req.params.caseId));
@@ -624,7 +718,7 @@ app.get('/api/cases/:caseId/timeline', async (req, res) => {
 });
 const multer_1 = __importDefault(require("multer"));
 const upload = (0, multer_1.default)({ storage: multer_1.default.memoryStorage() });
-app.post('/api/cases/:caseId/evidence', upload.single('file'), async (req, res) => {
+app.post('/api/cases/:caseId/evidence', authMiddleware_1.requireAuth, upload.single('file'), async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const evidence = { ...req.body, CaseMasterID: Number(req.params.caseId) };
@@ -657,7 +751,7 @@ app.post('/api/cases/:caseId/evidence', upload.single('file'), async (req, res) 
         res.status(500).json({ error: 'Failed to upload evidence' });
     }
 });
-app.get('/api/cases/:caseId/evidence', async (req, res) => {
+app.get('/api/cases/:caseId/evidence', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const files = await db.getEvidenceFilesByCase(Number(req.params.caseId));
@@ -667,7 +761,7 @@ app.get('/api/cases/:caseId/evidence', async (req, res) => {
         res.status(500).json({ error: 'Failed to get evidence files' });
     }
 });
-app.post('/api/cases/:caseId/chargesheet', async (req, res) => {
+app.post('/api/cases/:caseId/chargesheet', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const cs = { ...req.body, CaseMasterID: Number(req.params.caseId) };
@@ -678,7 +772,7 @@ app.post('/api/cases/:caseId/chargesheet', async (req, res) => {
         res.status(500).json({ error: 'Failed to submit chargesheet' });
     }
 });
-app.get('/api/cases/:caseId/chargesheet', async (req, res) => {
+app.get('/api/cases/:caseId/chargesheet', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const cs = await db.getChargesheetsByCase(Number(req.params.caseId));
@@ -688,10 +782,24 @@ app.get('/api/cases/:caseId/chargesheet', async (req, res) => {
         res.status(500).json({ error: 'Failed to get chargesheets' });
     }
 });
-app.put('/api/cases/:caseId/status', async (req, res) => {
+app.put('/api/cases/:caseId/reassign', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const success = await db.updateCaseStatus(Number(req.params.caseId), req.body.CaseStatusID, req.body.userEmail);
+        // Use the authenticated user's email for auditing
+        const actorEmail = req.user?.email || 'admin@ksp.gov.in';
+        const success = await db.reassignCase(Number(req.params.caseId), req.body.officerId, actorEmail);
+        res.json({ success });
+    }
+    catch (error) {
+        res.status(error.message.includes('Invalid target officer') ? 400 : 500).json({ error: error.message });
+    }
+});
+app.put('/api/cases/:caseId/status', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        // Use req.user.email from verified JWT instead of trusting req.body.userEmail
+        const actorEmail = req.user?.email || req.body.userEmail;
+        const success = await db.updateCaseStatus(Number(req.params.caseId), req.body.CaseStatusID, actorEmail);
         (0, hotspotController_1.invalidateHotspotCache)();
         res.json({ success });
     }

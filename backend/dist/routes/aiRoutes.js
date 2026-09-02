@@ -39,6 +39,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const aiController = __importStar(require("../controllers/aiController"));
 const router = express_1.default.Router();
-router.get('/dashboard', aiController.getDashboard);
-router.get('/report/pdf', aiController.generatePdfReport);
+const intelligenceService_1 = require("../services/intelligenceService");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+router.get('/dashboard', authMiddleware_1.requireAuth, aiController.getDashboard);
+router.get('/report/pdf', authMiddleware_1.requireAuth, aiController.generatePdfReport);
+router.get('/intelligence-context', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const dimensions = {
+            type: req.query.type,
+            districtId: req.query.districtId ? Number(req.query.districtId) : undefined,
+            stationId: req.query.stationId ? Number(req.query.stationId) : undefined,
+            crimeHeadId: req.query.crimeHeadId ? Number(req.query.crimeHeadId) : undefined,
+            dateFrom: req.query.dateFrom,
+            dateTo: req.query.dateTo
+        };
+        if (!dimensions.type) {
+            return res.status(400).json({ error: 'type is required' });
+        }
+        const context = await (0, intelligenceService_1.getVerifiedIntelligenceContext)(req, dimensions);
+        res.json({ success: true, ...context });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 exports.default = router;
