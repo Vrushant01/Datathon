@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAIDashboard } from '../../services/aiService';
@@ -86,7 +87,7 @@ export const AIAnomalyDetection: React.FC = () => {
     console.log(`[Station Risk] Request URL: ${url}`);
     
     try {
-      const response = await fetch(url);
+      const response = await authFetch(url);
       console.log(`[Station Risk] HTTP status: ${response.status}`);
       
       const rawText = await response.text();

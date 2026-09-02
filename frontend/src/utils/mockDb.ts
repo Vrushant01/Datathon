@@ -1,3 +1,4 @@
+import { authFetch } from './authFetch';
 import { API_BASE_URL } from '../config/api';
 // KSP Mock Database and Client-Side State Manager
 // Implements the exact ER Schema of the Karnataka Police Department
@@ -556,7 +557,7 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutM
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const response = await authFetch(url, { ...options, signal: controller.signal });
     clearTimeout(id);
     return response;
   } catch (err) {
@@ -706,11 +707,11 @@ export const mockDb = {
   refreshCases: async () => {
     try {
       const [casesRes, vicRes, accRes, compRes, actRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/cases`),
-        fetch(`${API_BASE_URL}/api/victims`),
-        fetch(`${API_BASE_URL}/api/accused`),
-        fetch(`${API_BASE_URL}/api/complainants`),
-        fetch(`${API_BASE_URL}/api/actsections`)
+        authFetch(`${API_BASE_URL}/api/cases`),
+        authFetch(`${API_BASE_URL}/api/victims`),
+        authFetch(`${API_BASE_URL}/api/accused`),
+        authFetch(`${API_BASE_URL}/api/complainants`),
+        authFetch(`${API_BASE_URL}/api/actsections`)
       ]);
 
       if (casesRes.ok) {
@@ -976,7 +977,7 @@ export const mockDb = {
   },
 
   transferCase: async (caseId: number, targetOfficerId: number) => {
-    const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
+    const res = await authFetch(`${API_BASE_URL}/api/cases/${caseId}/reassign`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ officerId: targetOfficerId })
@@ -1036,7 +1037,7 @@ export const mockDb = {
   },
 
   updateCase: async (caseId: number, updateData: any) => {
-    const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}`, {
+    const res = await authFetch(`${API_BASE_URL}/api/cases/${caseId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData)
@@ -1065,7 +1066,7 @@ export const mockDb = {
       CaseMasterID: caseId
     };
     try {
-      await fetch(`${API_BASE_URL}/api/cases/${caseId}/timeline`, {
+      await authFetch(`${API_BASE_URL}/api/cases/${caseId}/timeline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1093,11 +1094,11 @@ export const mockDb = {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('uploaded_by', uploaded_by);
-        const res = await fetch(`${API_BASE_URL}/api/cases/${caseId}/evidence`, { method: 'POST', body: formData });
+        const res = await authFetch(`${API_BASE_URL}/api/cases/${caseId}/evidence`, { method: 'POST', body: formData });
         const saved = await res.json();
         if (saved && saved.file_path) payload.file_path = saved.file_path;
       } else {
-        await fetch(`${API_BASE_URL}/api/cases/${caseId}/evidence`, {
+        await authFetch(`${API_BASE_URL}/api/cases/${caseId}/evidence`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -1114,7 +1115,7 @@ export const mockDb = {
   submitChargesheet: async (cs: Omit<ChargesheetRow, 'CSID'>, officerEmail: string) => {
     const payload = { ...cs, CSID: Date.now() };
     try {
-      await fetch(`${API_BASE_URL}/api/cases/${cs.CaseMasterID}/chargesheet`, {
+      await authFetch(`${API_BASE_URL}/api/cases/${cs.CaseMasterID}/chargesheet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1395,7 +1396,7 @@ export const mockDb = {
     };
     // No explicit backend table for these generic entities in our mock yet, but we'll try to POST if supported
     try {
-      await fetch(`${API_BASE_URL}/api/network/entities/${type}`, {
+      await authFetch(`${API_BASE_URL}/api/network/entities/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entity)
@@ -1441,7 +1442,7 @@ export const mockDb = {
       e.value = value;
       e.description = desc;
       try {
-        await fetch(`${API_BASE_URL}/api/network/entities/${e.type}`, {
+        await authFetch(`${API_BASE_URL}/api/network/entities/${e.type}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ EntityID: e.EntityID, CaseMasterID: e.CaseMasterID, EntityType: e.type, EntityValue: e.value, Description: e.description })
@@ -1463,7 +1464,7 @@ export const mockDb = {
       label: label
     };
     try {
-      await fetch(`${API_BASE_URL}/api/network/edges`, {
+      await authFetch(`${API_BASE_URL}/api/network/edges`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newEdge)

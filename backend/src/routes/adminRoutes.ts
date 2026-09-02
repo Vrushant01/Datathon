@@ -4,7 +4,10 @@ import { startMigration, getMigrationStatus } from '../controllers/adminControll
 
 const router = express.Router();
 
-// router.use(authMiddleware);
+import { requireRole } from '../middleware/authMiddleware';
+
+router.use(authMiddleware);
+router.use(requireRole('Admin'));
 
 router.post('/migrate-to-nosql', startMigration);
 // router.post('/migrate-to-cloudscale', startCloudScaleMigration);

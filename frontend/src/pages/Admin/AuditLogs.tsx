@@ -1,3 +1,4 @@
+import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { History, ShieldAlert, Calendar, Search, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
@@ -32,7 +33,7 @@ export const AuditLogs: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${API_BASE_URL}/api/audit-logs?page=${page}&limit=${limit}`);
+      const res = await authFetch(`${API_BASE_URL}/api/audit-logs?page=${page}&limit=${limit}`);
       if (!res.ok) throw new Error('Failed to fetch audit logs');
       const data = await res.json();
       setLogs(data.data || []);

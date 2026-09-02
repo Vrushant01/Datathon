@@ -1,3 +1,4 @@
+import { authFetch } from '../utils/authFetch';
 import { API_BASE_URL } from '../config/api';
 
 const API_BASE = `${API_BASE_URL}/api/ai`;
@@ -17,7 +18,7 @@ export const getAIDashboard = async (): Promise<any | null> => {
     if (_cachedDashboard && now - _cacheTs < CACHE_TTL) {
       return _cachedDashboard;
     }
-    const res = await fetch(`${API_BASE}/dashboard`);
+    const res = await authFetch(`${API_BASE}/dashboard`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     _cachedDashboard = data;
@@ -35,7 +36,7 @@ export const downloadAIReport = () => {
 
 export const predictStationRisk = async (features: any): Promise<any | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/station-risk/predict`, {
+    const res = await authFetch(`${API_BASE_URL}/api/station-risk/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(features)
