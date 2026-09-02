@@ -1,8 +1,12 @@
 [
   {
-    "from": "/api",
-    "to": "/api",
-    "target": "backend",
+    "name": "backend-api",
+    "source_endpoint": "/api",
+    "method": "ALL",
+    "target": {
+      "type": "appsail",
+      "appsail_service_name": "backend"
+    },
     "cors": {
       "origins": [
         "https://datathon-vnegltof.onslate.in"
@@ -11,13 +15,28 @@
         "GET",
         "POST",
         "PUT",
+        "PATCH",
         "DELETE",
         "OPTIONS"
       ],
       "headers": [
         "Authorization",
-        "Content-Type"
+        "Content-Type",
+        "Origin",
+        "Accept"
       ]
     }
+  },
+  {
+    "name": "Login Redirect",
+    "source_endpoint": "/app/index.html",
+    "target_endpoint": "/app/index.html",
+    "target": "client",
+    "method": "GET",
+    "throttling": {
+      "overall": {},
+      "ip": {}
+    },
+    "system": true
   }
 ]
