@@ -749,6 +749,7 @@ class CloudScaleRepository {
             const timestamp = new Date().toISOString();
             const item = NoSQLItem.from({
                 AuditLogID: logId,
+                LogGroup: 'ALL',
                 Timestamp: timestamp,
                 Action: log.Action,
                 EntityType: log.EntityType,
@@ -758,7 +759,7 @@ class CloudScaleRepository {
                 OldValue: log.OldValue || null,
                 NewValue: log.NewValue || null
             });
-            await table.insertItems({ item });
+            await table.insertRow(item);
         }
         catch (e) {
             // Do not re-throw here so the business operation succeeds even if auditing fails.
@@ -768,52 +769,59 @@ class CloudScaleRepository {
     }
     async getAuditLogs(filter) {
         try {
-            const zcql = this.app.zcql();
+            const nosql = this.app.nosql();
+            const table = nosql.table('auditlogs');
+            const { NoSQLEnum, NoSQLMarshall, NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+            const { NoSQLOperator } = NoSQLEnum;
             const page = filter?.page && filter.page >= 1 ? filter.page : 1;
             const limit = filter?.limit && filter.limit >= 1 && filter.limit <= 100 ? filter.limit : 50;
-            let whereClause = '';
-            if (filter) {
-                let conditions = [];
-                if (filter.entityType)
-                    conditions.push(`EntityType = '${filter.entityType}'`);
-                if (filter.entityId)
-                    conditions.push(`EntityID = '${filter.entityId}'`);
-                if (filter.actorId)
-                    conditions.push(`ActorID = '${filter.actorId}'`);
-                if (filter.action)
-                    conditions.push(`Action = '${filter.action}'`);
-                if (conditions.length > 0) {
-                    whereClause = 'WHERE ' + conditions.join(' AND ');
+            const query = {
+                key_condition: {
+                    attribute: ['LogGroup'],
+                    operator: NoSQLOperator.EQUALS,
+                    value: NoSQLMarshall.makeString('ALL')
+                },
+                forward_scan: false,
+                limit: limit
+            };
+            if (filter?.cursor) {
+                query.start_key = NoSQLItem.from({
+                    LogGroup: 'ALL',
+                    Timestamp: filter.cursor
+                });
+            }
+            const res = await table.queryIndex('LogGroupIndex', query);
+            const raw = res;
+            const data = (raw.get || []).map((d) => {
+                const item = d.item;
+                if (!item)
+                    return null;
+                return typeof item.toJSON === 'function' ? item.toJSON() : item;
+            }).filter(Boolean);
+            let nextCursor;
+            if (raw.start_key) {
+                const skItem = raw.start_key;
+                if (typeof skItem.getString === 'function') {
+                    nextCursor = skItem.getString('Timestamp') || undefined;
+                }
+                else if (skItem.Timestamp) {
+                    nextCursor = skItem.Timestamp;
+                }
+                else if (skItem.toJSON) {
+                    nextCursor = skItem.toJSON().Timestamp;
                 }
             }
-            // 1. Get total count
-            const countQuery = `SELECT COUNT(ROWID) FROM auditlogs ${whereClause}`;
-            const countRes = await zcql.executeZCQLQuery(countQuery);
-            let total = 0;
-            if (countRes && countRes.length > 0) {
-                // ZCQL returns count in the ROWID field of the table object
-                total = parseInt(countRes[0].auditlogs.ROWID) || 0;
-            }
-            // 2. Fetch paginated data (ZCQL uses 1-based indexing for LIMIT start_index, num_records)
-            const startIndex = ((page - 1) * limit) + 1;
-            const dataQuery = `SELECT * FROM auditlogs ${whereClause} ORDER BY Timestamp DESC LIMIT ${startIndex}, ${limit}`;
-            const dataRes = await zcql.executeZCQLQuery(dataQuery);
-            const paginatedData = dataRes.map((r) => r.auditlogs);
             return {
-                data: paginatedData,
-                total,
+                data,
+                total: 0, // Fallback, NoSQL does not support cheap counts
                 page,
-                limit
+                limit,
+                nextCursor
             };
         }
-        catch (e) {
-            console.error('[Audit] ZCQL Error fetching audit logs:', e.message);
-            return {
-                data: [],
-                total: 0,
-                page: filter?.page || 1,
-                limit: filter?.limit || 50
-            };
+        catch (error) {
+            console.error('[Audit] Failed to fetch audit logs from NoSQL index:', error);
+            return { data: [], total: 0, page: 1, limit: 50 };
         }
     }
 }

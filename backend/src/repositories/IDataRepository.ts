@@ -72,6 +72,7 @@ export interface AuditLogFilter {
   action?: string;
   page?: number;
   limit?: number;
+  cursor?: string;
 }
 
 export interface AuditLog {
@@ -91,6 +92,7 @@ export interface AuditLogResult {
   total: number;
   page: number;
   limit: number;
+  nextCursor?: string;
 }
 
 export interface CaseUpdatePayload {
