@@ -45,23 +45,12 @@ dotenv.config();
 const app = express();
 
 const corsOptions = {
-  origin: '*',
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: false
+  credentials: true
 };
 
-// Manual CORS headers — set before cors() in case the Catalyst ZGS proxy
-// intercepts the cors() library output. Raw res.setHeader calls are lower-level.
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Handle preflight for all routes
 app.use(express.json());
@@ -116,7 +105,7 @@ app.use(express.json());
 
 app.get('/api/health', (req, res) => {
   try {
-    res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.1-pipeline-fix' });
+    res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.2-cors-fix' });
   } catch (error: any) {
     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
   }
