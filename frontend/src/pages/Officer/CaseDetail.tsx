@@ -109,12 +109,37 @@ export const CaseDetail: React.FC = () => {
   };
 
   // Action: Update Status
-  const handleStatusChange = (newStatusId: number) => {
-    const success = mockDb.updateCaseStatus(caseId, newStatusId, user?.email || 'officer@ksp.gov.in');
-    if (success) {
-      setStatusVal(newStatusId);
-      setCDetails(mockDb.getCaseDetails(caseId)); // reload
-      showNotification('success', 'Investigation status updated.');
+  const handleStatusChange = async (newStatusId: number) => {
+    try {
+      showNotification('info', 'Updating status...');
+      const response = await fetch(`${API_BASE_URL}/api/cases/${caseId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          CaseStatusID: newStatusId,
+          userEmail: user?.email || 'officer@ksp.gov.in'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Backend update failed');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Only update local UI state AFTER successful backend update
+        setStatusVal(newStatusId);
+        // Refresh local mockDb for consistency so that other tabs might see the change
+        mockDb.updateCaseStatus(caseId, newStatusId, user?.email || 'officer@ksp.gov.in', true); 
+        setCDetails(mockDb.getCaseDetails(caseId)); 
+        showNotification('success', 'Investigation status updated securely on CloudScale.');
+      } else {
+        throw new Error('Backend returned false');
+      }
+    } catch (err) {
+      showNotification('error', 'Failed to update status. Previous state preserved.');
+      // DO NOT update setStatusVal to prevent false-success UI state
     }
   };
 

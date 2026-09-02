@@ -54,10 +54,13 @@ const retrieveContext = async (plan, req) => {
                 if (plan.collection === 'casemasters' || !plan.collection) {
                     const units = await repo.getUnits();
                     const districts = await repo.getDistricts();
+                    const employees = await repo.getEmployees();
                     const unitMap = new Map();
                     units.forEach(u => unitMap.set(Number(u.UnitID), u));
                     const distMap = new Map();
                     districts.forEach(d => distMap.set(Number(d.DistrictID), d));
+                    const empMap = new Map();
+                    employees.forEach(e => empMap.set(Number(e.EmployeeID), e));
                     allData = allData.map(c => {
                         if (c.PoliceStationID && !c.DistrictID) {
                             const u = unitMap.get(Number(c.PoliceStationID));
@@ -68,6 +71,11 @@ const retrieveContext = async (plan, req) => {
                                 if (d)
                                     c.DistrictName = d.DistrictName;
                             }
+                        }
+                        if (c.PolicePersonID) {
+                            const emp = empMap.get(Number(c.PolicePersonID));
+                            if (emp)
+                                c.OfficerName = `${emp.FirstName} ${emp.LastName}`.trim();
                         }
                         return c;
                     });
@@ -95,6 +103,9 @@ const retrieveContext = async (plan, req) => {
                         }
                         else if (plan.groupBy.toLowerCase().includes('station')) {
                             key = d.PoliceStationName || d.PoliceStationID || 'Unknown';
+                        }
+                        else if (plan.groupBy === 'PolicePersonID' || plan.groupBy === 'OfficerName') {
+                            key = d.OfficerName || d.PolicePersonID || 'Unknown';
                         }
                         else {
                             key = d[plan.groupBy] || 'Unknown';

@@ -32,8 +32,10 @@ import PDFDocument from 'pdfkit';
 import aiRoutes from './routes/aiRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
 import hotspotRoutes from './routes/hotspotRoutes';
+import { requireAuth, requireRole } from './middleware/authMiddleware';
 import adminRoutes from './routes/adminRoutes';
 import stationRiskRoutes from './routes/stationRiskRoutes';
+import authRoutes from './routes/authRoutes';
 import { invalidateHotspotCache } from './controllers/hotspotController';
 import fixDatesRoute from './routes/fixDatesRoute';
 import fixDistrictsRoute from './routes/fixDistrictsRoute';
@@ -51,6 +53,7 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/hotspots', hotspotRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/station-risk', stationRiskRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/admin/fix-dates', fixDatesRoute);
 app.use('/api/admin/fix-districts', fixDistrictsRoute);
 
@@ -200,6 +203,36 @@ app.get('/api/cases', async (req, res) => {
   } catch (error: any) {
     console.error('getCases error:', error);
     res.status(500).json({ error: 'Failed to fetch cases', details: error?.message });
+  }
+});
+
+// Backend Audit Logs API
+app.get('/api/audit-logs', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    
+    // Parse query parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    
+    // Validate pagination limits
+    const validPage = page > 0 ? page : 1;
+    const validLimit = Math.min(limit > 0 ? limit : 50, 500); // capped at 500
+    
+    const filter = {
+      entityType: req.query.entityType as string,
+      entityId: req.query.entityId as string,
+      actorId: req.query.actorId as string,
+      action: req.query.action as string,
+      page: validPage,
+      limit: validLimit
+    };
+    
+    const result = await (db as any).getAuditLogs(filter);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to fetch audit logs:', error);
+    res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 });
 
@@ -393,11 +426,29 @@ app.get('/api/actsections', async (req, res) => {
 });
 
 app.put('/api/cases/:caseId/reassign', async (req, res) => {
-  res.status(501).json({ error: 'Reassign case is not implemented in CloudScale yet' });
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const caseId = Number(req.params.caseId);
+    const officerId = Number(req.body.officerId);
+    const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+    
+    if (!officerId) {
+      return res.status(400).json({ error: 'officerId is required' });
+    }
+    await (db as any).reassignCase(caseId, officerId, actorId);
+    invalidateHotspotCache();
+    res.json({ success: true });
+  } catch (error: any) {
+    if (error.message && error.message.includes('Invalid target officer ID')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Failed to reassign case:', error);
+    res.status(500).json({ error: 'Failed to reassign case' });
+  }
 });
 
 // Basic CRUD for Cases to trigger invalidation
-app.post('/api/cases', async (req, res) => {
+app.post('/api/cases', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const caseData = { ...req.body };
@@ -437,27 +488,28 @@ app.post('/api/cases', async (req, res) => {
       caseData.CrimeNo = `${serial.toString().padStart(4, '0')}/${year}`;
     }
 
-    const newCase = await db.createCase(caseData);
+    const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+    const newCase = await (db as any).createCase(caseData, actorId);
     
     // Save Complainant if provided
     if (complainantData) {
       complainantData.CaseMasterID = newCaseId;
       complainantData.ComplainantID = newCaseId; // Mock ID
-      await db.addCaseEntity('Complainant', complainantData);
+      await (db as any).addCaseEntity('Complainant', complainantData, actorId);
     }
     
     // Save Victim if provided
     if (victimData) {
       victimData.CaseMasterID = newCaseId;
       victimData.VictimMasterID = newCaseId; // Mock ID
-      await db.addCaseEntity('Victim', victimData);
+      await (db as any).addCaseEntity('Victim', victimData, actorId);
     }
     
     // Save Accused if provided
     if (accusedData) {
       accusedData.CaseMasterID = newCaseId;
       accusedData.AccusedMasterID = newCaseId; // Mock ID
-      await db.addCaseEntity('Accused', accusedData);
+      await (db as any).addCaseEntity('Accused', accusedData, actorId);
     }
 
     // Save Acts if provided
@@ -475,15 +527,41 @@ app.post('/api/cases', async (req, res) => {
   }
 });
 
-app.put('/api/cases/:id', async (req, res) => {
-  res.status(501).json({ error: 'Update case is not implemented in CloudScale yet' });
+app.put('/api/cases/:id', requireAuth, async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const caseId = Number(req.params.id);
+    const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+    const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
+    invalidateHotspotCache();
+    res.json(updatedCase);
+  } catch(error: any) {
+    if (error.message && error.message.includes('unsupported or immutable')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Failed to update case:', error);
+    res.status(500).json({ error: 'Failed to update case' });
+  }
 });
 
-app.patch('/api/cases/:id', async (req, res) => {
-  res.status(501).json({ error: 'Update case is not implemented in CloudScale yet' });
+app.patch('/api/cases/:id', requireAuth, async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const caseId = Number(req.params.id);
+    const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+    const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
+    invalidateHotspotCache();
+    res.json(updatedCase);
+  } catch(error: any) {
+    if (error.message && error.message.includes('unsupported or immutable')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Failed to patch case:', error);
+    res.status(500).json({ error: 'Failed to patch case' });
+  }
 });
 
-app.delete('/api/cases/:id', async (req, res) => {
+app.delete('/api/cases/:id', requireRole('Admin'), async (req, res) => {
   res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
 });
 
@@ -667,7 +745,7 @@ app.get('/api/reports/case/:id', (req, res) => {
 
 // --- NEW ROUTES FOR TIMELINE, EVIDENCE, CHARGESHEET, NETWORK ---
 
-app.post('/api/cases/:caseId/timeline', async (req, res) => {
+app.post('/api/cases/:caseId/timeline', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const note = { ...req.body, CaseMasterID: Number(req.params.caseId) };
@@ -692,7 +770,7 @@ app.get('/api/cases/:caseId/timeline', async (req, res) => {
 import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
-app.post('/api/cases/:caseId/evidence', upload.single('file'), async (req, res) => {
+app.post('/api/cases/:caseId/evidence', requireAuth, upload.single('file'), async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const evidence = { ...req.body, CaseMasterID: Number(req.params.caseId) };
@@ -736,7 +814,7 @@ app.get('/api/cases/:caseId/evidence', async (req, res) => {
   }
 });
 
-app.post('/api/cases/:caseId/chargesheet', async (req, res) => {
+app.post('/api/cases/:caseId/chargesheet', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const cs = { ...req.body, CaseMasterID: Number(req.params.caseId) };
@@ -757,10 +835,24 @@ app.get('/api/cases/:caseId/chargesheet', async (req, res) => {
   }
 });
 
-app.put('/api/cases/:caseId/status', async (req, res) => {
+app.put('/api/cases/:caseId/reassign', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
-    const success = await db.updateCaseStatus(Number(req.params.caseId), req.body.CaseStatusID, req.body.userEmail);
+    // Use the authenticated user's email for auditing
+    const actorEmail = req.user?.email || 'admin@ksp.gov.in';
+    const success = await db.reassignCase(Number(req.params.caseId), req.body.officerId, actorEmail);
+    res.json({ success });
+  } catch(error: any) {
+    res.status(error.message.includes('Invalid target officer') ? 400 : 500).json({ error: error.message });
+  }
+});
+
+app.put('/api/cases/:caseId/status', requireAuth, async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    // Use req.user.email from verified JWT instead of trusting req.body.userEmail
+    const actorEmail = req.user?.email || req.body.userEmail;
+    const success = await db.updateCaseStatus(Number(req.params.caseId), req.body.CaseStatusID, actorEmail);
     invalidateHotspotCache();
     res.json({ success });
   } catch(error) {

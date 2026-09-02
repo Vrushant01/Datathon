@@ -30,6 +30,7 @@ import { AuditLogs } from './pages/Admin/AuditLogs';
 import { AIAnomalyDetection } from './pages/Admin/AIAnomalyDetection';
 import { RepeatedOffenders } from './pages/Admin/RepeatedOffenders';
 import { AIAssistant } from './pages/Admin/AIAssistant';
+import { IntelligenceCenter } from './pages/Admin/IntelligenceCenter';
 
 // Officer Pages
 import { OfficerLayout } from './pages/Officer/OfficerLayout';
@@ -95,6 +96,7 @@ const App: React.FC = () => {
               {/* Admin Portal Guarded Routes */}
               <Route path="/admin-portal" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
+                <Route path="intelligence" element={<IntelligenceCenter />} />
                 <Route path="officers" element={<OfficerManagement />} />
                 <Route path="stations" element={<StationManagement />} />
                 <Route path="firs" element={<FIRManagement />} />

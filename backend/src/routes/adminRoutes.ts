@@ -1,10 +1,10 @@
 import express from 'express';
-import { adminJwtMiddleware } from '../middleware/adminJwt';
+import { authMiddleware } from '../middleware/authMiddleware';
 import { startMigration, getMigrationStatus } from '../controllers/adminController';
 
 const router = express.Router();
 
-// router.use(adminJwtMiddleware);
+// router.use(authMiddleware);
 
 router.post('/migrate-to-nosql', startMigration);
 // router.post('/migrate-to-cloudscale', startCloudScaleMigration);
