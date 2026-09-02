@@ -80,6 +80,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginType: 'admin' | 'officer' | 'analytics'
   ): Promise<{ success: boolean; message: string }> => {
     try {
+      // Warm-up ping: if AppSail is cold-starting, give it up to 40s to wake before login POST
+      try {
+        const wakeController = new AbortController();
+        const wakeTimer = setTimeout(() => wakeController.abort(), 40000);
+        await fetch(`${API_BASE_URL}/api/health`, { signal: wakeController.signal });
+        clearTimeout(wakeTimer);
+      } catch {
+        // Ignore warm-up failure — still attempt login below
+      }
+
       const formBody = new URLSearchParams({ idOrEmail, passcode, loginType }).toString();
       const response = await authFetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
