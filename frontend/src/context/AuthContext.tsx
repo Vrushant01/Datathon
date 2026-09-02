@@ -80,10 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginType: 'admin' | 'officer' | 'analytics'
   ): Promise<{ success: boolean; message: string }> => {
     try {
+      const formBody = new URLSearchParams({ idOrEmail, passcode, loginType }).toString();
       const response = await authFetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idOrEmail, passcode, loginType })
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formBody
       });
 
       const data = await response.json();
