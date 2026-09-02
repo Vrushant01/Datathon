@@ -61,7 +61,7 @@ jobs:
       # backend/app-config.json for stack/command/buildPath.
       # Archive is built from /catalyst/backend including node_modules/ + dist/.
       - >-
-        catalyst deploy
+        cd .. && catalyst deploy
         --only appsail
         --token "$CATALYST_TOKEN"
         --verbose
