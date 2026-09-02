@@ -590,7 +590,12 @@ export const syncData = async (): Promise<void> => {
     const backoff = [1000, 2000, 4000, 8000];
     for (let attempt = 1; attempt <= 5; attempt++) {
       try {
-        const healthRes = await fetchWithTimeout(`${API_BASE_URL}/api/health`, {}, 10000);
+        // Use plain fetch without Authorization header to avoid OPTIONS preflight
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 10000);
+        const healthRes = await fetch(`${API_BASE_URL}/api/health`, { signal: controller.signal });
+        clearTimeout(id);
+        
         if (healthRes.ok) {
           const healthData = await healthRes.json();
           console.log(`[DB] health check response:`, healthData);
