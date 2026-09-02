@@ -4,6 +4,10 @@ import { RepositoryFactory } from '../repositories/RepositoryFactory';
 
 const router = express.Router();
 
+// Accept both JSON and URL-encoded form bodies (form-encoded avoids CORS preflight via ZGS)
+router.use(express.json());
+router.use(express.urlencoded({ extended: false }));
+
 export const generateToken = (payload: any) => {
   return jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret-for-demo', { expiresIn: '8h' });
 };
