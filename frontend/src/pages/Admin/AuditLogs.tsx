@@ -22,22 +22,40 @@ export const AuditLogs: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [cursors, setCursors] = useState<string[]>([]);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const limit = 50;
 
   useEffect(() => {
-    fetchLogs();
+    fetchLogs(page);
   }, [page]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (currentPage: number) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await authFetch(`${API_BASE_URL}/api/audit-logs?page=${page}&limit=${limit}`);
+      const currentCursor = currentPage > 1 ? cursors[currentPage - 2] : '';
+      const url = new URL(`${API_BASE_URL}/api/audit-logs`);
+      url.searchParams.append('limit', limit.toString());
+      if (currentCursor) {
+        url.searchParams.append('cursor', currentCursor);
+      }
+      
+      const res = await authFetch(url.toString());
       if (!res.ok) throw new Error('Failed to fetch audit logs');
       const data = await res.json();
       setLogs(data.data || []);
-      setTotal(data.total || 0);
+      
+      if (data.nextCursor) {
+        setCursors(prev => {
+          const newCursors = [...prev];
+          newCursors[currentPage - 1] = data.nextCursor;
+          return newCursors;
+        });
+        setHasNextPage(true);
+      } else {
+        setHasNextPage(false);
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -54,8 +72,6 @@ export const AuditLogs: React.FC = () => {
       (l.EntityType || '').toLowerCase().includes(term)
     );
   });
-
-  const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="space-y-6 select-none">
@@ -91,15 +107,15 @@ export const AuditLogs: React.FC = () => {
           >
             <ChevronLeft size={16} />
           </button>
-          <span>Page {page} {totalPages > 0 ? `of ${totalPages}` : ''}</span>
+          <span>Page {page}</span>
           <button 
-            disabled={page >= totalPages || loading} 
+            disabled={!hasNextPage || loading} 
             onClick={() => setPage(p => p + 1)}
             className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
           >
             <ChevronRight size={16} />
           </button>
-          <span className="ml-4 border-l pl-4">Total: {total} Records</span>
+          <span className="ml-4 border-l pl-4">Showing latest logs</span>
         </div>
       </div>
 

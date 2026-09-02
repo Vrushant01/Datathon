@@ -35,13 +35,13 @@ export const AdminLayout: React.FC = () => {
 
   const menuItems = [
     { label: 'Dashboard', path: '/admin-portal', icon: <LayoutDashboard size={18} />, primary: true },
-    { label: 'Intell Center', path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
     { label: 'Stations', path: '/admin-portal/stations', icon: <Building size={18} />, primary: false },
+    { label: 'Officers', path: '/admin-portal/officers', icon: <Users size={18} />, primary: false },
     { label: 'FIRs & Cases', path: '/admin-portal/firs', icon: <FileText size={18} />, primary: true },
     { label: 'Analytics', path: '/admin-portal/analytics', icon: <BarChart3 size={18} />, primary: true },
-    { label: 'Officers', path: '/admin-portal/officers', icon: <Users size={18} />, primary: false },
     { label: 'GIS Maps', path: '/admin-portal/gis', icon: <MapPin size={18} />, primary: false },
     { label: 'Criminal Network', path: '/admin-portal/network', icon: <Share2 size={18} />, primary: false },
+    { label: 'Intell Center', path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
     { label: 'AI Anomaly', path: '/admin-portal/anomaly-detection', icon: <Brain size={18} />, primary: false },
     { label: 'Repeated Offenders', path: '/admin-portal/repeated-offenders', icon: <Repeat size={18} />, primary: false },
     { label: 'AI Assistant', path: '/admin-portal/assistant', icon: <Bot size={18} />, primary: false },
