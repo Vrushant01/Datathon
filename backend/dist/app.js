@@ -38,9 +38,9 @@ const fixDistrictsRoute_1 = __importDefault(require("./routes/fixDistrictsRoute"
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const corsOptions = {
-    origin: true,
+    origin: 'https://datathon-vnegltof.onslate.in',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     credentials: true
 };
 app.use((0, cors_1.default)(corsOptions));
@@ -83,11 +83,9 @@ app.use((req, res, next) => {
     };
     next();
 });
-app.use((0, cors_1.default)(corsOptions));
-app.use(express_1.default.json());
 app.get('/api/health', (req, res) => {
     try {
-        res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.2-cors-fix' });
+        res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.2-cors-fix', reqHeaders: req.headers });
     }
     catch (error) {
         res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });

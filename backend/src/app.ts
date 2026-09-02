@@ -45,9 +45,9 @@ dotenv.config();
 const app = express();
 
 const corsOptions = {
-  origin: true,
+  origin: 'https://datathon-vnegltof.onslate.in',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   credentials: true
 };
 
@@ -82,30 +82,27 @@ const PORT: number = Number(process.env.X_ZOHO_CATALYST_LISTEN_PORT) || Number(p
 app.use((req, res, next) => {
   const originalJson = res.json;
   (req as any).metrics = { nosqlCalls: 0, cacheHits: 0, cacheMisses: 0, startTime: Date.now() };
-  
+
   res.json = function (body) {
     const totalTime = Date.now() - (req as any).metrics.startTime;
     res.setHeader('x-timing-total', `${totalTime}ms`);
     res.setHeader('x-timing-nosql-calls', `${(req as any).metrics.nosqlCalls}`);
     res.setHeader('x-timing-cache-hits', `${(req as any).metrics.cacheHits}`);
     res.setHeader('x-timing-cache-misses', `${(req as any).metrics.cacheMisses}`);
-    
+
     // Forensic diagnostics
     res.setHeader('x-db-provider-actual', (req.headers['x-mock-db-provider'] || process.env.DB_PROVIDER || 'mongo') as string);
     res.setHeader('x-data-source', (req as any).metrics.nosqlCalls > 0 ? 'nosql' : ((req as any).metrics.cacheHits > 0 ? 'memory-cache' : 'mongo'));
     res.setHeader('x-cache-state', `hits:${(req as any).metrics.cacheHits},misses:${(req as any).metrics.cacheMisses}`);
-    
+
     return originalJson.call(this, body);
   };
   next();
 });
 
-app.use(cors(corsOptions));
-app.use(express.json());
-
 app.get('/api/health', (req, res) => {
   try {
-    res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.2-cors-fix' });
+    res.json({ success: true, status: 'online', database: 'connected', provider: 'cloudscale', version: 'v1.0.2-cors-fix', reqHeaders: req.headers });
   } catch (error: any) {
     res.status(500).json({ success: false, status: 'error', error: 'Internal server error' });
   }
@@ -120,9 +117,9 @@ app.get('/api/forensic', async (req, res) => {
     const catalyst = require('zcatalyst-sdk-node');
     const catalystApp = catalyst.initialize(req);
     const datastore = catalystApp.datastore();
-    
+
     const results: any[] = [];
-    
+
     async function checkRecord(tableName: string, keyName: string, keyValue: number) {
       try {
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
@@ -166,7 +163,7 @@ app.post('/api/zcql', express.json(), async (req, res) => {
     const query = req.body.query;
     const zcqlRes = await zcql.executeZCQLQuery(query);
     res.json(zcqlRes);
-  } catch(e: any) {
+  } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -218,15 +215,15 @@ app.get('/api/cases', requireAuth, async (req, res) => {
 app.get('/api/audit-logs', requireRole('Admin', 'Analytics'), async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
-    
+
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
-    
+
     // Validate pagination limits
     const validPage = page > 0 ? page : 1;
     const validLimit = Math.min(limit > 0 ? limit : 50, 500); // capped at 500
-    
+
     const filter = {
       entityType: req.query.entityType as string,
       entityId: req.query.entityId as string,
@@ -235,7 +232,7 @@ app.get('/api/audit-logs', requireRole('Admin', 'Analytics'), async (req, res) =
       page: validPage,
       limit: validLimit
     };
-    
+
     const result = await (db as any).getAuditLogs(filter);
     res.json(result);
   } catch (error: any) {
@@ -250,9 +247,9 @@ app.get('/api/repeated-offenders', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const now = Date.now();
-    
+
     if (!repeatedOffendersCache.data || (now - repeatedOffendersCache.timestamp > 60000)) {
-      const cases = await (db as any).scanAll('CaseMaster'); 
+      const cases = await (db as any).scanAll('CaseMaster');
       const allAccused = await db.getAllAccused();
 
       const personMap = new Map<string, any>();
@@ -274,7 +271,7 @@ app.get('/api/repeated-offenders', requireAuth, async (req, res) => {
             Cases: []
           });
         }
-        
+
         const record = personMap.get(acc.PersonID);
         if (!record.Cases.find((existing: any) => existing.CaseMasterID === c.CaseMasterID)) {
           record.TotalCases += 1;
@@ -283,7 +280,7 @@ app.get('/api/repeated-offenders', requireAuth, async (req, res) => {
           } else {
             record.ActiveCases += 1;
           }
-          
+
           record.Cases.push({
             CaseMasterID: c.CaseMasterID,
             CaseNo: c.CaseNo,
@@ -396,7 +393,7 @@ app.get('/api/repeated-offenders/:personId', requireAuth, async (req, res) => {
     }
     const offender = repeatedOffendersCache.data.find(p => p.PersonID === personId);
     if (!offender) return res.status(404).json({ error: 'Offender not found' });
-    
+
     res.json(offender.Cases);
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch offender cases' });
@@ -439,7 +436,7 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
     const caseId = Number(req.params.caseId);
     const officerId = Number(req.body.officerId);
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
-    
+
     if (!officerId) {
       return res.status(400).json({ error: 'officerId is required' });
     }
@@ -471,13 +468,13 @@ app.post('/api/cases', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'CrimeRegisteredDateTime cannot be in the future' });
       }
     }
-    
+
     // Extract related entities
     const complainantData = caseData.Complainant;
     const victimData = caseData.Victim;
     const accusedData = caseData.Accused;
     const actsData = caseData.Acts;
-    
+
     delete caseData.Complainant;
     delete caseData.Victim;
     delete caseData.Accused;
@@ -488,7 +485,7 @@ app.post('/api/cases', requireAuth, async (req, res) => {
     const newCaseId = maxId + 1;
     caseData.CaseMasterID = newCaseId;
     caseData.CaseNo = `FIR-${newCaseId}`;
-    
+
     // Auto-generate CrimeNo if not provided
     if (!caseData.CrimeNo) {
       const year = new Date().getFullYear();
@@ -498,21 +495,21 @@ app.post('/api/cases', requireAuth, async (req, res) => {
 
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
     const newCase = await (db as any).createCase(caseData, actorId);
-    
+
     // Save Complainant if provided
     if (complainantData) {
       complainantData.CaseMasterID = newCaseId;
       complainantData.ComplainantID = newCaseId; // Mock ID
       await (db as any).addCaseEntity('Complainant', complainantData, actorId);
     }
-    
+
     // Save Victim if provided
     if (victimData) {
       victimData.CaseMasterID = newCaseId;
       victimData.VictimMasterID = newCaseId; // Mock ID
       await (db as any).addCaseEntity('Victim', victimData, actorId);
     }
-    
+
     // Save Accused if provided
     if (accusedData) {
       accusedData.CaseMasterID = newCaseId;
@@ -543,7 +540,7 @@ app.put('/api/cases/:id', requireAuth, async (req, res) => {
     const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
     invalidateHotspotCache();
     res.json(updatedCase);
-  } catch(error: any) {
+  } catch (error: any) {
     if (error.message && error.message.includes('unsupported or immutable')) {
       return res.status(400).json({ error: error.message });
     }
@@ -560,7 +557,7 @@ app.patch('/api/cases/:id', requireAuth, async (req, res) => {
     const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
     invalidateHotspotCache();
     res.json(updatedCase);
-  } catch(error: any) {
+  } catch (error: any) {
     if (error.message && error.message.includes('unsupported or immutable')) {
       return res.status(400).json({ error: error.message });
     }
@@ -759,7 +756,7 @@ app.post('/api/cases/:caseId/timeline', requireAuth, async (req, res) => {
     const note = { ...req.body, CaseMasterID: Number(req.params.caseId) };
     const saved = await db.addTimelineNote(note);
     res.status(201).json(saved);
-  } catch(error) {
+  } catch (error) {
     console.error('TIMELINE API ERROR:', error);
     res.status(500).json({ error: 'Failed to add timeline note' });
   }
@@ -770,7 +767,7 @@ app.get('/api/cases/:caseId/timeline', requireAuth, async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const notes = await db.getTimelineNotesByCase(Number(req.params.caseId));
     res.json(notes);
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to get timeline notes' });
   }
 });
@@ -782,7 +779,7 @@ app.post('/api/cases/:caseId/evidence', requireAuth, upload.single('file'), asyn
   try {
     const db = RepositoryFactory.getRepository(req);
     const evidence = { ...req.body, CaseMasterID: Number(req.params.caseId) };
-    
+
     if (req.file) {
       // Actually upload to Catalyst File Store
       const catalyst = require('zcatalyst-sdk-node');
@@ -803,10 +800,10 @@ app.post('/api/cases/:caseId/evidence', requireAuth, upload.single('file'), asyn
         evidence.file_name = req.file.originalname;
       }
     }
-    
+
     const saved = await db.uploadEvidence(evidence);
     res.status(201).json(saved);
-  } catch(error) {
+  } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to upload evidence' });
   }
@@ -817,7 +814,7 @@ app.get('/api/cases/:caseId/evidence', requireAuth, async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const files = await db.getEvidenceFilesByCase(Number(req.params.caseId));
     res.json(files);
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to get evidence files' });
   }
 });
@@ -828,7 +825,7 @@ app.post('/api/cases/:caseId/chargesheet', requireAuth, async (req, res) => {
     const cs = { ...req.body, CaseMasterID: Number(req.params.caseId) };
     const saved = await db.submitChargesheet(cs);
     res.status(201).json(saved);
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to submit chargesheet' });
   }
 });
@@ -838,7 +835,7 @@ app.get('/api/cases/:caseId/chargesheet', requireAuth, async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const cs = await db.getChargesheetsByCase(Number(req.params.caseId));
     res.json(cs);
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to get chargesheets' });
   }
 });
@@ -850,7 +847,7 @@ app.put('/api/cases/:caseId/reassign', requireAuth, async (req, res) => {
     const actorEmail = req.user?.email || 'admin@ksp.gov.in';
     const success = await db.reassignCase(Number(req.params.caseId), req.body.officerId, actorEmail);
     res.json({ success });
-  } catch(error: any) {
+  } catch (error: any) {
     res.status(error.message.includes('Invalid target officer') ? 400 : 500).json({ error: error.message });
   }
 });
@@ -863,7 +860,7 @@ app.put('/api/cases/:caseId/status', requireAuth, async (req, res) => {
     const success = await db.updateCaseStatus(Number(req.params.caseId), req.body.CaseStatusID, actorEmail);
     invalidateHotspotCache();
     res.json({ success });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to update status' });
   }
 });
@@ -873,7 +870,7 @@ app.post('/api/network/edges', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const saved = await db.addCustomEdge(req.body);
     res.status(201).json(saved);
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to add edge' });
   }
 });
@@ -883,7 +880,7 @@ app.post('/api/network/entities/:type', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const saved = await db.addCaseEntity(req.params.type, req.body);
     res.status(201).json(saved);
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ error: 'Failed to add entity' });
   }
 });
@@ -923,4 +920,4 @@ app.listen(PORT, '0.0.0.0', async () => {
   //   }
   // })();
 });
- 
+

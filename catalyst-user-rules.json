@@ -1,0 +1,23 @@
+[
+  {
+    "from": "/api",
+    "to": "/api",
+    "target": "backend",
+    "cors": {
+      "origins": [
+        "https://datathon-vnegltof.onslate.in"
+      ],
+      "methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "headers": [
+        "Authorization",
+        "Content-Type"
+      ]
+    }
+  }
+]
