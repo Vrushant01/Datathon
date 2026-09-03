@@ -125,32 +125,29 @@ class CloudScaleRepository {
                     break;
                 case 'units':
                     pkField = 'UnitID';
-                    for (let i = 2000; i <= 2930; i++)
+                    for (let i = 2000; i <= 2960; i++)
                         ids.push(i);
                     break;
                 case 'employees':
                     pkField = 'EmployeeID';
                     for (let i = 10001; i <= 11900; i++)
                         ids.push(i);
-                    for (let i = 30001; i <= 30930; i++)
+                    for (let i = 30001; i <= 30960; i++)
                         ids.push(i);
                     break;
-                // Range extended: MongoDB has 9,674 cases (100001–109674). Using 110000 ceiling with growth headroom.
                 case 'casemasters':
                     pkField = 'CaseMasterID';
-                    for (let i = 100001; i <= 110000; i++)
+                    for (let i = 100001; i <= 110500; i++)
                         ids.push(i);
                     break;
-                // Range extended: MongoDB has 9,674 accused (80001–89674).
                 case 'accuseds':
                     pkField = 'AccusedMasterID';
-                    for (let i = 80001; i <= 90000; i++)
+                    for (let i = 80001; i <= 90500; i++)
                         ids.push(i);
                     break;
-                // Range extended: MongoDB has 9,674 victims (70001–79674).
                 case 'victims':
                     pkField = 'VictimMasterID';
-                    for (let i = 70001; i <= 80000; i++)
+                    for (let i = 70001; i <= 80500; i++)
                         ids.push(i);
                     break;
             }
