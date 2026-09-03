@@ -14,7 +14,7 @@ DISTRICT_URBANIZATION = {
     "Bengaluru City":     {"urbanization_score": 95, "population_density": "high"},
     "Bengaluru Rural":    {"urbanization_score": 55, "population_density": "medium"},
     "Mysuru":             {"urbanization_score": 68, "population_density": "high"},
-    "Mangaluru":          {"urbanization_score": 72, "population_density": "high"},
+    "Davanagere":          {"urbanization_score": 55, "population_density": "medium"},
     "Dakshina Kannada":   {"urbanization_score": 65, "population_density": "medium"},
     "Udupi":              {"urbanization_score": 60, "population_density": "medium"},
     "Dharwad":            {"urbanization_score": 62, "population_density": "medium"},
@@ -137,7 +137,7 @@ def generate_point_in_district(district_name):
         elif "belagavi" in key: key = "belgaum"
         elif "vijayapura" in key: key = "bijapur"
         elif "kalaburagi" in key: key = "gulbarga"
-        elif "mangaluru" in key or "dakshina" in key: key = "dakshina kannada"
+        elif "dakshina" in key: key = "dakshina kannada"
         elif "mysuru" in key: key = "mysore"
         elif "shivamogga" in key: key = "shimoga"
         elif "tumakuru" in key: key = "tumkur"

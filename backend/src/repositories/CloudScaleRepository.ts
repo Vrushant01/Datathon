@@ -784,7 +784,7 @@ export class CloudScaleRepository implements IDataRepository {
         OldValue: log.OldValue || null,
         NewValue: log.NewValue || null
       });
-      await table.insertRow(item);
+      await table.insertItems({ item });
     } catch (e: any) {
       // Do not re-throw here so the business operation succeeds even if auditing fails.
       // But log heavily.
@@ -819,7 +819,15 @@ export class CloudScaleRepository implements IDataRepository {
         });
       }
 
-      const res = await table.queryIndex('LogGroupIndex', query);
+      const tableDetails = await nosql.getTable('auditlogs');
+      const detailsJson = (tableDetails as any).toJSON ? (tableDetails as any).toJSON() : tableDetails;
+      const index = detailsJson.global_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex') 
+                  || detailsJson.local_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex');
+      
+      const realTable = nosql.table(detailsJson);
+      const indexIdToUse = index ? index.id : 'LogGroupIndex';
+
+      const res = await realTable.queryIndex(indexIdToUse, query);
       const raw = res as any;
       const data = (raw.get || []).map((d: any) => {
         const item = d.item;
