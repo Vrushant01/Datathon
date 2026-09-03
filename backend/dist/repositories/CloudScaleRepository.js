@@ -759,7 +759,7 @@ class CloudScaleRepository {
                 OldValue: log.OldValue || null,
                 NewValue: log.NewValue || null
             });
-            await table.insertRow(item);
+            await table.insertItems({ item });
         }
         catch (e) {
             // Do not re-throw here so the business operation succeeds even if auditing fails.
@@ -790,7 +790,13 @@ class CloudScaleRepository {
                     Timestamp: filter.cursor
                 });
             }
-            const res = await table.queryIndex('LogGroupIndex', query);
+            const tableDetails = await nosql.getTable('auditlogs');
+            const detailsJson = tableDetails.toJSON ? tableDetails.toJSON() : tableDetails;
+            const index = detailsJson.global_index?.find((idx) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex')
+                || detailsJson.local_index?.find((idx) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex');
+            const realTable = nosql.table(detailsJson);
+            const indexIdToUse = index ? index.id : 'LogGroupIndex';
+            const res = await realTable.queryIndex(indexIdToUse, query);
             const raw = res;
             const data = (raw.get || []).map((d) => {
                 const item = d.item;

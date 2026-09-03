@@ -39,6 +39,8 @@ import authRoutes from './routes/authRoutes';
 import { invalidateHotspotCache } from './controllers/hotspotController';
 import fixDatesRoute from './routes/fixDatesRoute';
 import fixDistrictsRoute from './routes/fixDistrictsRoute';
+import testIndexRoute from './routes/testIndexRoute';
+import fixDataBugsRoute from './routes/fixDataBugsRoute';
 
 dotenv.config();
 
@@ -67,6 +69,8 @@ app.use('/api/station-risk', stationRiskRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/fix-dates', fixDatesRoute);
 app.use('/api/admin/fix-districts', fixDistrictsRoute);
+app.use('/api/test-index', testIndexRoute);
+app.use('/api/fix-data-bugs', fixDataBugsRoute);
 
 app.get("/", (req, res) => {
   res.status(200).send("Backend is Connected with pipeline 🚀");
