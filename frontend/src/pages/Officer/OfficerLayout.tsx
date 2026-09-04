@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -9,7 +9,6 @@ export const OfficerLayout: React.FC = () => {
   const { user, role, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Security route guard check
   if (role !== 'Officer') {
@@ -40,21 +39,25 @@ export const OfficerLayout: React.FC = () => {
   const activeClass = "bg-ksp-gold text-ksp-navy font-bold shadow-md scale-[1.02]";
   const inactiveClass = "text-slate-300 hover:bg-white/5 hover:text-white";
 
+  const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'Console';
+
   return (
-    <div className="flex-grow flex flex-col md:flex-row min-h-full bg-slate-50 relative select-none">
+    <div className="flex-grow flex flex-col xl:flex-row min-h-full bg-slate-50 relative select-none">
       
-      {/* Mobile Sidebar Header */}
-      <div className="md:hidden w-full bg-ksp-navy text-white px-4 py-3 flex justify-between items-center border-b border-ksp-gold/20 shadow">
-        <span className="font-extrabold text-sm tracking-wide text-ksp-gold">KSP STATION CONSOLE</span>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1 rounded bg-white/10 text-white">
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+      {/* Tablet/Mobile Header - App Style */}
+      <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-40 border-b border-ksp-gold/20">
+        <div className="flex flex-col">
+          <span className="font-extrabold text-[10px] uppercase tracking-wide text-ksp-gold">KSP Console</span>
+          <span className="font-semibold text-sm">{currentPageLabel}</span>
+        </div>
+        <div className="w-8 h-8 rounded-full bg-ksp-gold/15 text-ksp-gold border border-ksp-gold/30 flex items-center justify-center font-bold text-xs">
+          {user?.firstName?.charAt(0)}
+        </div>
       </div>
 
-      {/* Sidebar Navigation */}
+      {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        w-full md:w-64 bg-ksp-navy text-white flex flex-col border-r border-ksp-gold/25 shadow-xl shrink-0 z-40 transition-all duration-300 md:sticky md:top-0 md:h-screen md:overflow-y-auto
-        ${mobileMenuOpen ? 'block' : 'hidden md:flex'}
+        hidden xl:flex w-64 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl shrink-0 z-40 transition-all duration-300 sticky top-0 h-screen overflow-y-auto
       `}>
         {/* Officer summary info */}
         <div className="p-6 border-b border-white/5 select-none text-center bg-ksp-navy-dark/40">
@@ -74,7 +77,6 @@ export const OfficerLayout: React.FC = () => {
               <Link 
                 key={item.label}
                 to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
                   isActive ? activeClass : inactiveClass
                 }`}
@@ -93,11 +95,41 @@ export const OfficerLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-grow flex flex-col max-w-full ${location.pathname.includes('/network') ? 'p-0' : 'p-4 md:p-8'}`}>
+      <main className={`flex-grow flex flex-col max-w-full ${
+        location.pathname.includes('/network') 
+          ? 'p-0 pb-0' 
+          : 'px-4 pt-4 pb-24 xl:p-8'
+      }`}>
         <div className={location.pathname.includes('/network') ? 'flex-grow flex flex-col w-full' : 'container mx-auto'}>
           <Outlet />
         </div>
       </main>
+
+      {/* Bottom Navigation Bar (Hidden on >= xl) */}
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.05)] z-50 px-2 pb-[env(safe-area-inset-bottom)]">
+        <nav className="flex items-center justify-around h-16">
+          {menuItems.map(item => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.label}
+                to={item.path}
+                className="flex flex-col items-center justify-center flex-1 h-full py-1 gap-1"
+              >
+                <div className={`p-1.5 rounded-xl transition-all duration-200 ${
+                  isActive ? 'bg-ksp-navy text-white shadow-md shadow-ksp-navy/20 scale-110' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+                }`}>
+                  {React.cloneElement(item.icon, { size: 18, className: isActive ? 'text-ksp-gold' : '' })}
+                </div>
+                <span className={`text-[10px] font-semibold ${isActive ? 'text-ksp-navy' : 'text-slate-400'}`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
     </div>
   );
 };

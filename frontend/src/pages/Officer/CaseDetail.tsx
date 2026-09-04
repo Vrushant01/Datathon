@@ -219,7 +219,7 @@ export const CaseDetail: React.FC = () => {
               </div>
 
               {/* Grid cards Complainants / Victims / Accused */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
                 {/* Complainant card */}
                 <div className="bg-white rounded-lg border p-4 space-y-3">
@@ -296,9 +296,9 @@ export const CaseDetail: React.FC = () => {
 
           {/* TAB 2: TIMELINE NOTES */}
           {activeTab === 'timeline' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               {/* Timeline feed */}
-              <div className="lg:col-span-2 space-y-6 relative pl-4 border-l">
+              <div className="xl:col-span-2 space-y-6 relative pl-4 border-l">
                 {cDetails.Timeline.map((note: TimelineNoteRow) => (
                   <div key={note.NoteID} className="relative space-y-1">
                     {/* Circle Bullet */}
@@ -373,9 +373,9 @@ export const CaseDetail: React.FC = () => {
 
           {/* TAB 3: EVIDENCE LOCKER */}
           {activeTab === 'evidence' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               {/* Evidence grid */}
-              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {cDetails.Evidence.map((ev: EvidenceFileRow) => (
                   <div key={ev.EvidenceID} className="bg-white rounded-lg border p-4 flex flex-col justify-between hover:shadow-md transition">
                     <div>

@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 // ── Startup dependency diagnostic ────────────────────────────────────────────
 // Runs BEFORE pdfkit/fontkit are loaded so Catalyst logs show exactly which
 // module paths are (or are not) resolvable on the production container.
@@ -49,6 +50,7 @@ const corsOptions = {
 // which browsers reject as a CORS violation even when both values are identical.
 // app.use(cors(corsOptions));
 // app.options('*', cors(corsOptions));
+app.use((0, cookie_parser_1.default)()); // Required for req.cookies (refresh token httpOnly cookie)
 app.use(express_1.default.json());
 // Mount the new dedicated routers
 app.use('/api/ai', aiRoutes_1.default);

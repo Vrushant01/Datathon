@@ -1,5 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { RepositoryFactory } from '../repositories/RepositoryFactory';
 
 const router = express.Router();
@@ -8,14 +9,87 @@ const router = express.Router();
 router.use(express.json());
 router.use(express.urlencoded({ extended: false }));
 
-export const generateToken = (payload: any) => {
-  return jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret-for-demo', { expiresIn: '8h' });
+// ── Token secrets ────────────────────────────────────────────────────────────
+const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-demo';
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'fallback-refresh-secret-for-demo';
+
+// Access token: short-lived (1 hour)
+export const generateAccessToken = (payload: any) => {
+  return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 };
+
+// Keep old name as alias so any other internal callers still work
+export const generateToken = generateAccessToken;
+
+// ── In-memory refresh token store ────────────────────────────────────────────
+// Maps refreshToken (UUID) → { payload, expiresAt (ms) }
+// Survives within a single AppSail process lifetime.
+// Process restarts gracefully require re-login (acceptable — rare on AppSail).
+interface RefreshEntry {
+  payload: any;       // The user claims originally signed into the JWT
+  expiresAt: number;  // Unix ms
+}
+
+const refreshTokenStore = new Map<string, RefreshEntry>();
+
+const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function issueRefreshToken(payload: any): string {
+  const token = crypto.randomBytes(40).toString('hex');
+  refreshTokenStore.set(token, {
+    payload,
+    expiresAt: Date.now() + REFRESH_TOKEN_TTL_MS,
+  });
+  return token;
+}
+
+function consumeRefreshToken(token: string): any | null {
+  const entry = refreshTokenStore.get(token);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    refreshTokenStore.delete(token);
+    return null;
+  }
+  // Rotate: delete old token (one-time use), caller will issue a new one
+  refreshTokenStore.delete(token);
+  return entry.payload;
+}
+
+// ── Cookie helpers ────────────────────────────────────────────────────────────
+const COOKIE_NAME = 'ksp_rt';
+
+function setRefreshCookie(res: express.Response, token: string) {
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: true,           // HTTPS-only (Catalyst AppSail is always HTTPS)
+    sameSite: 'none',       // Cross-subdomain (frontend ≠ backend domain)
+    maxAge: REFRESH_TOKEN_TTL_MS,
+    path: '/',
+  });
+}
+
+function clearRefreshCookie(res: express.Response) {
+  res.clearCookie(COOKIE_NAME, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    path: '/',
+  });
+}
+
+// ── Shared login helper ───────────────────────────────────────────────────────
+function loginResponse(res: express.Response, userPayload: any, message: string) {
+  const accessToken = generateAccessToken(userPayload);
+  const refreshToken = issueRefreshToken(userPayload);
+  setRefreshCookie(res, refreshToken);
+  return res.json({ success: true, token: accessToken, user: userPayload, message });
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
 
 router.post('/login', async (req, res) => {
   try {
     const { idOrEmail, passcode, loginType } = req.body;
-    const db = RepositoryFactory.getRepository(req);
 
     if (loginType === 'admin') {
       if (
@@ -27,21 +101,21 @@ router.post('/login', async (req, res) => {
           role: 'Admin',
           firstName: 'Administrator KSP'
         };
-        const token = generateToken(adminUser);
-        return res.json({ success: true, token, user: adminUser, message: 'Admin authenticated successfully' });
+        return loginResponse(res, adminUser, 'Admin authenticated successfully');
       }
       return res.status(401).json({ success: false, message: 'Invalid Admin credentials' });
-      
+
     } else if (loginType === 'analytics') {
+      const db = RepositoryFactory.getRepository(req);
       const allUnits = await db.getUnits();
       const stations = allUnits.filter((u: any) => u.TypeID === 1);
-      
+
       if (passcode !== 'analytics123') {
         return res.status(401).json({ success: false, message: 'Invalid Analytics passcode. Try "analytics123"' });
       }
 
-      const targetStation = stations.find((s: any) => 
-        s.UnitID.toString() === idOrEmail || 
+      const targetStation = stations.find((s: any) =>
+        s.UnitID.toString() === idOrEmail ||
         s.UnitName.toLowerCase().includes(idOrEmail.toLowerCase().replace('analytics_', '').replace('_analytics', ''))
       );
 
@@ -60,11 +134,11 @@ router.post('/login', async (req, res) => {
         districtName: district,
         unitId: targetStation.UnitID
       };
-      const token = generateToken(analyticsUser);
-      return res.json({ success: true, token, user: analyticsUser, message: 'Analytics portal authenticated successfully' });
+      return loginResponse(res, analyticsUser, 'Analytics portal authenticated successfully');
 
     } else {
       // Officer
+      const db = RepositoryFactory.getRepository(req);
       const employees = await db.getEmployees();
       const emp = employees.find(
         (e: any) => e.EmployeeID.toString() === idOrEmail || (e.KGID && e.KGID.toLowerCase() === idOrEmail.toLowerCase())
@@ -93,8 +167,7 @@ router.post('/login', async (req, res) => {
           stationName: station,
           districtName: district
         };
-        const token = generateToken(officerUser);
-        return res.json({ success: true, token, user: officerUser, message: 'Officer authenticated successfully' });
+        return loginResponse(res, officerUser, 'Officer authenticated successfully');
       }
 
       return res.status(401).json({ success: false, message: 'Invalid password. Try "password"' });
@@ -103,6 +176,44 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
+});
+
+// ── POST /api/auth/refresh ────────────────────────────────────────────────────
+// Silently issues a new access token using the httpOnly refresh cookie.
+// Rotates the refresh token on success (one-time use).
+router.post('/refresh', (req, res) => {
+  const incomingRefreshToken = req.cookies?.[COOKIE_NAME];
+
+  if (!incomingRefreshToken) {
+    return res.status(401).json({ success: false, message: 'No refresh token provided' });
+  }
+
+  const payload = consumeRefreshToken(incomingRefreshToken);
+
+  if (!payload) {
+    clearRefreshCookie(res);
+    return res.status(401).json({ success: false, message: 'Refresh token expired or invalid. Please log in again.' });
+  }
+
+  // Strip JWT-internal fields (iat, exp) before re-signing
+  const { iat, exp, ...userClaims } = payload;
+
+  const newAccessToken = generateAccessToken(userClaims);
+  const newRefreshToken = issueRefreshToken(userClaims);
+  setRefreshCookie(res, newRefreshToken);
+
+  return res.json({ success: true, token: newAccessToken });
+});
+
+// ── POST /api/auth/logout ─────────────────────────────────────────────────────
+// Invalidates the refresh token server-side and clears the cookie.
+router.post('/logout', (req, res) => {
+  const incomingRefreshToken = req.cookies?.[COOKIE_NAME];
+  if (incomingRefreshToken) {
+    refreshTokenStore.delete(incomingRefreshToken);
+  }
+  clearRefreshCookie(res);
+  return res.json({ success: true, message: 'Logged out successfully' });
 });
 
 export default router;

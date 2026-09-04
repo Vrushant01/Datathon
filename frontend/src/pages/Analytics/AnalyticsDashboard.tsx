@@ -61,7 +61,7 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-xl border shadow-sm">
           <div className="flex items-center gap-4">
             <div className="bg-blue-100 p-3 rounded-lg text-blue-600">

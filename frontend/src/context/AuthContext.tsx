@@ -113,6 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    // Fire-and-forget: invalidate the server-side refresh token + clear the httpOnly cookie.
+    // We don't await — even if the network fails, the local state is cleared below.
+    fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',  // Sends the ksp_rt cookie so the server can clear it
+    }).catch(() => { /* ignore network errors on logout */ });
+
     localStorage.removeItem('token');
     setUser(null);
   };

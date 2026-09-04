@@ -16,6 +16,7 @@
     "@swc/helpers": "^0.5.23",
     "@types/multer": "^2.2.0",
     "axios": "^1.20.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.22.2",
@@ -27,6 +28,7 @@
     "zcatalyst-sdk-node": "^3.4.0"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",
