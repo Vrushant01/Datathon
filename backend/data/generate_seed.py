@@ -601,10 +601,10 @@ backend_json = {
     "SEED_ACT_SECTIONS": act_section_rows,
     "SEED_CUSTOM_EDGES": custom_edges
 }
-with open('backend/src/seedData.json', 'w', encoding='utf-8') as f:
+with open('backend/data/seedData.json', 'w', encoding='utf-8') as f:
     json.dump(backend_json, f, indent=2)
 
-print("Generated backend/src/seedData.json")
+print("Generated backend/data/seedData.json")
 
 # --- Validation Report ---
 report = {}
