@@ -426,6 +426,79 @@ router.post('/patch-employees', requireAuth, requireRole('Admin'), async (req: a
     }
 });
 
+router.get('/check-audit', requireAuth, requireRole('Admin'), async (req: any, res: any) => {
+    try {
+        const app = catalyst.initialize(req);
+        const nosql = app.nosql();
+        const { NoSQLEnum, NoSQLMarshall, NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        
+        const tableDetails = await nosql.getTable('auditlogs');
+        const detailsJson = (tableDetails as any).toJSON ? (tableDetails as any).toJSON() : tableDetails;
+        const index = detailsJson.global_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex') 
+                    || detailsJson.local_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex');
+        
+        const realTable = nosql.table(detailsJson);
+        const indexIdToUse = index ? index.id : 'LogGroupIndex';
+
+        let badRecords: any[] = [];
+        let totalScanned = 0;
+        
+        // We will scan up to 10 pages of 50 items (500 items max) to find bad ones
+        let startKey: any = undefined;
+        
+        for (let page = 0; page < 10; page++) {
+            const query: any = {
+                key_condition: {
+                    attribute: ['LogGroup'],
+                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                    value: NoSQLMarshall.makeString('ALL')
+                },
+                forward_scan: false,
+                limit: 50
+            };
+            if (startKey) query.start_key = startKey;
+            
+            const resp = await realTable.queryIndex(indexIdToUse, query) as any;
+            
+            const items = (resp.get || []).map((d: any) => {
+                const item = d.item;
+                if (!item) return null;
+                return typeof item.toJSON === 'function' ? item.toJSON() : item;
+            }).filter(Boolean);
+            
+            totalScanned += items.length;
+            
+            for (const item of items) {
+                const ts = item.Timestamp;
+                if (typeof ts !== 'string') {
+                    badRecords.push({
+                        AuditLogID: item.AuditLogID,
+                        Action: item.Action,
+                        TimestampType: typeof ts,
+                        TimestampValue: ts,
+                        RawData: item
+                    });
+                }
+            }
+            
+            if (resp.start_key) {
+                startKey = resp.start_key;
+            } else {
+                break;
+            }
+        }
+
+        res.json({
+            success: true,
+            totalScanned,
+            badRecordsCount: badRecords.length,
+            badRecords
+        });
+    } catch (e: any) {
+        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+    }
+});
+
 const removeEmptyValues = (obj: any) => {
     return Object.fromEntries(
         Object.entries(obj).filter(([_, v]) => v != null && v !== '')

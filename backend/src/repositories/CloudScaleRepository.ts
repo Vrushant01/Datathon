@@ -829,7 +829,21 @@ export class CloudScaleRepository implements IDataRepository {
       const data = (raw.get || []).map((d: any) => {
         const item = d.item;
         if (!item) return null;
-        return typeof item.toJSON === 'function' ? item.toJSON() : item;
+        
+        // Unwrap the {"S": "..."} NoSQL raw types returned by queryIndex
+        const rawJson = typeof item.toJSON === 'function' ? item.toJSON() : item;
+        const clean: any = {};
+        for (const [k, v] of Object.entries(rawJson)) {
+            if (v && typeof v === 'object') {
+                if ('S' in (v as any)) clean[k] = (v as any).S;
+                else if ('N' in (v as any)) clean[k] = Number((v as any).N);
+                else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+                else clean[k] = v;
+            } else {
+                clean[k] = v;
+            }
+        }
+        return clean;
       }).filter(Boolean);
 
       let nextCursor: string | undefined;

@@ -161,7 +161,7 @@ export const AuditLogs: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-medium block">ID: {log.EntityID || 'N/A'}</span>
                   </td>
                   <td className="p-4 font-semibold text-slate-500 whitespace-nowrap">
-                    <span className="flex items-center gap-1"><Calendar size={12} /> {log.Timestamp.replace('T', ' ').substring(0, 19)}</span>
+                    <span className="flex items-center gap-1"><Calendar size={12} /> {String(log.Timestamp || '').replace('T', ' ').substring(0, 19)}</span>
                   </td>
                   <td className="p-4 text-slate-600 font-medium">
                     {log.Description}
