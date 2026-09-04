@@ -520,8 +520,8 @@ export const mapToCamelCase = (row: any): any => {
   if (!row) return row;
   const mapped: any = {};
   for (const key of Object.keys(row)) {
-    const lowerKey = key.toLowerCase();
-    const camelKey = ALL_CAMEL_KEYS.find(k => k.toLowerCase() === lowerKey);
+    const lowerKey = String(key || '').toLowerCase();
+    const camelKey = ALL_CAMEL_KEYS.find(k => String(k || '').toLowerCase() === lowerKey);
     if (camelKey) {
       mapped[camelKey] = row[key];
     } else {
@@ -535,7 +535,7 @@ export const mapToLowercase = (row: any): any => {
   if (!row) return row;
   const mapped: any = {};
   for (const key of Object.keys(row)) {
-    mapped[key.toLowerCase()] = row[key];
+    mapped[String(key || '').toLowerCase()] = row[key];
   }
   return mapped;
 };

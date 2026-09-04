@@ -56,8 +56,8 @@ export function getCasesForAnomaly(cases: any[], filters: AnomalyFilterParams): 
     if (typeof filters.crimeType === 'number') {
       filterCrimeHeadId = filters.crimeType;
     } else {
-      const typeStr = filters.crimeType.toLowerCase().replace(/[^a-z]/g, '');
-      const ch = crimeHeads.find(x => x.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(x.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '')));
+      const typeStr = String(filters.crimeType || '').toLowerCase().replace(/[^a-z]/g, '');
+      const ch = crimeHeads.find(x => String(x.CrimeGroupName || '').toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(String(x.CrimeGroupName || '').toLowerCase().replace(/[^a-z]/g, '')));
       if (ch) filterCrimeHeadId = ch.CrimeHeadID;
     }
   }

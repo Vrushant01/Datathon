@@ -6,7 +6,7 @@ This document outlines the workflow and CI/CD strategy for deploying code and da
 
 When you make changes to frontend React components or backend Express controllers, you follow a standard Git workflow:
 
-```bash      vv
+```bash 
 git add .
 git commit -m "update dashboard logic"
 git push origin main

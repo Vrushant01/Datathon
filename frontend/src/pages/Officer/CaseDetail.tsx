@@ -85,7 +85,7 @@ export const CaseDetail: React.FC = () => {
       caseId,
       evidenceName,
       evidenceType,
-      `/evidence/lockers/${evidenceName.toLowerCase().replace(/ /g, '_')}`,
+      `/evidence/lockers/${String(evidenceName || '').toLowerCase().replace(/ /g, '_')}`,
       user?.firstName || 'Officer'
     );
 

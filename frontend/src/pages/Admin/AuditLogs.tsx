@@ -66,10 +66,10 @@ export const AuditLogs: React.FC = () => {
   const filteredLogs = logs.filter(l => {
     const term = searchQuery.toLowerCase();
     return (
-      (l.ActorID || '').toLowerCase().includes(term) ||
-      (l.Action || '').toLowerCase().includes(term) ||
-      (l.Description || '').toLowerCase().includes(term) ||
-      (l.EntityType || '').toLowerCase().includes(term)
+      String(l.ActorID || '').toLowerCase().includes(term) ||
+      String(l.Action || '').toLowerCase().includes(term) ||
+      String(l.Description || '').toLowerCase().includes(term) ||
+      String(l.EntityType || '').toLowerCase().includes(term)
     );
   });
 

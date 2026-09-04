@@ -393,7 +393,7 @@ export const CriminalNetwork: React.FC = () => {
   const filteredFIRs = filterFirCases.filter(c => 
     c.CaseNo.includes(searchQuery) ||
     c.CrimeNo.includes(searchQuery) ||
-    c.BriefFacts.toLowerCase().includes(searchQuery.toLowerCase())
+    String(c.BriefFacts || '').toLowerCase().includes(String(searchQuery || '').toLowerCase())
   );
 
   return (

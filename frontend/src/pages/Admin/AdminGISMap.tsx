@@ -42,8 +42,8 @@ export const AdminGISMap: React.FC = () => {
   const [selectedCrimeHead, setSelectedCrimeHead] = useState<number | 'ALL'>(() => {
     const cParam = searchParams.get('crimeType');
     if (cParam) {
-      const typeStr = cParam.toLowerCase().replace(/[^a-z]/g, '');
-      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '')));
+      const typeStr = String(cParam || '').toLowerCase().replace(/[^a-z]/g, '');
+      const ch = mockDb.getCrimeHeads().find(c => String(c.CrimeGroupName || '').toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(String(c.CrimeGroupName || '').toLowerCase().replace(/[^a-z]/g, '')));
       if (ch) return ch.CrimeHeadID;
     }
     return 'ALL';
@@ -558,12 +558,12 @@ export const AdminGISMap: React.FC = () => {
                 const mappings: { [key: string]: string } = { 'bengaluruurban': 'bangalore' };
                 const districtName = properties?._dbDistrictName || '';
                 const matchedDistrict = districts.find(d => {
-                    const normalized = d.DistrictName.toLowerCase().replace(/\s/g, '');
-                    return normalized === districtName.toLowerCase().replace(/\s/g, '') || mappings[normalized] === districtName.toLowerCase().replace(/\s/g, '');
+                    const normalized = String(d.DistrictName || '').toLowerCase().replace(/\s/g, '');
+                    return normalized === String(districtName || '').toLowerCase().replace(/\s/g, '') || mappings[normalized] === String(districtName || '').toLowerCase().replace(/\s/g, '');
                 });
 
                 if (matchedDistrict) {
-                    if (matchedDistrict.DistrictName.toLowerCase().includes('bengaluru') && matchedDistrict.DistrictName.toLowerCase().includes('urban')) {
+                    if (String(matchedDistrict.DistrictName || '').toLowerCase().includes('bengaluru') && String(matchedDistrict.DistrictName || '').toLowerCase().includes('urban')) {
                         console.log(`[GIS DEBUG] Bengaluru Urban click fired = true`);
                         console.log(`[GIS DEBUG] Bengaluru Urban feature = ${JSON.stringify(feature)}`);
                         console.log(`[GIS DEBUG] Bengaluru Urban properties = ${JSON.stringify(properties)}`);
@@ -665,7 +665,7 @@ export const AdminGISMap: React.FC = () => {
            if (f) {
                const bbox = getBoundingBox(f);
                
-               if (districtObj.DistrictName.toLowerCase().includes('bengaluru') && districtObj.DistrictName.toLowerCase().includes('urban')) {
+               if (String(districtObj.DistrictName || '').toLowerCase().includes('bengaluru') && String(districtObj.DistrictName || '').toLowerCase().includes('urban')) {
                    console.log(`[GIS DEBUG] Bengaluru Urban dropdown selected = true`);
                    console.log(`[GIS DEBUG] Bengaluru Urban bounds = ${JSON.stringify(bbox)}`);
                    console.log(`[GIS DEBUG] Bengaluru Urban camera animation = true`);

@@ -52,8 +52,8 @@ export const OfficerManagement: React.FC = () => {
     if (location.state?.autoOpenAssign) {
       setAssignModalOpen(true);
       if (location.state?.prefillStationName) {
-        const lowerName = location.state.prefillStationName.toLowerCase();
-        const station = units.find(u => lowerName.includes(u.UnitName.toLowerCase()) || u.UnitName.toLowerCase().includes(lowerName));
+        const lowerName = String(location.state.prefillStationName || '').toLowerCase();
+        const station = units.find(u => lowerName.includes(String(u.UnitName || '').toLowerCase()) || String(u.UnitName || '').toLowerCase().includes(lowerName));
         if (station) {
           setAssignStationId(station.UnitID);
         }
@@ -224,13 +224,13 @@ export const OfficerManagement: React.FC = () => {
     if (filterStation !== 'ALL' && emp.UnitID !== filterStation) return false;
     if (filterStatus !== 'ALL' && emp.status !== filterStatus) return false;
 
-    const term = searchQuery.toLowerCase();
-    const rankName = ranks.find(r => r.RankID === emp.RankID)?.RankName.toLowerCase() || '';
-    const unitName = units.find(u => u.UnitID === emp.UnitID)?.UnitName.toLowerCase() || '';
+    const term = String(searchQuery || '').toLowerCase();
+    const rankName = String(ranks.find(r => r.RankID === emp.RankID)?.RankName || '').toLowerCase();
+    const unitName = String(units.find(u => u.UnitID === emp.UnitID)?.UnitName || '').toLowerCase();
     return (
-      emp.FirstName.toLowerCase().includes(term) ||
-      emp.KGID.toLowerCase().includes(term) ||
-      emp.EmployeeID.toString().includes(term) ||
+      String(emp.FirstName || '').toLowerCase().includes(term) ||
+      String(emp.KGID || '').toLowerCase().includes(term) ||
+      String(emp.EmployeeID || '').toLowerCase().includes(term) ||
       rankName.includes(term) ||
       unitName.includes(term)
     );

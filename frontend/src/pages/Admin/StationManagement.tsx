@@ -38,8 +38,8 @@ export const StationManagement: React.FC = () => {
         setNotifyProblem(location.state.prefillProblem);
       }
       if (location.state?.prefillStation) {
-        const lowerName = location.state.prefillStation.toLowerCase();
-        const station = mockDb.getUnits().find(u => lowerName.includes(u.UnitName.toLowerCase()) || u.UnitName.toLowerCase().includes(lowerName));
+        const lowerName = String(location.state.prefillStation || '').toLowerCase();
+        const station = mockDb.getUnits().find(u => lowerName.includes(String(u.UnitName || '').toLowerCase()) || String(u.UnitName || '').toLowerCase().includes(lowerName));
         if (station) {
           setNotifyStationId(station.UnitID);
         }
@@ -97,10 +97,10 @@ export const StationManagement: React.FC = () => {
   const filteredStations = stations.filter(st => {
     if (filterDistrict !== 'ALL' && st.DistrictID !== filterDistrict) return false;
     
-    const term = searchQuery.toLowerCase();
-    const distName = districts.find(d => d.DistrictID === st.DistrictID)?.DistrictName.toLowerCase() || '';
+    const term = String(searchQuery || '').toLowerCase();
+    const distName = String(districts.find(d => d.DistrictID === st.DistrictID)?.DistrictName || '').toLowerCase();
     return (
-      st.UnitName.toLowerCase().includes(term) ||
+      String(st.UnitName || '').toLowerCase().includes(term) ||
       distName.includes(term)
     );
   });

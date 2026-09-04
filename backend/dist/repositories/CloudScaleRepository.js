@@ -752,7 +752,7 @@ class CloudScaleRepository {
                 EntityType: log.EntityType,
                 EntityID: log.EntityID,
                 Description: log.Description,
-                ActorID: log.ActorID,
+                ActorID: String(log.ActorID || ''),
                 OldValue: log.OldValue || null,
                 NewValue: log.NewValue || null
             });
