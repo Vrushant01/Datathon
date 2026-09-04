@@ -799,7 +799,25 @@ class CloudScaleRepository {
                 const item = d.item;
                 if (!item)
                     return null;
-                return typeof item.toJSON === 'function' ? item.toJSON() : item;
+                // Unwrap the {"S": "..."} NoSQL raw types returned by queryIndex
+                const rawJson = typeof item.toJSON === 'function' ? item.toJSON() : item;
+                const clean = {};
+                for (const [k, v] of Object.entries(rawJson)) {
+                    if (v && typeof v === 'object') {
+                        if ('S' in v)
+                            clean[k] = v.S;
+                        else if ('N' in v)
+                            clean[k] = Number(v.N);
+                        else if ('BOOL' in v)
+                            clean[k] = v.BOOL === true || v.BOOL === 'true';
+                        else
+                            clean[k] = v;
+                    }
+                    else {
+                        clean[k] = v;
+                    }
+                }
+                return clean;
             }).filter(Boolean);
             let nextCursor;
             if (raw.start_key) {
