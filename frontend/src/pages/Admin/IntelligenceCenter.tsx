@@ -19,6 +19,7 @@ export interface IntelligenceAlert {
   dateTo?: string;
   currentValue?: number;
   baselineValue?: number;
+  percentageChange?: number;
   score?: number;
   explanation: string;
 }
@@ -68,6 +69,7 @@ export const IntelligenceCenter: React.FC = () => {
               dateTo: a.windowEnd,
               currentValue: a.currentCount,
               baselineValue: a.baselineMean,
+              percentageChange: a.percentIncrease ?? a.percentageChange,
               score: a.riskScore,
               explanation: a.reason || 'Temporal anomaly detected.'
             });
@@ -308,7 +310,33 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
             {alert.type} • {alert.severity}
           </span>
           <h2 className="text-xl font-extrabold text-slate-800 mt-2">{alert.locationName}</h2>
-          <p className="text-sm font-medium text-slate-600 mt-1">{alert.explanation}</p>
+          <p className="text-sm font-medium text-slate-600 mt-1 mb-2">{alert.explanation}</p>
+          {alert.type === 'ANOMALY' && (
+            <div className="flex flex-wrap gap-3 mt-3">
+              {(alert.dateFrom && alert.dateTo) && (
+                <div className="bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-0.5">Time Window</span>
+                  <span className="text-xs font-semibold text-slate-700">{alert.dateFrom} to {alert.dateTo}</span>
+                </div>
+              )}
+              {alert.percentageChange !== undefined && (
+                <div className="bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
+                  <span className="text-[10px] text-amber-600 font-bold uppercase tracking-wider block mb-0.5">Deviation</span>
+                  <span className="text-xs font-semibold text-amber-800">
+                    Z: {alert.score?.toFixed(2)} | Change: +{alert.percentageChange}%
+                  </span>
+                </div>
+              )}
+              {alert.currentValue !== undefined && alert.baselineValue !== undefined && (
+                <div className="bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                  <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider block mb-0.5">Volume</span>
+                  <span className="text-xs font-semibold text-blue-800">
+                    Current: {alert.currentValue} / Baseline: {alert.baselineValue.toFixed(1)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <button 
           onClick={generateSummary}
