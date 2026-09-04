@@ -1,6 +1,6 @@
 import React from 'react';
 import { TransparentLogo } from './TransparentLogo';
-import { mockDb } from '../utils/mockDb';
+import { mockDb } from '../../data/mockDb';
 
 interface FIRDocumentProps {
   cDetails: any;

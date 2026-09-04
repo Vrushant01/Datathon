@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { mockDb } from '../../utils/mockDb';
+import { mockDb } from '../../../data/mockDb';
 import { Link } from 'react-router-dom';
 import { 
   FileText, Clock, CheckCircle2, ChevronRight, 

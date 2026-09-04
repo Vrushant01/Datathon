@@ -1,6 +1,6 @@
 import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useRef } from 'react';
-import { mockDb } from '../../utils/mockDb';
+import { mockDb } from '../../../data/mockDb';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { MapPin, Filter } from 'lucide-react';

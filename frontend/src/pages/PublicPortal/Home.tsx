@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Shield, Brain, ChevronDown, Users, ChevronRight, Lock, MapPin, BarChart3 } from 'lucide-react';
-import { mockDb } from '../../utils/mockDb';
+import { mockDb } from '../../../data/mockDb';
 import { TransparentLogo } from '../../components/TransparentLogo';
 export const Home: React.FC = () => {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);

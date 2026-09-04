@@ -1,5 +1,5 @@
 import React from 'react';
-import { mockDb } from '../../utils/mockDb';
+import { mockDb } from '../../../data/mockDb';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,

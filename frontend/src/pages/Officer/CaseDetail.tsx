@@ -2,7 +2,7 @@ import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { mockDb, CaseMasterRow, ComplainantRow, VictimRow, AccusedRow, ActSectionAssociationRow, ChargesheetRow, EvidenceFileRow, TimelineNoteRow } from '../../utils/mockDb';
+import { mockDb, CaseMasterRow, ComplainantRow, VictimRow, AccusedRow, ActSectionAssociationRow, ChargesheetRow, EvidenceFileRow, TimelineNoteRow } from '../../../data/mockDb';
 import { 
   ArrowLeft, FileText, MessageSquare, Paperclip, ShieldAlert, 
   MapPin, User, Calendar, BookOpen, Clock, Plus, Upload, Check, Send, 

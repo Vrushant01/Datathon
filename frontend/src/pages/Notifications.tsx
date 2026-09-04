@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { mockDb, NotificationRow } from '../utils/mockDb';
+import { mockDb, NotificationRow } from '../../data/mockDb';
 import { Bell, CheckCheck, Calendar, BellOff } from 'lucide-react';
 
 export const Notifications: React.FC = () => {

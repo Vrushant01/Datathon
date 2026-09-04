@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, LogOut, Bell, User, MapPin } from 'lucide-react';
-import { mockDb, dbConnectionError } from '../utils/mockDb';
+import { mockDb, dbConnectionError } from '../../data/mockDb';
 import { useDbConnection } from '../hooks/useDbConnection';
 import { TransparentLogo } from './TransparentLogo';
 

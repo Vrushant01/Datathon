@@ -1,1 +1,0 @@
-const fs=require('fs'); const data = JSON.parse(fs.readFileSync('preflight_results.json', 'utf16le')); data.allTablesInfo.forEach(t => console.log(t.name + ': PK=' + t.partition_key.column_name + ' (' + t.partition_key.data_type + ')'));
