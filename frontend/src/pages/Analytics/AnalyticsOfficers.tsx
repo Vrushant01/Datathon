@@ -34,7 +34,7 @@ export const AnalyticsOfficers: React.FC = () => {
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Officers & Active Assignments</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <th className="p-4">Officer Name</th>

@@ -120,7 +120,7 @@ export const AuditLogs: React.FC = () => {
       </div>
 
       {/* Roster Table Grid */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden min-h-[400px] relative">
+      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto min-h-[400px] relative">
         {loading && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-10">
             <Loader className="animate-spin text-ksp-navy" />
@@ -135,7 +135,7 @@ export const AuditLogs: React.FC = () => {
         )}
 
         {!error && (
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <th className="p-4">Log ID</th>

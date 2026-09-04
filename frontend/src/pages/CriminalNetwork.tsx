@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import { mockDb } from '../utils/mockDb';
 import { 
   Share2, FileText, Search, Activity, ShieldAlert, ArrowLeft, Network,
@@ -47,11 +48,25 @@ const nodeTypes = {
 
 export const CriminalNetwork: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const personIdParam = searchParams.get('personId');
+
   const cases = mockDb.getCases();
   const accusedList = mockDb.getAccused();
   const victimsList = mockDb.getVictims();
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (personIdParam) {
+      const accused = accusedList.find(a => String(a.PersonID) === personIdParam);
+      if (accused && accused.AccusedName) {
+        setSearchQuery(accused.AccusedName);
+      } else {
+        setSearchQuery(personIdParam);
+      }
+    }
+  }, [personIdParam, accusedList]);
   const [selectedFirId, setSelectedFirId] = useState<number | null>(null);
   const [selectedNodeData, setSelectedNodeData] = useState<any | null>(null);
 
@@ -390,11 +405,22 @@ export const CriminalNetwork: React.FC = () => {
     }
   };
 
-  const filteredFIRs = filterFirCases.filter(c => 
-    c.CaseNo.includes(searchQuery) ||
-    c.CrimeNo.includes(searchQuery) ||
-    String(c.BriefFacts || '').toLowerCase().includes(String(searchQuery || '').toLowerCase())
-  );
+  const filteredFIRs = filterFirCases.filter(c => {
+    const searchLower = String(searchQuery || '').toLowerCase();
+    
+    if (c.CaseNo.includes(searchQuery) ||
+        c.CrimeNo.includes(searchQuery) ||
+        String(c.BriefFacts || '').toLowerCase().includes(searchLower)) {
+      return true;
+    }
+
+    const caseAccused = accusedList.filter(a => a.CaseMasterID === c.CaseMasterID);
+    if (caseAccused.some(a => String(a.AccusedName || '').toLowerCase().includes(searchLower))) {
+      return true;
+    }
+    
+    return false;
+  });
 
   return (
     <div className="dark flex-1 h-full min-h-[calc(100vh-64px)] w-full bg-[#020617] text-[#e4e2e4] flex flex-col font-sans overflow-hidden select-none pb-24 xl:pb-0">

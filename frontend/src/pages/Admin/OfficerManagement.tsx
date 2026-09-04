@@ -312,8 +312,8 @@ export const OfficerManagement: React.FC = () => {
       </div>
 
       {/* Roster Table Grid */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse text-xs">
+      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
+        <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
           <thead>
             <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <th className="p-4">Emp ID</th>

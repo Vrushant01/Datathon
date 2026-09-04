@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 
 
 
@@ -58,6 +59,7 @@ const corsOptions = {
 // which browsers reject as a CORS violation even when both values are identical.
 // app.use(cors(corsOptions));
 // app.options('*', cors(corsOptions));
+app.use(cookieParser()); // Required for req.cookies (refresh token httpOnly cookie)
 app.use(express.json());
 
 // Mount the new dedicated routers

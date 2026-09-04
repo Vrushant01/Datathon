@@ -49,7 +49,7 @@ export const OfficerDashboard: React.FC = () => {
       </div>
 
       {/* KPI Counters */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         
         <div className="bg-white p-5 rounded-xl border shadow-sm flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-ksp-navy rounded-lg border border-blue-100">
