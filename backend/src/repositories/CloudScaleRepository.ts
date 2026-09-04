@@ -185,6 +185,7 @@ export class CloudScaleRepository implements IDataRepository {
                     if ('S' in (v as any)) clean[k] = (v as any).S;
                     else if ('N' in (v as any)) clean[k] = Number((v as any).N);
                     else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+                    else if ('NULL' in (v as any)) clean[k] = null;
                     else clean[k] = v;
                 } else {
                     clean[k] = v;
@@ -838,6 +839,7 @@ export class CloudScaleRepository implements IDataRepository {
                 if ('S' in (v as any)) clean[k] = (v as any).S;
                 else if ('N' in (v as any)) clean[k] = Number((v as any).N);
                 else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+                else if ('NULL' in (v as any)) clean[k] = null;
                 else clean[k] = v;
             } else {
                 clean[k] = v;
