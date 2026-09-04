@@ -42,7 +42,6 @@ export const AdminLayout: React.FC = () => {
     { label: 'GIS Maps', path: '/admin-portal/gis', icon: <MapPin size={18} />, primary: false },
     { label: 'Criminal Network', path: '/admin-portal/network', icon: <Share2 size={18} />, primary: false },
     { label: 'Intell Center', path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
-    { label: 'AI Anomaly', path: '/admin-portal/anomaly-detection', icon: <Brain size={18} />, primary: false },
     { label: 'Station Risk', path: '/admin-portal/station-risk', icon: <Activity size={18} />, primary: false },
     { label: 'Repeated Offenders', path: '/admin-portal/repeated-offenders', icon: <Repeat size={18} />, primary: false },
     { label: 'AI Assistant', path: '/admin-portal/assistant', icon: <Bot size={18} />, primary: false },
