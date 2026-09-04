@@ -48,11 +48,16 @@ const App: React.FC = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
-    // Initial data sync
-    syncData().then(() => {
+    // Initial data sync (only if authenticated)
+    const token = localStorage.getItem('token');
+    if (token) {
+      syncData().then(() => {
+        setDataLoaded(true);
+        setSyncKey(k => k + 1);
+      });
+    } else {
       setDataLoaded(true);
-      setSyncKey(k => k + 1);
-    });
+    }
 
     return () => {
       // Cleanup if necessary

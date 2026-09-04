@@ -1,6 +1,6 @@
 import { authFetch } from '../utils/authFetch';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockDb, EmployeeRow } from '../../data/mockDb';
+import { mockDb, EmployeeRow, syncData } from '../../data/mockDb';
 import { API_BASE_URL } from '../config/api';
 
 export type UserRole = 'Admin' | 'Officer' | 'Analytics' | null;
@@ -102,6 +102,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.success && data.token) {
         localStorage.setItem('token', data.token);
         setUser(data.user);
+        
+        // Delay the sync until the authenticated user/token is ready
+        await syncData();
+        
         return { success: true, message: data.message };
       } else {
         return { success: false, message: data.message || 'Authentication failed' };
