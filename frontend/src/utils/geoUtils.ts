@@ -12,7 +12,7 @@ export const getDistance = (lat1: number, lon1: number, lat2: number, lon2: numb
 
 export const getMappedGeoJsonFeature = (districtName: string, geoJsonData: any) => {
     if (!geoJsonData || !districtName) return null;
-    const name = districtName.toLowerCase().replace(/[^a-z]/g, '');
+    const name = String(districtName || '').toLowerCase().replace(/[^a-z]/g, '');
     const mappings: Record<string, string> = {
         'bengalurucity': 'bangalore',
         'bengaluruurban': 'bangalore',
@@ -37,7 +37,7 @@ export const getMappedGeoJsonFeature = (districtName: string, geoJsonData: any) 
     return geoJsonData.features.find((f: any) => {
         const p = f.properties.district || f.properties.NAME_2 || f.properties.ST_NM;
         if (!p) return false;
-        const featureName = p.toLowerCase().replace(/[^a-z]/g, '');
+        const featureName = String(p || '').toLowerCase().replace(/[^a-z]/g, '');
         return featureName === targetName;
     });
 };

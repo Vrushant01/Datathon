@@ -141,6 +141,256 @@ router.post('/relabel', authMiddleware_1.requireAuth, (0, authMiddleware_1.requi
         res.status(500).json({ success: false, error: e.message, stack: e.stack });
     }
 });
+router.post('/rename-units', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
+    try {
+        const app = zcatalyst_sdk_node_1.default.initialize(req);
+        const nosql = app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const commit = req.body?.commit === true;
+        const unitsTable = nosql.table('units');
+        let allUnits = [];
+        let uKeys = [];
+        // Fetch the 30 units that were recently relabeled
+        for (let i = 2931; i <= 2960; i++)
+            uKeys.push(new NoSQLItem().addNumber('UnitID', i));
+        for (let i = 0; i < uKeys.length; i += 25) {
+            const resp = await unitsTable.fetchItem({ keys: uKeys.slice(i, i + 25) });
+            allUnits.push(...(resp.get || []).map((d) => typeof d.item.toJSON === 'function' ? d.item.toJSON() : d.item));
+        }
+        const unitsToRename = allUnits.filter(u => {
+            const name = getVal(u.UnitName) || '';
+            return Number(getVal(u.DistrictID)) === 1029 && name.includes('Davanagere');
+        });
+        let mapping = [];
+        for (const u of unitsToRename) {
+            const oldName = getVal(u.UnitName);
+            const newName = oldName.replace('Davanagere', 'Dakshina');
+            mapping.push(`Unit ${getVal(u.UnitID)}: ${oldName} -> ${newName}`);
+        }
+        let log = [];
+        if (commit) {
+            const processUpdateBatch = async (table, items, pkField) => {
+                for (const it of items) {
+                    const oldName = getVal(it.UnitName);
+                    const newName = oldName.replace('Davanagere', 'Dakshina');
+                    const payload = {
+                        keys: new NoSQLItem().addNumber(pkField, Number(getVal(it[pkField]))),
+                        update_attributes: [
+                            {
+                                operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+                                attribute_path: ['UnitName'],
+                                update_value: NoSQLMarshall.make(newName)
+                            }
+                        ]
+                    };
+                    await table.updateItems(payload);
+                }
+            };
+            await processUpdateBatch(unitsTable, unitsToRename, 'UnitID');
+            log.push(`Renamed ${unitsToRename.length} Units`);
+        }
+        res.json({
+            success: true,
+            mode: commit ? 'LIVE (Committed)' : 'DRY RUN',
+            summary: {
+                renamed: unitsToRename.length,
+                mapping
+            },
+            log: commit ? log : undefined
+        });
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+    }
+});
+router.post('/patch-cases', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
+    try {
+        const app = zcatalyst_sdk_node_1.default.initialize(req);
+        const nosql = app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const commit = req.body?.commit === true;
+        const casesTable = nosql.table('casemasters');
+        let allCases = [];
+        let cKeys = [];
+        // Fetch the 349 seeded cases
+        for (let i = 110001; i <= 110349; i++)
+            cKeys.push(new NoSQLItem().addNumber('CaseMasterID', i));
+        for (let i = 0; i < cKeys.length; i += 25) {
+            try {
+                const resp = await casesTable.fetchItem({ keys: cKeys.slice(i, i + 25) });
+                allCases.push(...(resp.get || []).map((d) => typeof d.item.toJSON === 'function' ? d.item.toJSON() : d.item));
+            }
+            catch (e) { }
+        }
+        const casesToUpdate = allCases.filter(c => getVal(c.BriefFacts) === "Seeded case for Davanagere bounding box alignment.");
+        let mapping = [];
+        let updates = [];
+        const landmarks = ['Main Road', 'Market', 'Metro Station', 'Temple', 'Residential Layout', 'Bus Stand', 'Park', 'Commercial Complex'];
+        const dirs = ['North', 'South', 'East', 'West', 'North-East', 'South-West', 'North-West', 'South-East'];
+        for (const c of casesToUpdate) {
+            const cid = Number(getVal(c.CaseMasterID));
+            const uid = Number(getVal(c.PoliceStationID));
+            const crimeSceneLoc = `Near ${landmarks[Math.floor(Math.random() * landmarks.length)]}, Dakshina New PS ${uid} Area`;
+            const distDir = `${(0.5 + Math.random() * 8.0).toFixed(1)} km ${dirs[Math.floor(Math.random() * dirs.length)]}`;
+            const narratives = [
+                `Station received information about an incident at ${crimeSceneLoc}. The complainant appeared at the station and reported the occurrence. Preliminary enquiry was conducted at the spot which is ${distDir} from the PS. Scene was visited, sketch and photographs were taken. Investigation is currently ongoing to trace the suspects.`,
+                `Complainant arrived at the PS to file a grievance regarding an incident at ${crimeSceneLoc}. After recording the statement, officers visited the location, approx ${distDir} from the station. Evidence was collected and witness statements are being recorded. Case registered and investigation initiated.`,
+                `Control room dispatched officers to ${crimeSceneLoc} (${distDir} from PS) following a distress call. Upon arrival, the situation was brought under control. The complainant formally lodged a complaint later at the station. Initial spot inspection is complete and suspects are being interrogated.`
+            ];
+            const briefFacts = narratives[Math.floor(Math.random() * narratives.length)];
+            const stolenProp = ""; // Not strictly generating complex major head dependency here, defaulting to empty or generic
+            updates.push({
+                cid,
+                briefFacts,
+                crimeSceneLoc,
+                distDir,
+                stolenProp,
+                jurisdictionFlag: 'Inside'
+            });
+            if (mapping.length < 5) {
+                mapping.push({
+                    CaseMasterID: cid,
+                    BriefFacts: briefFacts,
+                    CrimeSceneLocation: crimeSceneLoc,
+                    DistanceDirection: distDir,
+                    StolenProperty: stolenProp,
+                    JurisdictionFlag: 'Inside'
+                });
+            }
+        }
+        let log = [];
+        if (commit) {
+            for (const upd of updates) {
+                const payload = {
+                    keys: new NoSQLItem().addNumber('CaseMasterID', upd.cid),
+                    update_attributes: [
+                        { operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT, attribute_path: ['BriefFacts'], update_value: NoSQLMarshall.make(upd.briefFacts) },
+                        { operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT, attribute_path: ['CrimeSceneLocation'], update_value: NoSQLMarshall.make(upd.crimeSceneLoc) },
+                        { operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT, attribute_path: ['DistanceDirection'], update_value: NoSQLMarshall.make(upd.distDir) },
+                        { operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT, attribute_path: ['StolenProperty'], update_value: NoSQLMarshall.make(upd.stolenProp) },
+                        { operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT, attribute_path: ['JurisdictionFlag'], update_value: NoSQLMarshall.make(upd.jurisdictionFlag) }
+                    ]
+                };
+                await casesTable.updateItems(payload);
+            }
+            log.push(`Updated ${updates.length} Cases with realistic details`);
+        }
+        res.json({
+            success: true,
+            mode: commit ? 'LIVE (Committed)' : 'DRY RUN',
+            summary: {
+                updated: updates.length,
+                samples: mapping
+            },
+            log: commit ? log : undefined
+        });
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+    }
+});
+router.get('/check-employees', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
+    try {
+        const app = zcatalyst_sdk_node_1.default.initialize(req);
+        const nosql = app.nosql();
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const empTable = nosql.table('employees');
+        let allEmps = [];
+        let eKeys = [];
+        // Covering all potential employee IDs across both original and seeded ranges
+        for (let i = 10001; i <= 11900; i++)
+            eKeys.push(new NoSQLItem().addNumber('EmployeeID', i));
+        for (let i = 30001; i <= 30960; i++)
+            eKeys.push(new NoSQLItem().addNumber('EmployeeID', i));
+        for (let i = 0; i < eKeys.length; i += 25) {
+            try {
+                const resp = await empTable.fetchItem({ keys: eKeys.slice(i, i + 25) });
+                allEmps.push(...(resp.get || []).map((d) => typeof d.item.toJSON === 'function' ? d.item.toJSON() : d.item));
+            }
+            catch (e) { }
+        }
+        const badRecords = [];
+        for (const e of allEmps) {
+            const eid = getVal(e.EmployeeID);
+            const fname = getVal(e.FirstName);
+            const kgid = getVal(e.KGID);
+            const missing = [];
+            if (eid == null || eid === '')
+                missing.push('EmployeeID');
+            if (fname == null || fname === '')
+                missing.push('FirstName');
+            if (kgid == null || kgid === '')
+                missing.push('KGID');
+            if (missing.length > 0) {
+                badRecords.push({ EmployeeID: eid, missing, rawData: e });
+            }
+        }
+        res.json({
+            success: true,
+            totalScanned: allEmps.length,
+            badRecordsCount: badRecords.length,
+            badRecords
+        });
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+    }
+});
+router.post('/patch-employees', authMiddleware_1.requireAuth, (0, authMiddleware_1.requireRole)('Admin'), async (req, res) => {
+    try {
+        const app = zcatalyst_sdk_node_1.default.initialize(req);
+        const nosql = app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const commit = req.body?.commit === true;
+        const empTable = nosql.table('employees');
+        let allEmps = [];
+        let eKeys = [];
+        // Fetch the 30 employees
+        for (let i = 10931; i <= 10960; i++)
+            eKeys.push(new NoSQLItem().addNumber('EmployeeID', i));
+        for (let i = 0; i < eKeys.length; i += 25) {
+            try {
+                const resp = await empTable.fetchItem({ keys: eKeys.slice(i, i + 25) });
+                allEmps.push(...(resp.get || []).map((d) => typeof d.item.toJSON === 'function' ? d.item.toJSON() : d.item));
+            }
+            catch (e) { }
+        }
+        const empsToUpdate = allEmps.filter(e => !getVal(e.KGID));
+        let mapping = [];
+        let updates = [];
+        for (const e of empsToUpdate) {
+            const eid = Number(getVal(e.EmployeeID));
+            const kgid = `KGID${eid}`;
+            updates.push({ eid, kgid });
+            mapping.push(`EmployeeID ${eid} -> ${kgid}`);
+        }
+        let log = [];
+        if (commit) {
+            for (const upd of updates) {
+                const payload = {
+                    keys: new NoSQLItem().addNumber('EmployeeID', upd.eid),
+                    update_attributes: [
+                        { operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT, attribute_path: ['KGID'], update_value: NoSQLMarshall.make(upd.kgid) }
+                    ]
+                };
+                await empTable.updateItems(payload);
+            }
+            log.push(`Updated ${updates.length} Employees with missing KGID`);
+        }
+        res.json({
+            success: true,
+            mode: commit ? 'LIVE (Committed)' : 'DRY RUN',
+            summary: {
+                updated: updates.length,
+                mapping
+            },
+            log: commit ? log : undefined
+        });
+    }
+    catch (e) {
+        res.status(500).json({ success: false, error: e.message, stack: e.stack });
+    }
+});
 const removeEmptyValues = (obj) => {
     return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v != null && v !== ''));
 };

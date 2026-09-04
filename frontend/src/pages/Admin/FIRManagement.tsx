@@ -36,8 +36,8 @@ export const FIRManagement: React.FC = () => {
   const [filterCrimeHead, setFilterCrimeHead] = useState<number | 'ALL'>(() => {
     const cParam = searchParams.get('crimeType');
     if (cParam) {
-      const typeStr = cParam.toLowerCase().replace(/[^a-z]/g, '');
-      const ch = mockDb.getCrimeHeads().find(c => c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(c.CrimeGroupName.toLowerCase().replace(/[^a-z]/g, '')));
+      const typeStr = String(cParam || '').toLowerCase().replace(/[^a-z]/g, '');
+      const ch = mockDb.getCrimeHeads().find(c => String(c.CrimeGroupName || '').toLowerCase().replace(/[^a-z]/g, '').includes(typeStr) || typeStr.includes(String(c.CrimeGroupName || '').toLowerCase().replace(/[^a-z]/g, '')));
       if (ch) return ch.CrimeHeadID;
     }
     return 'ALL';
@@ -370,15 +370,15 @@ export const FIRManagement: React.FC = () => {
 
     // 2. Extra local text search
     if (searchQuery) {
-      const term = searchQuery.toLowerCase();
-      const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName.toLowerCase() || '';
-      const officerName = employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName.toLowerCase() || '';
+      const term = String(searchQuery || '').toLowerCase();
+      const stationName = String(stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || '').toLowerCase();
+      const officerName = String(employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName || '').toLowerCase();
       
-      const matchID = c.CaseNo.toLowerCase().includes(term) || c.CrimeNo.toLowerCase().includes(term);
-      const matchFIR = c.FIRNo?.toLowerCase().includes(term);
+      const matchID = String(c.CaseNo || '').toLowerCase().includes(term) || String(c.CrimeNo || '').toLowerCase().includes(term);
+      const matchFIR = String(c.FIRNo || '').toLowerCase().includes(term);
       const matchStation = stationName.includes(term);
       const matchOfficer = officerName.includes(term);
-      const matchFacts = c.BriefFacts?.toLowerCase().includes(term);
+      const matchFacts = String(c.BriefFacts || '').toLowerCase().includes(term);
       
       if (!matchID && !matchFIR && !matchStation && !matchOfficer && !matchFacts) return false;
     }

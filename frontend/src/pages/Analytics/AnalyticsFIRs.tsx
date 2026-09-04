@@ -21,15 +21,15 @@ export const AnalyticsFIRs: React.FC = () => {
     if (c.PoliceStationID !== unitId) return false;
     if (filterStatus !== 'ALL' && c.CaseStatusID !== filterStatus) return false;
 
-    const term = searchQuery.toLowerCase();
-    const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName.toLowerCase() || '';
-    const officerName = employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName.toLowerCase() || '';
+    const term = String(searchQuery || '').toLowerCase();
+    const stationName = String(stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || '').toLowerCase();
+    const officerName = String(employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName || '').toLowerCase();
     return (
-      c.CrimeNo.toLowerCase().includes(term) ||
-      c.CaseNo.toLowerCase().includes(term) ||
+      String(c.CrimeNo || '').toLowerCase().includes(term) ||
+      String(c.CaseNo || '').toLowerCase().includes(term) ||
       stationName.includes(term) ||
       officerName.includes(term) ||
-      c.BriefFacts.toLowerCase().includes(term)
+      String(c.BriefFacts || '').toLowerCase().includes(term)
     );
   });
 
