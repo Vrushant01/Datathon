@@ -69,7 +69,7 @@ export const IntelligenceCenter: React.FC = () => {
               currentValue: a.currentCount,
               baselineValue: a.baselineMean,
               score: a.riskScore,
-              explanation: a.title + (a.description ? ' - ' + a.description : '')
+              explanation: a.reason || 'Temporal anomaly detected.'
             });
           });
         }

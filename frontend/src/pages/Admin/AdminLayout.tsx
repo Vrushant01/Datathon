@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutDashboard, Users, FileText, BarChart3, MapPin, 
-  History, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat, MoreHorizontal, Crosshair
+  History, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat, MoreHorizontal, Crosshair, Activity
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -43,6 +43,7 @@ export const AdminLayout: React.FC = () => {
     { label: 'Criminal Network', path: '/admin-portal/network', icon: <Share2 size={18} />, primary: false },
     { label: 'Intell Center', path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
     { label: 'AI Anomaly', path: '/admin-portal/anomaly-detection', icon: <Brain size={18} />, primary: false },
+    { label: 'Station Risk', path: '/admin-portal/station-risk', icon: <Activity size={18} />, primary: false },
     { label: 'Repeated Offenders', path: '/admin-portal/repeated-offenders', icon: <Repeat size={18} />, primary: false },
     { label: 'AI Assistant', path: '/admin-portal/assistant', icon: <Bot size={18} />, primary: false },
     { label: 'Audit Logs', path: '/admin-portal/audit', icon: <History size={18} />, primary: false }
