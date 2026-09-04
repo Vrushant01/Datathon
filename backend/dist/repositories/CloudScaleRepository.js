@@ -205,6 +205,8 @@ class CloudScaleRepository {
                             clean[k] = Number(v.N);
                         else if ('BOOL' in v)
                             clean[k] = v.BOOL === true || v.BOOL === 'true';
+                        else if ('NULL' in v)
+                            clean[k] = null;
                         else
                             clean[k] = v;
                     }
@@ -810,6 +812,8 @@ class CloudScaleRepository {
                             clean[k] = Number(v.N);
                         else if ('BOOL' in v)
                             clean[k] = v.BOOL === true || v.BOOL === 'true';
+                        else if ('NULL' in v)
+                            clean[k] = null;
                         else
                             clean[k] = v;
                     }
