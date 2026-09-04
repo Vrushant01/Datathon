@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockDb, CaseMasterRow } from '../../utils/mockDb';
+import { mockDb, CaseMasterRow } from '../../../data/mockDb';
 import { useAuth } from '../../context/AuthContext';
 import { FileText, Search } from 'lucide-react';
 

@@ -14,7 +14,7 @@ export const seedCloudScaleData = async (req: Request, res: Response) => {
     const app = catalyst.initialize(req as any);
     const nosql = app.nosql();
     
-    const seedPath = path.join(__dirname, '../seedData.json');
+    const seedPath = path.join(__dirname, '../../data/seedData.json');
     const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
 
     const insertBatch = async (table: any, records: any[]) => {
@@ -88,7 +88,7 @@ export const validateCloudScaleSeeding = async (req: Request, res: Response) => 
   try {
     const app = catalyst.initialize(req as any);
     const nosql = app.nosql();
-    const seedPath = path.join(__dirname, '../seedData.json');
+    const seedPath = path.join(__dirname, '../../data/seedData.json');
     const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
     
     const tables = ['districts', 'units', 'employees', 'casemasters', 'accuseds', 'victims', 'complainants', 'actsectionassociations', 'customedges'];

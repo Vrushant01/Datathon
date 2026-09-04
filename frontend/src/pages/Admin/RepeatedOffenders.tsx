@@ -6,7 +6,7 @@ import {
   MapPin, Calendar, Clock, History, User, FileText, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
-import { mockDb } from '../../utils/mockDb';
+import { mockDb } from '../../../data/mockDb';
 import { useNavigate } from 'react-router-dom';
 
 export const RepeatedOffenders: React.FC = () => {

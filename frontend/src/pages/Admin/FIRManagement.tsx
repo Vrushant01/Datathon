@@ -1,7 +1,7 @@
 import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { mockDb, CaseMasterRow, EmployeeRow } from '../../utils/mockDb';
+import { mockDb, CaseMasterRow, EmployeeRow } from '../../../data/mockDb';
 import { API_BASE_URL } from '../../config/api';
 import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';

@@ -1,0 +1,287 @@
+{
+  "cases": [
+    {
+      "CaseMasterID": 111001,
+      "CaseNo": "0001/2026",
+      "CrimeNo": "CR-0001/2026",
+      "PoliceStationID": 2102,
+      "DistrictID": 1004,
+      "CrimeRegisteredDate": "2026-09-02T14:30:00Z",
+      "CrimeRegisteredDateTime": "2026-09-02T14:30:00Z",
+      "CrimeMajorHeadID": 400,
+      "CaseCategoryID": 4,
+      "GravityOffenceID": 3,
+      "CaseStatusID": 3,
+      "latitude": 12.94925807245098,
+      "longitude": 75.4827045959745,
+      "BriefFacts": "Online OTP scam leading to loss of 5 lakhs from bank account."
+    },
+    {
+      "CaseMasterID": 111002,
+      "CaseNo": "0002/2026",
+      "CrimeNo": "CR-0002/2026",
+      "PoliceStationID": 2011,
+      "DistrictID": 1001,
+      "CrimeRegisteredDate": "2026-09-02T14:30:00Z",
+      "CrimeRegisteredDateTime": "2026-09-02T14:30:00Z",
+      "CrimeMajorHeadID": 100,
+      "CaseCategoryID": 1,
+      "GravityOffenceID": 2,
+      "CaseStatusID": 3,
+      "latitude": 13.016896707595508,
+      "longitude": 77.46299980840593,
+      "BriefFacts": "Domestic violence case involving physical assault on spouse."
+    },
+    {
+      "CaseMasterID": 111003,
+      "CaseNo": "0003/2026",
+      "CrimeNo": "CR-0003/2026",
+      "PoliceStationID": 2011,
+      "DistrictID": 1001,
+      "CrimeRegisteredDate": "2026-09-02T14:30:00Z",
+      "CrimeRegisteredDateTime": "2026-09-02T14:30:00Z",
+      "CrimeMajorHeadID": 400,
+      "CaseCategoryID": 4,
+      "GravityOffenceID": 3,
+      "CaseStatusID": 1,
+      "latitude": 13.01061591557725,
+      "longitude": 77.4542960923886,
+      "BriefFacts": "Online OTP scam leading to loss of 5 lakhs from bank account."
+    },
+    {
+      "CaseMasterID": 111004,
+      "CaseNo": "0004/2026",
+      "CrimeNo": "CR-0004/2026",
+      "PoliceStationID": 2014,
+      "DistrictID": 1001,
+      "CrimeRegisteredDate": "2026-09-02T14:30:00Z",
+      "CrimeRegisteredDateTime": "2026-09-02T14:30:00Z",
+      "CrimeMajorHeadID": 100,
+      "CaseCategoryID": 1,
+      "GravityOffenceID": 2,
+      "CaseStatusID": 1,
+      "latitude": 13.032063785556044,
+      "longitude": 77.59824368209664,
+      "BriefFacts": "Victim attacked with iron rod over property dispute."
+    },
+    {
+      "CaseMasterID": 111005,
+      "CaseNo": "0005/2026",
+      "CrimeNo": "CR-0005/2026",
+      "PoliceStationID": 2067,
+      "DistrictID": 1003,
+      "CrimeRegisteredDate": "2026-09-02T14:30:00Z",
+      "CrimeRegisteredDateTime": "2026-09-02T14:30:00Z",
+      "CrimeMajorHeadID": 100,
+      "CaseCategoryID": 1,
+      "GravityOffenceID": 2,
+      "CaseStatusID": 1,
+      "latitude": 12.294051963049425,
+      "longitude": 76.54783541307728,
+      "BriefFacts": "Street fight resulted in stabbing incident."
+    }
+  ],
+  "accused": [
+    {
+      "AccusedMasterID": 91001,
+      "CaseMasterID": 111001,
+      "AccusedName": "Rajesh Reddy",
+      "AgeYear": 48,
+      "GenderID": 1,
+      "PersonID": "P-A-91002"
+    },
+    {
+      "AccusedMasterID": 91002,
+      "CaseMasterID": 111002,
+      "AccusedName": "Prakash Kumar",
+      "AgeYear": 47,
+      "GenderID": 1,
+      "PersonID": "P-A-91003"
+    },
+    {
+      "AccusedMasterID": 91003,
+      "CaseMasterID": 111002,
+      "AccusedName": "Sanjay Shetty",
+      "AgeYear": 41,
+      "GenderID": 1,
+      "PersonID": "P-A-91004"
+    },
+    {
+      "AccusedMasterID": 91004,
+      "CaseMasterID": 111003,
+      "AccusedName": "Rajesh Reddy",
+      "AgeYear": 40,
+      "GenderID": 1,
+      "PersonID": "P-A-91005"
+    },
+    {
+      "AccusedMasterID": 91005,
+      "CaseMasterID": 111004,
+      "AccusedName": "Shilpa Bhat",
+      "AgeYear": 34,
+      "GenderID": 2,
+      "PersonID": "P-A-91006"
+    },
+    {
+      "AccusedMasterID": 91006,
+      "CaseMasterID": 111004,
+      "AccusedName": "Rajesh Bhat",
+      "AgeYear": 49,
+      "GenderID": 1,
+      "PersonID": "P-A-91007"
+    },
+    {
+      "AccusedMasterID": 91007,
+      "CaseMasterID": 111005,
+      "AccusedName": "Prakash Hegde",
+      "AgeYear": 25,
+      "GenderID": 1,
+      "PersonID": "P-A-91008"
+    }
+  ],
+  "victims": [
+    {
+      "VictimMasterID": 81001,
+      "CaseMasterID": 111001,
+      "VictimName": "Darshan Kumar",
+      "AgeYear": 47,
+      "GenderID": 1,
+      "PersonID": "P-V-81002"
+    },
+    {
+      "VictimMasterID": 81002,
+      "CaseMasterID": 111001,
+      "VictimName": "Prakash Rao",
+      "AgeYear": 56,
+      "GenderID": 1,
+      "PersonID": "P-V-81003"
+    },
+    {
+      "VictimMasterID": 81003,
+      "CaseMasterID": 111002,
+      "VictimName": "Nandini Patil",
+      "AgeYear": 23,
+      "GenderID": 2,
+      "PersonID": "P-V-81004"
+    },
+    {
+      "VictimMasterID": 81004,
+      "CaseMasterID": 111003,
+      "VictimName": "Lakshmi Murthy",
+      "AgeYear": 51,
+      "GenderID": 2,
+      "PersonID": "P-V-81005"
+    },
+    {
+      "VictimMasterID": 81005,
+      "CaseMasterID": 111003,
+      "VictimName": "Lakshmi Shetty",
+      "AgeYear": 27,
+      "GenderID": 2,
+      "PersonID": "P-V-81006"
+    },
+    {
+      "VictimMasterID": 81006,
+      "CaseMasterID": 111004,
+      "VictimName": "Sanjay Gowda",
+      "AgeYear": 33,
+      "GenderID": 1,
+      "PersonID": "P-V-81007"
+    },
+    {
+      "VictimMasterID": 81007,
+      "CaseMasterID": 111004,
+      "VictimName": "Rahul Kumar",
+      "AgeYear": 53,
+      "GenderID": 1,
+      "PersonID": "P-V-81008"
+    },
+    {
+      "VictimMasterID": 81008,
+      "CaseMasterID": 111005,
+      "VictimName": "Darshan Bhat",
+      "AgeYear": 29,
+      "GenderID": 1,
+      "PersonID": "P-V-81009"
+    }
+  ],
+  "complainants": [
+    {
+      "ComplainantID": 71001,
+      "CaseMasterID": 111001,
+      "ComplainantName": "Manjunath Murthy",
+      "AgeYear": 48,
+      "GenderID": 1
+    },
+    {
+      "ComplainantID": 71002,
+      "CaseMasterID": 111002,
+      "ComplainantName": "Rahul Murthy",
+      "AgeYear": 39,
+      "GenderID": 1
+    },
+    {
+      "ComplainantID": 71003,
+      "CaseMasterID": 111003,
+      "ComplainantName": "Suresh Kumar",
+      "AgeYear": 28,
+      "GenderID": 1
+    },
+    {
+      "ComplainantID": 71004,
+      "CaseMasterID": 111004,
+      "ComplainantName": "Prakash Bhat",
+      "AgeYear": 31,
+      "GenderID": 1
+    },
+    {
+      "ComplainantID": 71005,
+      "CaseMasterID": 111005,
+      "ComplainantName": "Meghana Bhat",
+      "AgeYear": 57,
+      "GenderID": 2
+    }
+  ],
+  "acts": [
+    {
+      "CaseActSectionID": 61001,
+      "CaseMasterID": 111001,
+      "Act_Section": "420 IPC"
+    },
+    {
+      "CaseActSectionID": 61002,
+      "CaseMasterID": 111002,
+      "Act_Section": "307 IPC"
+    },
+    {
+      "CaseActSectionID": 61003,
+      "CaseMasterID": 111002,
+      "Act_Section": "307 IPC"
+    },
+    {
+      "CaseActSectionID": 61004,
+      "CaseMasterID": 111003,
+      "Act_Section": "420 IPC"
+    },
+    {
+      "CaseActSectionID": 61005,
+      "CaseMasterID": 111004,
+      "Act_Section": "307 IPC"
+    },
+    {
+      "CaseActSectionID": 61006,
+      "CaseMasterID": 111004,
+      "Act_Section": "307 IPC"
+    },
+    {
+      "CaseActSectionID": 61007,
+      "CaseMasterID": 111005,
+      "Act_Section": "307 IPC"
+    },
+    {
+      "CaseActSectionID": 61008,
+      "CaseMasterID": 111005,
+      "Act_Section": "307 IPC"
+    }
+  ]
+}

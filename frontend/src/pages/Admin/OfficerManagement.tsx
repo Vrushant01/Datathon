@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { mockDb, EmployeeRow } from '../../utils/mockDb';
+import { mockDb, EmployeeRow } from '../../../data/mockDb';
 import { 
   Users, UserPlus, Search, Edit2, ShieldAlert, Trash2, 
   CheckCircle2, XCircle, Check, X, ShieldCheck 

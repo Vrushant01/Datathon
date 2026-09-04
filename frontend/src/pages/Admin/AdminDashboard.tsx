@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { mockDb, syncData } from '../../utils/mockDb';
+import { mockDb, syncData } from '../../../data/mockDb';
 import { useDbConnection } from '../../hooks/useDbConnection';
 import { getAIDashboard } from '../../services/aiService';
 import { 

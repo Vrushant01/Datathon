@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { syncData } from './utils/mockDb';
+import { syncData } from '../data/mockDb';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 

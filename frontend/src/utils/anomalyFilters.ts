@@ -1,4 +1,4 @@
-import { mockDb } from './mockDb';
+import { mockDb } from '../../data/mockDb';
 
 /**
  * Normalise a CrimeRegisteredDateTime (ISO string) or CrimeRegisteredDate ("YYYY-MM-DD")

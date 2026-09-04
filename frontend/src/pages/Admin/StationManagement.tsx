@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { mockDb, UnitRow } from '../../utils/mockDb';
+import { mockDb, UnitRow } from '../../../data/mockDb';
 import { 
   Building, Plus, Search, MapPin, X
 } from 'lucide-react';

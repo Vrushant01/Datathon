@@ -14,7 +14,7 @@ const seedCloudScaleData = async (req, res) => {
     try {
         const app = zcatalyst_sdk_node_1.default.initialize(req);
         const nosql = app.nosql();
-        const seedPath = path_1.default.join(__dirname, '../seedData.json');
+        const seedPath = path_1.default.join(__dirname, '../../data/seedData.json');
         const seed = JSON.parse(fs_1.default.readFileSync(seedPath, 'utf8'));
         const insertBatch = async (table, records) => {
             let count = 0;
@@ -87,7 +87,7 @@ const validateCloudScaleSeeding = async (req, res) => {
     try {
         const app = zcatalyst_sdk_node_1.default.initialize(req);
         const nosql = app.nosql();
-        const seedPath = path_1.default.join(__dirname, '../seedData.json');
+        const seedPath = path_1.default.join(__dirname, '../../data/seedData.json');
         const seed = JSON.parse(fs_1.default.readFileSync(seedPath, 'utf8'));
         const tables = ['districts', 'units', 'employees', 'casemasters', 'accuseds', 'victims', 'complainants', 'actsectionassociations', 'customedges'];
         const pks = ['DistrictID', 'UnitID', 'EmployeeID', 'CaseMasterID', 'AccusedMasterID', 'VictimMasterID', 'ComplainantID', 'CaseMasterID', 'EdgeID'];

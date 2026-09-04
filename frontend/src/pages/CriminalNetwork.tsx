@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
-import { mockDb } from '../utils/mockDb';
+import { mockDb } from '../../data/mockDb';
 import { 
   Share2, FileText, Search, Activity, ShieldAlert, ArrowLeft, Network,
   Plus, Trash2, ArrowUpRight

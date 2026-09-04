@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dbConnectionStatus, dbDataLoaded, subscribeToDbStatus } from '../utils/mockDb';
+import { dbConnectionStatus, dbDataLoaded, subscribeToDbStatus } from '../../data/mockDb';
 
 export const useDbConnection = () => {
   const [state, setState] = useState({

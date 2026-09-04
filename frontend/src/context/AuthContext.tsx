@@ -1,6 +1,6 @@
 import { authFetch } from '../utils/authFetch';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockDb, EmployeeRow } from '../utils/mockDb';
+import { mockDb, EmployeeRow } from '../../data/mockDb';
 import { API_BASE_URL } from '../config/api';
 
 export type UserRole = 'Admin' | 'Officer' | 'Analytics' | null;
