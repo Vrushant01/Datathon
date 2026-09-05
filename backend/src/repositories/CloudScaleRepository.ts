@@ -126,9 +126,9 @@ export class CloudScaleRepository implements IDataRepository {
             case 'districts': pkField = 'DistrictID'; for (let i = 1001; i <= 1031; i++) ids.push(i); break;
             case 'units': pkField = 'UnitID'; for (let i = 2000; i <= 2960; i++) ids.push(i); break;
             case 'employees': pkField = 'EmployeeID'; for (let i = 10001; i <= 11900; i++) ids.push(i); for (let i = 30001; i <= 30960; i++) ids.push(i); break;
-            case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); break;
-            case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); break;
-            case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); break;
+            case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
+            case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
+            case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
         }
 
         const allItems: any[] = [];

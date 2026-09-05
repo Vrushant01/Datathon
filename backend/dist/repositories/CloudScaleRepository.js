@@ -139,15 +139,21 @@ class CloudScaleRepository {
                     pkField = 'CaseMasterID';
                     for (let i = 100001; i <= 110500; i++)
                         ids.push(i);
+                    for (let i = 300001; i <= 300150; i++)
+                        ids.push(i);
                     break;
                 case 'accuseds':
                     pkField = 'AccusedMasterID';
                     for (let i = 80001; i <= 90500; i++)
                         ids.push(i);
+                    for (let i = 300001; i <= 300150; i++)
+                        ids.push(i);
                     break;
                 case 'victims':
                     pkField = 'VictimMasterID';
                     for (let i = 70001; i <= 80500; i++)
+                        ids.push(i);
+                    for (let i = 300001; i <= 300150; i++)
                         ids.push(i);
                     break;
             }
