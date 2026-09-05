@@ -37,6 +37,7 @@ const fixDatesRoute_1 = __importDefault(require("./routes/fixDatesRoute"));
 const fixDistrictsRoute_1 = __importDefault(require("./routes/fixDistrictsRoute"));
 const testIndexRoute_1 = __importDefault(require("./routes/testIndexRoute"));
 const fixDataBugsRoute_1 = __importDefault(require("./routes/fixDataBugsRoute"));
+const verifySeedRoute_1 = __importDefault(require("./routes/verifySeedRoute"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const corsOptions = {
@@ -63,6 +64,7 @@ app.use('/api/admin/fix-dates', fixDatesRoute_1.default);
 app.use('/api/admin/fix-districts', fixDistrictsRoute_1.default);
 app.use('/api/test-index', testIndexRoute_1.default);
 app.use('/api/fix-data-bugs', fixDataBugsRoute_1.default);
+app.use('/api/verify-seed', verifySeedRoute_1.default);
 app.get("/", (req, res) => {
     res.status(200).send("Backend is Connected with pipeline 🚀");
 });
