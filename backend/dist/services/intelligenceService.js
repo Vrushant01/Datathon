@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getVerifiedIntelligenceContext = void 0;
 const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
+const repeatedOffenderService_1 = require("./repeatedOffenderService");
 const axios_1 = __importDefault(require("axios"));
 /**
  * Normalise a date string to the number of complete UTC days since Unix epoch.
@@ -93,29 +94,17 @@ const getVerifiedIntelligenceContext = async (req, dimensions) => {
     // 3. Correlate Repeated Offenders
     let offenders = [];
     try {
-        const allAccused = await repo.getAllAccused();
-        // Build repeated offenders exactly like the repeatedOffenderController does
-        const counts = new Map();
-        for (const a of allAccused) {
-            if (!a.PersonID || !a.CaseMasterID)
-                continue;
-            if (!counts.has(a.PersonID)) {
-                counts.set(a.PersonID, { personId: a.PersonID, name: a.AccusedName || 'Unknown', caseIds: new Set() });
-            }
-            counts.get(a.PersonID).caseIds.add(a.CaseMasterID);
-        }
-        const matchedCaseIds = new Set(slimCases.map((c) => c.CaseMasterID));
-        for (const data of counts.values()) {
-            if (data.caseIds.size >= 2) {
-                // Is this offender linked to our affected cases?
-                const isLinked = Array.from(data.caseIds).some(cid => matchedCaseIds.has(cid));
-                if (isLinked) {
-                    offenders.push({
-                        PersonID: data.personId,
-                        AccusedName: data.name,
-                        TotalCases: data.caseIds.size
-                    });
-                }
+        const allOffenders = await (0, repeatedOffenderService_1.getRepeatedOffenders)(repo);
+        const matchedCaseIds = new Set(slimCases.map((c) => Number(c.CaseMasterID)));
+        for (const p of allOffenders) {
+            // Is this offender linked to our affected cases?
+            const isLinked = p.Cases.some((c) => matchedCaseIds.has(Number(c.CaseMasterID)));
+            if (isLinked) {
+                offenders.push({
+                    PersonID: p.PersonID,
+                    AccusedName: p.AccusedName,
+                    TotalCases: p.TotalCases
+                });
             }
         }
     }

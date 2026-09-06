@@ -1,6 +1,6 @@
 export const getTopCrimeDistrictsDef = {
   name: 'getTopCrimeDistricts',
-  description: 'Retrieves the top districts with the highest volume of crimes within a specific time period.',
+  description: 'ONLY use this tool when the user EXPLICITLY asks for "Top crime districts" or to rank districts by crime volume.',
   parameters: {
     type: 'object',
     properties: {

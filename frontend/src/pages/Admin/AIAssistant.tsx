@@ -2,6 +2,16 @@ import { authFetch } from '../../utils/authFetch';
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { z } from 'zod';
+
+const RechartsConfigSchema = z.object({
+  type: z.enum(['LineChart', 'PieChart', 'BarChart']),
+  title: z.string().optional(),
+  data: z.array(z.record(z.any())),
+  xKey: z.string(),
+  yKey: z.string()
+});
+
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
@@ -155,7 +165,8 @@ export const AIAssistant: React.FC = () => {
                           const match = /language-(\w+)/.exec(className || '');
                           if (!inline && match && match[1] === 'recharts') {
                             try {
-                              const config = JSON.parse(String(children).replace(/\n/g, ''));
+                              const rawConfig = JSON.parse(String(children).replace(/\n/g, ''));
+                              const config = RechartsConfigSchema.parse(rawConfig);
 
                               const ChartComponent = config.type === 'LineChart' ? LineChart :
                                                      config.type === 'PieChart' ? PieChart :
@@ -190,10 +201,15 @@ export const AIAssistant: React.FC = () => {
                               );
                             } catch (e) {
                               return (
-                                <div className="w-full h-64 mt-4 mb-4 bg-slate-50 p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
-                                  <div className="flex flex-col items-center text-slate-400 gap-2">
-                                    <Loader2 size={24} className="animate-spin" />
-                                    <span className="text-sm">Generating chart...</span>
+                                <div className="w-full mt-4 mb-4 bg-red-50 p-4 rounded-xl shadow-sm border border-red-100 flex flex-col items-center justify-center">
+                                  <div className="flex flex-col items-center text-red-500 gap-2">
+                                    <span className="text-sm font-semibold">Chart Generation Failed</span>
+                                    <span className="text-xs text-red-400">The data provided was invalid or incomplete.</span>
+                                  </div>
+                                  <div className="mt-4 w-full">
+                                    <code className="text-xs text-red-400 bg-red-100 p-2 rounded block overflow-x-auto whitespace-pre-wrap">
+                                      {String(children)}
+                                    </code>
                                   </div>
                                 </div>
                               );

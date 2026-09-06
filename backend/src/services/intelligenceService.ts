@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { RepositoryFactory } from '../repositories/RepositoryFactory';
+import { getRepeatedOffenders } from './repeatedOffenderService';
 import axios from 'axios';
 
 /**
@@ -98,31 +99,18 @@ export const getVerifiedIntelligenceContext = async (req: Request, dimensions: I
   // 3. Correlate Repeated Offenders
   let offenders: any[] = [];
   try {
-    const allAccused = await repo.getAllAccused();
+    const allOffenders = await getRepeatedOffenders(repo as any);
+    const matchedCaseIds = new Set(slimCases.map((c: any) => Number(c.CaseMasterID)));
     
-    // Build repeated offenders exactly like the repeatedOffenderController does
-    const counts = new Map<string, { personId: string; name: string; caseIds: Set<number> }>();
-    for (const a of allAccused) {
-      if (!a.PersonID || !a.CaseMasterID) continue;
-      if (!counts.has(a.PersonID)) {
-        counts.set(a.PersonID, { personId: a.PersonID, name: a.AccusedName || 'Unknown', caseIds: new Set() });
-      }
-      counts.get(a.PersonID)!.caseIds.add(a.CaseMasterID);
-    }
-    
-    const matchedCaseIds = new Set(slimCases.map((c: any) => c.CaseMasterID));
-    
-    for (const data of counts.values()) {
-      if (data.caseIds.size >= 2) {
-        // Is this offender linked to our affected cases?
-        const isLinked = Array.from(data.caseIds).some(cid => matchedCaseIds.has(cid));
-        if (isLinked) {
-          offenders.push({
-            PersonID: data.personId,
-            AccusedName: data.name,
-            TotalCases: data.caseIds.size
-          });
-        }
+    for (const p of allOffenders) {
+      // Is this offender linked to our affected cases?
+      const isLinked = p.Cases.some((c: any) => matchedCaseIds.has(Number(c.CaseMasterID)));
+      if (isLinked) {
+        offenders.push({
+          PersonID: p.PersonID,
+          AccusedName: p.AccusedName,
+          TotalCases: p.TotalCases
+        });
       }
     }
   } catch (err: any) {
