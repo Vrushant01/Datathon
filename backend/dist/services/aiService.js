@@ -172,6 +172,9 @@ const getDashboardData = async (db) => {
             generatedTime: new Date().toISOString(),
             district: a.level === 'STATION' && a.locationId ? (districtNames.get(unitToDistrict.get(a.locationId) || 0) || 'Various') : (a.level === 'DISTRICT' ? a.locationName : (a.level === 'STATE' ? 'Karnataka (State)' : 'Various')),
             policeStation: a.level === 'STATION' ? a.locationName : 'Multiple',
+            districtId: a.level === 'STATION' && a.locationId ? unitToDistrict.get(a.locationId) : (a.level === 'DISTRICT' ? a.locationId : undefined),
+            stationId: a.level === 'STATION' ? a.locationId : undefined,
+            crimeHeadId: a.crimeHeadId,
             crimeType: a.crimeType,
             riskScore: Math.min(100, Math.round(50 + a.zScore * 10)),
             // Temporal-specific XAI fields

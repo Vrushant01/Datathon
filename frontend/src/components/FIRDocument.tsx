@@ -34,12 +34,12 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
       <div className="space-y-5 text-xs text-slate-800">
         
         <div className="grid grid-cols-2 border-b pb-2.5">
-          <div><strong>1. Case ID:</strong> {cDetails.CaseNo}</div>
-          <div className="text-right"><strong>2. Crime FIR Number:</strong> <span className="font-mono">{cDetails.CrimeNo}</span></div>
+          <div><strong>1. Case ID:</strong> {cDetails.CaseNo || 'N/A'}</div>
+          <div className="text-right"><strong>2. Crime FIR Number:</strong> <span className="font-mono">{cDetails.CrimeNo || 'N/A'}</span></div>
         </div>
 
         <div className="grid grid-cols-2 border-b pb-2.5">
-          <div><strong>3. Registered Date:</strong> {cDetails.CrimeRegisteredDate}</div>
+          <div><strong>3. Registered Date:</strong> {cDetails.CrimeRegisteredDate || 'Unknown'}</div>
           <div className="text-right"><strong>4. Act Book Applied:</strong> {categoryName} {cDetails.BNSApplicable ? "(BNS Applicable)" : "(IPC Applicable)"}</div>
         </div>
 
@@ -59,9 +59,9 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
 
         <div className="border-b pb-2.5">
           <strong>8. Time & Place of Incident:</strong>
-          <p className="m-0 pl-4 mt-1">Occurrence: {cDetails.IncidentFromDate.replace('T', ' ')} To: {cDetails.IncidentToDate.replace('T', ' ')}</p>
-          <p className="m-0 pl-4">Information Received at PS: {cDetails.InfoReceivedPSDate.replace('T', ' ')}</p>
-          <p className="m-0 pl-4">Delay in Reporting: {cDetails.DelayInReporting ? `Yes - ${cDetails.DelayReason}` : 'No'}</p>
+          <p className="m-0 pl-4 mt-1">Occurrence: {cDetails.IncidentFromDate ? cDetails.IncidentFromDate.replace('T', ' ') : 'Unknown'} To: {cDetails.IncidentToDate ? cDetails.IncidentToDate.replace('T', ' ') : 'Unknown'}</p>
+          <p className="m-0 pl-4">Information Received at PS: {cDetails.InfoReceivedPSDate ? cDetails.InfoReceivedPSDate.replace('T', ' ') : 'Unknown'}</p>
+          <p className="m-0 pl-4">Delay in Reporting: {cDetails.DelayInReporting ? `Yes - ${cDetails.DelayReason || 'Reason not specified'}` : 'No'}</p>
         </div>
 
         <div className="border-b pb-2.5">
@@ -75,9 +75,9 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
           <strong>10. Complainant / Informant:</strong>
           {cDetails.Complainant ? (
             <div className="mt-1 pl-4 space-y-1">
-              <p className="m-0">Name: {cDetails.Complainant.ComplainantName}</p>
+              <p className="m-0">Name: {cDetails.Complainant.ComplainantName || 'Unknown'}</p>
               <p className="m-0">Father/Spouse Name: {cDetails.Complainant.FatherSpouseName || 'Not recorded'}</p>
-              <p className="m-0">Age: {cDetails.Complainant.AgeYear} Years | Occupation: {mockDb.getOccupations().find(o => o.OccupationID === cDetails.Complainant.OccupationID)?.OccupationName || 'Unknown'}</p>
+              <p className="m-0">Age: {cDetails.Complainant.AgeYear ? `${cDetails.Complainant.AgeYear} Years` : 'Unknown'} | Occupation: {mockDb.getOccupations().find(o => o.OccupationID === cDetails.Complainant.OccupationID)?.OccupationName || 'Unknown'}</p>
               <p className="m-0">Contact Phone: {cDetails.Complainant.Phone || 'Not recorded'}</p>
               <p className="m-0">Permanent Address: {cDetails.Complainant.PermanentAddress || 'Not recorded'}</p>
               <p className="m-0">Identity Proof: {cDetails.Complainant.IdentityProof || 'Not recorded'}</p>
@@ -93,7 +93,7 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
             <div className="mt-1 pl-4 space-y-2">
               {cDetails.Victims.map((v: any, i: number) => (
                 <div key={i} className="border-l-2 border-slate-200 pl-2">
-                  <p className="m-0 font-bold">{v.VictimName} (Age: {v.AgeYear})</p>
+                  <p className="m-0 font-bold">{v.VictimName || 'Unknown'} (Age: {v.AgeYear || 'Unknown'})</p>
                   <p className="m-0">Relationship to Complainant: {v.RelationshipToComplainant || 'Not specified'}</p>
                 </div>
               ))}
@@ -109,7 +109,7 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
             <div className="mt-1 pl-4 space-y-3">
               {cDetails.Accused.map((ac: any, i: number) => (
                 <div key={i} className="border-l-2 border-slate-200 pl-2">
-                  <p className="m-0 font-bold">{ac.AccusedName} (Age: {ac.AgeYear}) [ID: {ac.PersonID}]</p>
+                  <p className="m-0 font-bold">{ac.AccusedName || 'Unknown'} (Age: {ac.AgeYear || 'Unknown'}) {ac.PersonID ? `[ID: ${ac.PersonID}]` : ''}</p>
                   <p className="m-0">Aliases: {ac.Aliases || 'None'}</p>
                   <p className="m-0">Father/Spouse Name: {ac.FatherSpouseName || 'Unknown'}</p>
                   <p className="m-0">Address: {ac.Address || 'Unknown'}</p>
@@ -125,7 +125,7 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
 
         <div className="border-b pb-3">
           <strong>13. Brief Facts of Case Filed:</strong>
-          <p className="mt-1 pl-4 leading-relaxed text-slate-600 italic">"{cDetails.BriefFacts}"</p>
+          <p className="mt-1 pl-4 leading-relaxed text-slate-600 italic">"{cDetails.BriefFacts || 'No brief facts recorded.'}"</p>
         </div>
         
         {cDetails.StolenProperty && (
@@ -138,7 +138,7 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
         <div className="border-b pb-3 pt-2">
           <strong>15. Legal Closure & Dispatch:</strong>
           <p className="mt-1 pl-4 m-0">FIR read over to the complainant/informant, admitted to be correctly recorded, and a copy given free of cost.</p>
-          <p className="pl-4 m-0">Dispatch Copy Handed Over: {cDetails.DispatchCopyHanded ? `Yes (Date: ${cDetails.DispatchCopyDate})` : 'No'}</p>
+          <p className="pl-4 m-0">Dispatch Copy Handed Over: {cDetails.DispatchCopyHanded ? `Yes (Date: ${cDetails.DispatchCopyDate || 'Unknown'})` : 'No'}</p>
         </div>
 
         {/* Signatures */}
@@ -150,7 +150,7 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
           <div>
             <div className="h-10"></div>
             <p className="border-t border-slate-300 pt-2 w-48 mx-auto m-0">Signature of Recording Officer</p>
-            <p className="text-[9px] text-slate-500 m-0 mt-1">Rank: {cDetails.RecordingOfficerRank || 'SHO'}</p>
+            <p className="text-[9px] text-slate-500 m-0 mt-1">Rank: {cDetails.RecordingOfficerRank || 'Unknown'}</p>
           </div>
         </div>
 

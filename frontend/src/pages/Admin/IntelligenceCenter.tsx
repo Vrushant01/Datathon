@@ -62,7 +62,8 @@ export const IntelligenceCenter: React.FC = () => {
               id: a.id,
               type: 'ANOMALY',
               severity: severityMap[a.severity] || 'MODERATE',
-              districtId: a.district ? Number(a.district) : undefined,
+              districtId: a.districtId,
+              stationId: a.stationId,
               locationName: a.locationName || 'Unknown Region',
               crimeHeadId: a.crimeHeadId,
               crimeType: a.crimeType,
@@ -404,15 +405,15 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
         <div className="grid grid-cols-2 gap-4">
           
           {/* AFFECTED FIRS */}
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col">
+          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col h-[350px]">
             <div className="flex items-center gap-2 text-ksp-navy mb-3">
               <FileText size={16} />
               <h3 className="text-xs font-extrabold uppercase tracking-widest">Affected FIRs</h3>
             </div>
             {affectedCases.length === 0 ? (
-              <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No matching cases found.</p>
+              <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No affected FIRs found for this anomaly.</p>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
+              <div className="space-y-2 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
                 {affectedCases.map(c => (
                   <div key={c.CaseMasterID} className="flex justify-between items-center p-2 hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 group">
                     <div>
@@ -432,15 +433,15 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
           </div>
 
           {/* HOTSPOTS */}
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col">
+          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col h-[350px]">
             <div className="flex items-center gap-2 text-ksp-navy mb-3">
               <MapPin size={16} />
               <h3 className="text-xs font-extrabold uppercase tracking-widest">Derived Activity Zones</h3>
             </div>
             {derivedZones.length === 0 ? (
-              <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No matching zones available.</p>
+              <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No activity zones detected.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
                 <div className="text-[10px] font-bold text-slate-500 uppercase">{derivedZones.length} zones detected based on affected FIRs</div>
                 {derivedZones.map((zone, i) => (
                   <div key={i} className="p-3 bg-red-50 border border-red-100 rounded-lg group cursor-pointer hover:bg-red-100 transition-colors" onClick={() => {
