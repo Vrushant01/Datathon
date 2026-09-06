@@ -633,7 +633,16 @@ export const syncData = async (): Promise<void> => {
     console.log('[Dashboard] stats request started');
     const fetchTable = async (route: string) => {
       const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Authentication required');
+        if (res.status === 403) throw new Error('Permission denied');
+        if (res.status === 404) throw new Error('Resource not found');
+        if (res.status === 409) throw new Error('Conflict');
+        if (res.status === 422) throw new Error('Validation error');
+        if (res.status === 429) throw new Error('Rate limit exceeded');
+        if (res.status >= 500) throw new Error('Server error');
+        throw new Error(`HTTP error ${res.status}`);
+      }
       return await res.json();
     };
 
@@ -689,8 +698,13 @@ export const syncData = async (): Promise<void> => {
     setDbStatus('connected', null, true);
     console.log('[CloudScale Sync] Complete. In-memory cache synchronized.');
   } catch (err: any) {
-    setDbStatus('error', err.message || err, false);
-    console.error('[CloudScale Sync Error] Failed to pull live data:', err.message || err);
+    const errorMsg = err.message || 'Sync failed';
+    setDbStatus('error', errorMsg, false);
+    if (errorMsg === 'Authentication required') {
+      console.log('[CloudScale Sync] Authentication required or expired.');
+    } else {
+      console.error(`[CloudScale Sync Error] ${errorMsg}`);
+    }
   } finally {
     isSyncing = false;
   }

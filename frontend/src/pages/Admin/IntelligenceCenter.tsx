@@ -207,9 +207,7 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
         if (alert.dateFrom) query.append('dateFrom', alert.dateFrom);
         if (alert.dateTo) query.append('dateTo', alert.dateTo);
 
-        const res = await authFetch(`${API_BASE_URL}/api/ai/intelligence-context?${query.toString()}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
+        const res = await authFetch(`${API_BASE_URL}/api/ai/intelligence-context?${query.toString()}`);
         
         if (res.ok) {
            const data = await res.json();
@@ -251,8 +249,7 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
       const res = await authFetch(`${API_BASE_URL}/api/chatbot/investigation-summary`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ alertDetails })
       });

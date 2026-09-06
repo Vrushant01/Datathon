@@ -1,16 +1,25 @@
 import { API_BASE_URL } from '../config/api';
 
-// Internal flag to prevent a refresh call from recursively triggering another refresh
-let isRefreshing = false;
+// Global promise for the refresh operation
+let refreshTokenPromise: Promise<string> | null = null;
 
-// Queue of callbacks waiting for the current refresh to complete
-// (handles the case where multiple concurrent requests all hit 401 simultaneously)
-type QueueEntry = { resolve: (token: string) => void; reject: (err: any) => void };
-let refreshQueue: QueueEntry[] = [];
+function clearAuthAndRedirect(errorData?: any) {
+  localStorage.removeItem('token');
+  localStorage.removeItem('ksp_auth_user');
 
-function drainQueue(token: string | null, err: any) {
-  refreshQueue.forEach(entry => (token ? entry.resolve(token) : entry.reject(err)));
-  refreshQueue = [];
+  const path = window.location.pathname;
+  if (path.startsWith('/analytics')) {
+    window.location.href = '/analytics-login';
+  } else if (path.startsWith('/officer')) {
+    window.location.href = '/login';
+  } else {
+    window.location.href = '/admin-login';
+  }
+
+  return new Response(JSON.stringify({ error: 'Session expired. Redirecting to login.', details: errorData }), {
+    status: 401,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 /**
@@ -40,12 +49,26 @@ async function refreshAccessToken(): Promise<string> {
  *   1. Attaches the current Bearer access token from localStorage.
  *   2. On 401, silently refreshes the token and retries the request once.
  *   3. On failed refresh, clears local auth state and redirects to /login.
- *
- * All 20+ call sites across the app benefit automatically — no changes needed there.
+ *   4. Avoids duplicate refresh requests concurrently.
  */
 export const authFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  const token = localStorage.getItem('token');
+  // ── Pre-flight check ────────────────────────────────────────────────────────
+  // If a refresh is ALREADY happening in this tab, await it BEFORE making the first attempt.
+  // This prevents sending 9 simultaneous requests with an obviously expired token.
+  if (refreshTokenPromise) {
+    try {
+      const newToken = await refreshTokenPromise;
+      const headers = new Headers(init?.headers);
+      headers.set('Authorization', `Bearer ${newToken}`);
+      return await fetch(input, { ...init, headers });
+    } catch (err) {
+      // If the pending refresh fails, this queued request also fails
+      return clearAuthAndRedirect(err);
+    }
+  }
 
+  const initialToken = localStorage.getItem('token');
+  
   const buildHeaders = (t: string | null): Headers => {
     const headers = new Headers(init?.headers);
     if (t) headers.set('Authorization', `Bearer ${t}`);
@@ -55,67 +78,54 @@ export const authFetch = async (input: RequestInfo | URL, init?: RequestInit): P
   // ── First attempt ────────────────────────────────────────────────────────────
   const firstResponse = await fetch(input, {
     ...init,
-    headers: buildHeaders(token),
+    headers: buildHeaders(initialToken),
   });
 
+  // Only handle 401. 403 means "Forbidden/Insufficient Role", not "Token Expired".
   if (firstResponse.status !== 401) {
     return firstResponse;
   }
 
-  // ── 401 received — attempt token refresh ─────────────────────────────────────
-  // If a refresh is already in-flight, queue this request until it resolves.
-  if (isRefreshing) {
-    return new Promise<Response>((resolve, reject) => {
-      refreshQueue.push({
-        resolve: async (newToken) => {
-          const retryResponse = await fetch(input, {
-            ...init,
-            headers: buildHeaders(newToken),
-          });
-          resolve(retryResponse);
-        },
-        reject,
-      });
+  // ── 401 received ─────────────────────────────────────────────────────────────
+  
+  // Cross-tab concurrency check:
+  // Did another tab (or another rapid request in this tab) already refresh the token while we were in-flight?
+  const currentToken = localStorage.getItem('token');
+  if (currentToken && currentToken !== initialToken) {
+    // The token was successfully refreshed by someone else. Retry immediately.
+    return await fetch(input, {
+      ...init,
+      headers: buildHeaders(currentToken),
     });
   }
 
-  // This request is the first to hit 401 — it becomes the refresh driver.
-  isRefreshing = true;
+  // If no refresh is happening in this tab, we must be the one to start it.
+  if (!refreshTokenPromise) {
+    refreshTokenPromise = refreshAccessToken()
+      .then(newToken => {
+        localStorage.setItem('token', newToken);
+        return newToken;
+      })
+      .catch(err => {
+        // We will throw the error so that all awaiting requests know it failed,
+        // but the redirection is handled by each request catching it.
+        throw err;
+      })
+      .finally(() => {
+        // Clear the promise so future requests evaluate the new state
+        refreshTokenPromise = null;
+      });
+  }
 
+  // Await the shared refresh promise
   try {
-    const newToken = await refreshAccessToken();
-    localStorage.setItem('token', newToken);
-    isRefreshing = false;
-    drainQueue(newToken, null);
-
-    // Retry the original request with the fresh token
+    const newToken = await refreshTokenPromise;
+    // Retry original request exactly once
     return await fetch(input, {
       ...init,
       headers: buildHeaders(newToken),
     });
-
   } catch (refreshError) {
-    // Refresh token is also expired/invalid — force logout
-    isRefreshing = false;
-    drainQueue(null, refreshError);
-
-    localStorage.removeItem('token');
-    localStorage.removeItem('ksp_auth_user');
-
-    // Redirect to root login — detect which portal based on current path
-    const path = window.location.pathname;
-    if (path.startsWith('/analytics')) {
-      window.location.href = '/analytics-login';
-    } else if (path.startsWith('/officer')) {
-      window.location.href = '/login';
-    } else {
-      window.location.href = '/admin-login';
-    }
-
-    // Return a synthetic 401 so any caller that checks the status code isn't left hanging
-    return new Response(JSON.stringify({ error: 'Session expired. Redirecting to login.' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return clearAuthAndRedirect(refreshError);
   }
 };
