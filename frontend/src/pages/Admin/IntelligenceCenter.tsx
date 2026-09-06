@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Brain, ShieldAlert, MapPin, Repeat, Share2, FileText, ChevronRight, CheckCircle2, XCircle, Search, Bot, AlertTriangle, AlertCircle } from 'lucide-react';
 import { getAIDashboard } from '../../services/aiService';
 import { API_BASE_URL } from '../../config/api';
+import { mockDb } from '../../../data/mockDb';
 import ReactMarkdown from 'react-markdown';
 
 export interface IntelligenceAlert {
@@ -227,6 +228,27 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
     fetchContext();
   }, [alert.id]);
 
+  const derivedZones = useMemo(() => {
+    if (!affectedCases || affectedCases.length === 0) return [];
+    
+    const counts: Record<number, number> = {};
+    affectedCases.forEach(c => {
+      if (c.PoliceStationID) counts[c.PoliceStationID] = (counts[c.PoliceStationID] || 0) + 1;
+    });
+    
+    const units = mockDb.getUnits();
+    const zones = Object.entries(counts).map(([stationId, count]) => {
+      const station = units.find(u => u.UnitID === Number(stationId));
+      return {
+        stationId: Number(stationId),
+        stationName: station ? station.UnitName : `Unknown Station`,
+        count
+      };
+    });
+    
+    return zones.sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [affectedCases]);
+
   const generateSummary = async () => {
     setLoadingSummary(true);
     setAiSummary(null);
@@ -413,22 +435,28 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
           <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm flex flex-col">
             <div className="flex items-center gap-2 text-ksp-navy mb-3">
               <MapPin size={16} />
-              <h3 className="text-xs font-extrabold uppercase tracking-widest">GIS Hotspot</h3>
+              <h3 className="text-xs font-extrabold uppercase tracking-widest">Derived Activity Zones</h3>
             </div>
-            {hotspots.length === 0 ? (
-              <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No matching hotspot available.</p>
+            {derivedZones.length === 0 ? (
+              <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No matching zones available.</p>
             ) : (
               <div className="space-y-3">
-                {hotspots.map((h, i) => (
-                  <div key={i} className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                    <div className="text-xs font-bold text-red-800 mb-1">Red Zone Cluster Identified</div>
-                    <div className="text-[10px] text-red-600 font-medium">Incident Count: {h.incidentCount}</div>
-                    <button 
-                      onClick={() => onNavigate('/admin-portal/gis')}
-                      className="mt-2 text-[10px] font-bold text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded transition w-full"
-                    >
+                <div className="text-[10px] font-bold text-slate-500 uppercase">{derivedZones.length} zones detected based on affected FIRs</div>
+                {derivedZones.map((zone, i) => (
+                  <div key={i} className="p-3 bg-red-50 border border-red-100 rounded-lg group cursor-pointer hover:bg-red-100 transition-colors" onClick={() => {
+                    const params = new URLSearchParams();
+                    params.append('station', zone.stationName);
+                    if (alert.crimeType) params.append('crimeType', alert.crimeType);
+                    onNavigate(`/admin-portal/gis?${params.toString()}`);
+                  }}>
+                    <div className="text-xs font-bold text-red-800 mb-1 flex justify-between">
+                       <span>🚨 {zone.stationName}</span>
+                       <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <div className="text-[10px] text-red-600 font-medium">Incident Count: {zone.count} cases</div>
+                    <div className="mt-2 text-[10px] font-bold text-red-700 underline decoration-red-300 underline-offset-2 group-hover:decoration-red-500">
                       View on Map
-                    </button>
+                    </div>
                   </div>
                 ))}
               </div>
