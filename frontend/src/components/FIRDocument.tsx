@@ -45,7 +45,7 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
 
         <div className="grid grid-cols-2 border-b pb-2.5">
           <div><strong>5. General Diary Entry:</strong> {cDetails.GDEntryNumber || 'N/A'}</div>
-          <div className="text-right"><strong>6. GD Date & Time:</strong> {cDetails.GDEntryTimestamp?.replace('T', ' ').replace('Z', '') || 'N/A'}</div>
+          <div className="text-right"><strong>6. GD Date & Time:</strong> {cDetails.GDEntryTimestamp ? String(cDetails.GDEntryTimestamp).replace('T', ' ').replace('Z', '') : 'N/A'}</div>
         </div>
 
         <div className="border-b pb-2.5">
@@ -59,8 +59,8 @@ export const FIRDocument: React.FC<FIRDocumentProps> = ({ cDetails, user }) => {
 
         <div className="border-b pb-2.5">
           <strong>8. Time & Place of Incident:</strong>
-          <p className="m-0 pl-4 mt-1">Occurrence: {cDetails.IncidentFromDate ? cDetails.IncidentFromDate.replace('T', ' ') : 'Unknown'} To: {cDetails.IncidentToDate ? cDetails.IncidentToDate.replace('T', ' ') : 'Unknown'}</p>
-          <p className="m-0 pl-4">Information Received at PS: {cDetails.InfoReceivedPSDate ? cDetails.InfoReceivedPSDate.replace('T', ' ') : 'Unknown'}</p>
+          <p className="m-0 pl-4 mt-1">Occurrence: {cDetails.IncidentFromDate ? String(cDetails.IncidentFromDate).replace('T', ' ') : 'Unknown'} To: {cDetails.IncidentToDate ? String(cDetails.IncidentToDate).replace('T', ' ') : 'Unknown'}</p>
+          <p className="m-0 pl-4">Information Received at PS: {cDetails.InfoReceivedPSDate ? String(cDetails.InfoReceivedPSDate).replace('T', ' ') : 'Unknown'}</p>
           <p className="m-0 pl-4">Delay in Reporting: {cDetails.DelayInReporting ? `Yes - ${cDetails.DelayReason || 'Reason not specified'}` : 'No'}</p>
         </div>
 

@@ -284,8 +284,8 @@ export const CaseDetail: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-bold text-ksp-navy border-b pb-1.5 mb-3 flex items-center gap-1.5"><Clock size={14} /> Occurrence Times</h4>
                   <div className="text-xs space-y-1.5 text-slate-600 font-semibold">
-                    <p className="m-0"><strong>Incident Time range:</strong> {cDetails.IncidentFromDate.replace('T', ' ').substring(0, 16)} to {cDetails.IncidentToDate.replace('T', ' ').substring(0, 16)}</p>
-                    <p className="m-0"><strong>Station Received report:</strong> {cDetails.InfoReceivedPSDate.replace('T', ' ').substring(0, 16)}</p>
+                    <p className="m-0"><strong>Incident Time range:</strong> {cDetails.IncidentFromDate ? String(cDetails.IncidentFromDate).replace('T', ' ').substring(0, 16) : 'Unknown'} to {cDetails.IncidentToDate ? String(cDetails.IncidentToDate).replace('T', ' ').substring(0, 16) : 'Unknown'}</p>
+                    <p className="m-0"><strong>Station Received report:</strong> {cDetails.InfoReceivedPSDate ? String(cDetails.InfoReceivedPSDate).replace('T', ' ').substring(0, 16) : 'Unknown'}</p>
                     <p className="m-0"><strong>Filing Station Court:</strong> {courtName}</p>
                   </div>
                 </div>

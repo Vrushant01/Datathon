@@ -481,8 +481,8 @@ export const AnalyticsGISMap: React.FC = () => {
   if (!unitId) return <div className="p-8 text-center text-red-500">No Station Assigned to this Profile</div>;
 
   return (
-    <div className="h-full flex flex-col space-y-4">
-      <div>
+    <div className="flex-1 flex flex-col min-h-0 gap-4">
+      <div className="shrink-0">
         <h2 className="text-xl font-extrabold text-ksp-navy tracking-tight uppercase flex items-center gap-2">
           <MapPin size={24} className="text-ksp-gold" />
           Station GIS Map
@@ -492,12 +492,12 @@ export const AnalyticsGISMap: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
         
         {/* Filter Card */}
-        <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4 lg:col-span-1 h-fit">
-          <span className="text-gray-500 font-medium">Mapped cases matching filter: {finalFilteredCases.length}</span>
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2 mb-2">
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col gap-3 lg:w-72 shrink-0 h-fit overflow-y-auto max-h-[40vh] lg:max-h-none">
+          <span className="text-xs text-gray-500 font-medium">Mapped cases matching filter: {finalFilteredCases.length}</span>
+          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
             <Filter size={14} className="text-ksp-gold-dark" /> Station GIS Filters
           </h3>
 
@@ -535,10 +535,7 @@ export const AnalyticsGISMap: React.FC = () => {
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Gravity</label>
             <select 
               value={selectedGravity}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedGravity(val === 'ALL' ? 'ALL' : Number(val));
-              }}
+              onChange={(e) => setSelectedGravity(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy"
             >
               <option value="ALL">All Gravities</option>
@@ -546,36 +543,39 @@ export const AnalyticsGISMap: React.FC = () => {
             </select>
           </div>
 
-          <div className={validHotspots.length === 0 ? 'opacity-50' : ''}>
+          <div className={validHotspots.length === 0 ? 'opacity-60 grayscale' : ''}>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Active Red Zones</label>
             <select 
               value={selectedHotspot}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedHotspot(val);
-              }}
+              onChange={(e) => setSelectedHotspot(e.target.value)}
               disabled={validHotspots.length === 0}
-              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed"
+              className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:cursor-not-allowed disabled:bg-slate-100"
             >
-              <option value="ALL">All Active Hotspots ({validHotspots.length})</option>
-              {validHotspots.map((h, i) => (
-                <option key={i} value={h.clusterId}>
-                  {h.crimeName} ({hotspotCounts[h.clusterId] || 0} Cases)
-                </option>
-              ))}
+              {validHotspots.length === 0 ? (
+                <option value="ALL">No Active Hotspots (0)</option>
+              ) : (
+                <>
+                  <option value="ALL">All Active Hotspots ({validHotspots.length})</option>
+                  {validHotspots.map((h, i) => (
+                    <option key={i} value={h.clusterId}>
+                      {h.crimeName} ({hotspotCounts[h.clusterId] || 0} Cases)
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
 
           {isHotspotsLoading && (
-            <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs flex items-center gap-2 font-bold animate-pulse">
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs flex items-center gap-2 font-bold animate-pulse">
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0"></div>
               Recalculating Intelligence...
             </div>
           )}
         </div>
 
         {/* Map Container */}
-        <div className="lg:col-span-3 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[500px] relative">
+        <div className="flex-1 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[400px] lg:min-h-0 relative z-0">
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full focus:outline-none outline-none" style={{ outline: 'none' }} />
         </div>
 
@@ -583,4 +583,3 @@ export const AnalyticsGISMap: React.FC = () => {
     </div>
   );
 };
-
