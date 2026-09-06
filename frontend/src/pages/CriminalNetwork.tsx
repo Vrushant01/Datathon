@@ -51,9 +51,9 @@ export const CriminalNetwork: React.FC = () => {
   const [searchParams] = useSearchParams();
   const personIdParam = searchParams.get('personId');
 
-  const cases = mockDb.getCases();
-  const accusedList = mockDb.getAccused();
-  const victimsList = mockDb.getVictims();
+  const cases = useMemo(() => mockDb.getCases(), []);
+  const accusedList = useMemo(() => mockDb.getAccused(), []);
+  const victimsList = useMemo(() => mockDb.getVictims(), []);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -93,15 +93,17 @@ export const CriminalNetwork: React.FC = () => {
 
   const isOfficer = user?.role === 'Officer';
   const isAnalytics = user?.role === 'Analytics';
-  const filterFirCases = cases.filter(c => {
-    if (isOfficer) {
-      return c.PolicePersonID === user?.employeeId;
-    }
-    if (isAnalytics) {
-      return c.PoliceStationID === user?.unitId;
-    }
-    return true;
-  });
+  const filterFirCases = useMemo(() => {
+    return cases.filter(c => {
+      if (isOfficer) {
+        return c.PolicePersonID === user?.employeeId;
+      }
+      if (isAnalytics) {
+        return c.PoliceStationID === user?.unitId;
+      }
+      return true;
+    });
+  }, [cases, isOfficer, isAnalytics, user?.employeeId, user?.unitId]);
 
   const isCaseEditable = (caseId: number) => {
     const caseRecord = cases.find(c => c.CaseMasterID === caseId);
@@ -405,22 +407,38 @@ export const CriminalNetwork: React.FC = () => {
     }
   };
 
-  const filteredFIRs = filterFirCases.filter(c => {
-    const searchLower = String(searchQuery || '').toLowerCase();
-    
-    if (c.CaseNo.includes(searchQuery) ||
-        c.CrimeNo.includes(searchQuery) ||
-        String(c.BriefFacts || '').toLowerCase().includes(searchLower)) {
-      return true;
+  const accusedByCase = useMemo(() => {
+    const map = new Map<number, any[]>();
+    for (const a of accusedList) {
+        const arr = map.get(a.CaseMasterID);
+        if (arr) {
+            arr.push(a);
+        } else {
+            map.set(a.CaseMasterID, [a]);
+        }
     }
+    return map;
+  }, [accusedList]);
 
-    const caseAccused = accusedList.filter(a => a.CaseMasterID === c.CaseMasterID);
-    if (caseAccused.some(a => String(a.AccusedName || '').toLowerCase().includes(searchLower))) {
-      return true;
-    }
+  const filteredFIRs = useMemo(() => {
+    if (!searchQuery) return filterFirCases;
+    const searchLower = String(searchQuery).toLowerCase();
     
-    return false;
-  });
+    return filterFirCases.filter(c => {
+      if (String(c.CaseNo || '').toLowerCase().includes(searchLower) ||
+          String(c.CrimeNo || '').toLowerCase().includes(searchLower) ||
+          String(c.BriefFacts || '').toLowerCase().includes(searchLower)) {
+        return true;
+      }
+
+      const caseAccused = accusedByCase.get(c.CaseMasterID) || [];
+      if (caseAccused.some(a => String(a.AccusedName || '').toLowerCase().includes(searchLower))) {
+        return true;
+      }
+      
+      return false;
+    });
+  }, [filterFirCases, searchQuery, accusedByCase]);
 
   return (
     <div className="dark flex-1 h-full min-h-[calc(100vh-64px)] w-full bg-[#020617] text-[#e4e2e4] flex flex-col font-sans overflow-hidden select-none pb-24 xl:pb-0">
