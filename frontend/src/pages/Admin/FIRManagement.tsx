@@ -520,7 +520,7 @@ export const FIRManagement: React.FC = () => {
             {filteredCases.slice(0, 50).map((c) => {
               const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || 'Unknown';
               const officer = employees.find(e => e.EmployeeID === c.PolicePersonID);
-              const categoryName = categories.find(cat => cat.CaseCategoryID === c.CaseCategoryID)?.LookupValue.split(' ')[0] || 'FIR';
+              const categoryName = String(categories.find(cat => cat.CaseCategoryID === c.CaseCategoryID)?.LookupValue || 'FIR').split(' ')[0];
               const statusName = caseStatuses.find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName || 'Active';
               
               const caseVictims = victims.filter(v => v.CaseMasterID === c.CaseMasterID).map(v => v.VictimName).join(', ') || 'N/A';

@@ -54,24 +54,24 @@ export const AdminAnalytics: React.FC = () => {
       return districts.map(d => {
         const districtStations = stations.filter(s => s.DistrictID === d.DistrictID);
         const caseCount = filteredCases.filter(c => districtStations.some(s => s.UnitID === c.PoliceStationID)).length;
-        return { name: d.DistrictName.replace(' City', '').replace(' Rural', ''), Cases: caseCount };
+        return { name: String(d.DistrictName || '').replace(' City', '').replace(' Rural', ''), Cases: caseCount };
       }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
     } else if (selectedStation === 'ALL') {
       const districtStations = stations.filter(s => s.DistrictID === selectedDistrict);
       return districtStations.map(s => {
         const caseCount = filteredCases.filter(c => c.PoliceStationID === s.UnitID).length;
-        return { name: s.UnitName.replace(' PS', ''), Cases: caseCount };
+        return { name: String(s.UnitName || '').replace(' PS', ''), Cases: caseCount };
       }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
     } else {
       const s = stations.find(s => s.UnitID === selectedStation);
-      return s ? [{ name: s.UnitName.replace(' PS', ''), Cases: totalCases }] : [];
+      return s ? [{ name: String(s.UnitName || '').replace(' PS', ''), Cases: totalCases }] : [];
     }
   }, [selectedDistrict, selectedStation, districts, stations, filteredCases, totalCases]);
 
   // 2. Crime Categories
   const categoryData = crimeHeads.map(ch => {
     const caseCount = filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length;
-    return { name: ch.CrimeGroupName.split(' ').slice(-2).join(' '), Cases: caseCount };
+    return { name: String(ch.CrimeGroupName || '').split(' ').slice(-2).join(' '), Cases: caseCount };
   }).filter(c => c.Cases > 0).sort((a,b) => b.Cases - a.Cases).slice(0, 8); // Top 8
 
   // 3. Victim Age Demographics
@@ -94,7 +94,7 @@ export const AdminAnalytics: React.FC = () => {
   const officerData = officers.map(o => {
     const assignedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID).length;
     const solvedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID && (c.CaseStatusID === 2 || c.CaseStatusID === 3)).length;
-    return { name: o.FirstName.split(' ')[0], Assigned: assignedCount, Solved: solvedCount };
+    return { name: String(o.FirstName || '').split(' ')[0], Assigned: assignedCount, Solved: solvedCount };
   }).filter(o => o.Assigned > 0).sort((a,b) => b.Assigned - a.Assigned).slice(0, 10);
 
   // 6. Socio-Economic Correlation Data (Capability 3 of ER specification)
@@ -112,7 +112,7 @@ export const AdminAnalytics: React.FC = () => {
       return displayStations.slice(0, 10).map((s, i) => {
         const caseCount = filteredCases.filter(c => c.PoliceStationID === s.UnitID).length;
         return {
-          name: s.UnitName.replace(' PS', ''),
+          name: String(s.UnitName || '').replace(' PS', ''),
           CrimeRate: Number((caseCount / 20).toFixed(1)),
           LiteracyRate: 75 + ((i * 3) % 15),
           Urbanization: 60 + ((i * 7) % 35)
@@ -122,7 +122,7 @@ export const AdminAnalytics: React.FC = () => {
       const s = stations.find(st => st.UnitID === selectedStation);
       if (!s) return [];
       return [{
-        name: s.UnitName.replace(' PS', ''),
+        name: String(s.UnitName || '').replace(' PS', ''),
         CrimeRate: Number((totalCases / 20).toFixed(1)),
         LiteracyRate: 85,
         Urbanization: 90
