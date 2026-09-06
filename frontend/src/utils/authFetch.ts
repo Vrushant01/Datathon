@@ -88,39 +88,36 @@ export const authFetch = async (input: RequestInfo | URL, init?: RequestInit): P
 
   // ── 401 received ─────────────────────────────────────────────────────────────
   
-  // Cross-tab concurrency check:
-  // Did another tab (or another rapid request in this tab) already refresh the token while we were in-flight?
-  const currentToken = localStorage.getItem('token');
-  if (currentToken && currentToken !== initialToken) {
-    // The token was successfully refreshed by someone else. Retry immediately.
-    return await fetch(input, {
-      ...init,
-      headers: buildHeaders(currentToken),
-    });
-  }
-
-  // If no refresh is happening in this tab, we must be the one to start it.
-  if (!refreshTokenPromise) {
-    refreshTokenPromise = refreshAccessToken()
-      .then(newToken => {
-        localStorage.setItem('token', newToken);
-        return newToken;
-      })
-      .catch(err => {
-        // We will throw the error so that all awaiting requests know it failed,
-        // but the redirection is handled by each request catching it.
-        throw err;
-      })
-      .finally(() => {
-        // Clear the promise so future requests evaluate the new state
-        refreshTokenPromise = null;
-      });
-  }
-
-  // Await the shared refresh promise
+  // Use Web Locks API for true cross-tab synchronization.
+  // Only one tab can hold the 'ksp_auth_refresh' lock at a time.
   try {
-    const newToken = await refreshTokenPromise;
-    // Retry original request exactly once
+    const newToken = await navigator.locks.request('ksp_auth_refresh', async () => {
+      // Once we have the lock, check if another tab ALREADY refreshed the token
+      // while we were waiting for the lock.
+      const currentToken = localStorage.getItem('token');
+      if (currentToken && currentToken !== initialToken) {
+        return currentToken;
+      }
+
+      // If no refresh is happening in this tab, we must be the one to start it.
+      if (!refreshTokenPromise) {
+        refreshTokenPromise = refreshAccessToken()
+          .then(token => {
+            localStorage.setItem('token', token);
+            return token;
+          })
+          .catch(err => {
+            throw err;
+          })
+          .finally(() => {
+            refreshTokenPromise = null;
+          });
+      }
+
+      return await refreshTokenPromise;
+    });
+
+    // Retry original request exactly once with the new token
     return await fetch(input, {
       ...init,
       headers: buildHeaders(newToken),
