@@ -412,7 +412,7 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
             {affectedCases.length === 0 ? (
               <p className="text-xs text-slate-500 font-medium p-4 text-center bg-slate-50 rounded-lg">No matching cases found.</p>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-64 overflow-y-auto overscroll-contain pr-1">
                 {affectedCases.map(c => (
                   <div key={c.CaseMasterID} className="flex justify-between items-center p-2 hover:bg-slate-50 rounded border border-transparent hover:border-slate-200 group">
                     <div>
@@ -445,7 +445,7 @@ const InvestigationPanel: React.FC<{ alert: IntelligenceAlert, onNavigate: Retur
                 {derivedZones.map((zone, i) => (
                   <div key={i} className="p-3 bg-red-50 border border-red-100 rounded-lg group cursor-pointer hover:bg-red-100 transition-colors" onClick={() => {
                     const params = new URLSearchParams();
-                    params.append('station', zone.stationName);
+                    params.append('stationId', zone.stationId.toString());
                     if (alert.crimeType) params.append('crimeType', alert.crimeType);
                     onNavigate(`/admin-portal/gis?${params.toString()}`);
                   }}>

@@ -24,6 +24,11 @@ export const AdminGISMap: React.FC = () => {
   
   // Filters
   const [selectedDistrict, setSelectedDistrict] = useState<number | 'ALL'>(() => {
+    const sidParam = searchParams.get('stationId');
+    if (sidParam) {
+      const stat = mockDb.getUnits().find(s => s.UnitID === Number(sidParam) && s.TypeID === 1);
+      if (stat) return stat.DistrictID;
+    }
     const dParam = searchParams.get('district');
     if (dParam) {
       const dist = mockDb.getDistricts().find(d => d.DistrictName === dParam);
@@ -32,6 +37,11 @@ export const AdminGISMap: React.FC = () => {
     return 'ALL';
   });
   const [selectedStation, setSelectedStation] = useState<number | 'ALL'>(() => {
+    const sidParam = searchParams.get('stationId');
+    if (sidParam) {
+      const stat = mockDb.getUnits().find(s => s.UnitID === Number(sidParam) && s.TypeID === 1);
+      if (stat) return stat.UnitID;
+    }
     const sParam = searchParams.get('station');
     if (sParam) {
       const stat = mockDb.getUnits().find(s => s.UnitName === sParam && s.TypeID === 1);
