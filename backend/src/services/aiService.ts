@@ -193,6 +193,11 @@ export const getDashboardData = async (db: IDataRepository) => {
       crimeType: a.crimeType,
       riskScore: Math.min(100, Math.round(50 + a.zScore * 10)),
 
+      // Raw identifiers for the frontend to filter
+      districtId: a.level === 'STATION' && a.locationId ? unitToDistrict.get(a.locationId) : (a.level === 'DISTRICT' ? a.locationId : undefined),
+      stationId: a.level === 'STATION' ? a.locationId : undefined,
+      crimeHeadId: a.crimeHeadId,
+
       // Temporal-specific XAI fields
       algorithmUsed: a.algorithmUsed,
       evidence: `${a.currentCount} cases in current 7-day window`,
