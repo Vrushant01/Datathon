@@ -59,6 +59,14 @@ const App: React.FC = () => {
       setDataLoaded(true);
     }
 
+    // Always clear the googtrans cookie on mount so the app starts in English.
+    // This prevents a previous Kannada session from bleeding into a fresh login.
+    const hostname = window.location.hostname;
+    const cookieReset = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = cookieReset;
+    document.cookie = cookieReset + ' domain=' + hostname + ';';
+    document.cookie = cookieReset + ' domain=.' + hostname + ';';
+
     // Nuclear Google Translate UI suppression via MutationObserver
     function suppressAllGoogleTranslateUI() {
       const HIDE_SELECTORS = [
