@@ -59,6 +59,27 @@ const App: React.FC = () => {
       setDataLoaded(true);
     }
 
+    // Google Translate banner suppression observer
+    function suppressGoogleTranslateBanner() {
+      const hideBanner = () => {
+        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
+          || document.querySelector('iframe.skiptranslate') as HTMLElement;
+        if (frame) {
+          frame.style.setProperty('display', 'none', 'important');
+          frame.style.setProperty('visibility', 'hidden', 'important');
+          frame.style.setProperty('height', '0', 'important');
+        }
+        document.body.style.setProperty('top', '0px', 'important');
+        document.body.style.setProperty('position', 'static', 'important');
+      };
+
+      hideBanner();
+      const observer = new MutationObserver(hideBanner);
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    }
+    
+    suppressGoogleTranslateBanner();
+
     return () => {
       // Cleanup if necessary
     };

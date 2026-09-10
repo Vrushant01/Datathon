@@ -34,19 +34,18 @@ export const Navbar: React.FC = () => {
       select.dispatchEvent(new Event('change', { bubbles: true }));
       console.log(`[Translate] Dispatched change event with bubbles: true`);
       
-      // Cleanup Google Translate injected banner and inline body styles
-      let cleanupCount = 0;
-      const cleanupInterval = setInterval(() => {
-        document.body.style.setProperty('top', '0px', 'important');
-        document.body.style.setProperty('position', 'static', 'important');
-        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement;
+      const hideBanner = () => {
+        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
+          || document.querySelector('iframe.skiptranslate') as HTMLElement;
         if (frame) {
           frame.style.setProperty('display', 'none', 'important');
           frame.style.setProperty('visibility', 'hidden', 'important');
+          frame.style.setProperty('height', '0', 'important');
         }
-        cleanupCount++;
-        if (cleanupCount > 10) clearInterval(cleanupInterval);
-      }, 200);
+        document.body.style.setProperty('top', '0px', 'important');
+        document.body.style.setProperty('position', 'static', 'important');
+      };
+      hideBanner();
     } else {
       console.warn(`[Translate] Could not find .goog-te-combo. Is Google Translate loaded?`);
     }
@@ -62,6 +61,18 @@ export const Navbar: React.FC = () => {
         select.value = '';
       }
       select.dispatchEvent(new Event('change', { bubbles: true }));
+      const hideBanner = () => {
+        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
+          || document.querySelector('iframe.skiptranslate') as HTMLElement;
+        if (frame) {
+          frame.style.setProperty('display', 'none', 'important');
+          frame.style.setProperty('visibility', 'hidden', 'important');
+          frame.style.setProperty('height', '0', 'important');
+        }
+        document.body.style.setProperty('top', '0px', 'important');
+        document.body.style.setProperty('position', 'static', 'important');
+      };
+      hideBanner();
     }
     setLang('en');
 
