@@ -46,20 +46,6 @@ import './App.css';
 const App: React.FC = () => {
   const [syncKey, setSyncKey] = React.useState(0);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(104);
-
-  useEffect(() => {
-    const updateHeaderHeight = () => {
-      const header = document.querySelector('header');
-      if (header) {
-        setHeaderHeight(header.offsetHeight);
-      }
-    };
-    
-    setTimeout(updateHeaderHeight, 100);
-    window.addEventListener('resize', updateHeaderHeight);
-    return () => window.removeEventListener('resize', updateHeaderHeight);
-  }, [dataLoaded, syncKey]);
 
   useEffect(() => {
     // Initial data sync (only if authenticated)
@@ -81,32 +67,33 @@ const App: React.FC = () => {
   return (
     <AuthProvider key={syncKey}>
       <Router>
-        <div className="min-h-screen bg-slate-50 relative">
-          <div className="fixed top-0 left-0 w-full z-50 shadow-md">
-            <Navbar />
-          </div>
+        <div className="flex flex-col min-h-screen bg-slate-50">
           <Routes>
               {/* Public Portal Routes */}
               <Route path="/" element={
-                <div className="flex flex-col min-h-screen" style={{ paddingTop: `${headerHeight}px` }}>
+                <div className="flex-1 flex flex-col">
+                  <Navbar />
                   <div className="flex-grow"><Home /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/login" element={
-                <div className="flex flex-col min-h-screen" style={{ paddingTop: `${headerHeight}px` }}>
+                <div className="flex-1 flex flex-col">
+                  <Navbar />
                   <div className="flex-grow"><OfficerLogin /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/analytics-login" element={
-                <div className="flex flex-col min-h-screen" style={{ paddingTop: `${headerHeight}px` }}>
+                <div className="flex-1 flex flex-col">
+                  <Navbar />
                   <div className="flex-grow"><AnalyticsLogin /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/admin" element={
-                <div className="flex flex-col min-h-screen" style={{ paddingTop: `${headerHeight}px` }}>
+                <div className="flex-1 flex flex-col">
+                  <Navbar />
                   <div className="flex-grow"><AdminLogin /></div>
                   <Footer />
                 </div>

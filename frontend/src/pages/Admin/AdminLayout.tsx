@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Navbar } from '../../components/Navbar';
 import { 
   LayoutDashboard, Users, FileText, BarChart3, MapPin, 
   History, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat, MoreHorizontal, Crosshair, Activity
@@ -11,20 +12,6 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(104);
-
-  useEffect(() => {
-    const updateHeaderHeight = () => {
-      const header = document.querySelector('header');
-      if (header) {
-        setHeaderHeight(header.offsetHeight);
-      }
-    };
-    
-    updateHeaderHeight();
-    window.addEventListener('resize', updateHeaderHeight);
-    return () => window.removeEventListener('resize', updateHeaderHeight);
-  }, []);
 
   // Security route guard check
   if (role !== 'Admin') {
@@ -96,8 +83,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside 
-        className="hidden xl:flex fixed left-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-y-auto transition-all duration-300"
-        style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
+        className="hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl h-screen transition-all duration-300"
       >
         {/* Console title branding */}
         <div className="p-6 border-b border-white/5 select-none">
@@ -135,10 +121,10 @@ export const AdminLayout: React.FC = () => {
 
       {/* Main Content Area */}
       {/* pb-24 on mobile ensures content isn't obscured by the bottom nav */}
-      <div 
-        className="xl:ml-64 flex flex-col overflow-y-auto overflow-x-hidden"
-        style={{ marginTop: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
-      >
+      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className="hidden xl:block">
+          <Navbar />
+        </div>
         <main 
           className={`flex-1 min-w-0 ${
             (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
