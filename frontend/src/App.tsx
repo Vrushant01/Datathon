@@ -67,9 +67,14 @@ const App: React.FC = () => {
         '.goog-tooltip',
         '.goog-tooltip.skiptranslate',
         '.goog-te-balloon-frame',
-        '#goog-gt-tt',
         '.goog-te-spinner-pos',
+        '.goog-te-spinner',
+        '.goog-te-spinner-animation',
+        '.VIpgJd-ZVi9od-aZ2wEe-wOHMyf',
+        '.goog-logo-link',
+        '#goog-gt-tt',
         'iframe.skiptranslate',
+        'div.skiptranslate',
       ];
       const enforce = () => {
         HIDE_SELECTORS.forEach(sel => {
