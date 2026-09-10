@@ -51,9 +51,14 @@ const App: React.FC = () => {
     // Initial data sync (only if authenticated)
     const token = localStorage.getItem('token');
     if (token) {
-      syncData().then(() => {
+      // Race syncData against a 5-second timeout so the app never stays
+      // stuck on "Loading..." forever if the backend is unreachable
+      const syncTimeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
+      Promise.race([syncData(), syncTimeout]).then(() => {
         setDataLoaded(true);
         setSyncKey(k => k + 1);
+      }).catch(() => {
+        setDataLoaded(true); // still show the app even if sync fails
       });
     } else {
       setDataLoaded(true);
@@ -166,6 +171,7 @@ const App: React.FC = () => {
                   <Footer />
                 </div>
               } />
+              <Route path="/admin-login" element={<Navigate to="/admin" replace />} />
 
               {/* Admin Portal Guarded Routes */}
               <Route path="/admin-portal" element={<AdminLayout />}>

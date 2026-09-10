@@ -29,6 +29,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      localStorage.removeItem('ksp_auth_user');
+      return null;
+    }
     const saved = localStorage.getItem('ksp_auth_user');
     if (saved) {
       try {
@@ -41,7 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    if (user) {
+    const token = localStorage.getItem('token');
+    if (user && token) {
       localStorage.setItem('ksp_auth_user', JSON.stringify(user));
     } else {
       localStorage.removeItem('ksp_auth_user');
@@ -125,6 +131,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).catch(() => { /* ignore network errors on logout */ });
 
     localStorage.removeItem('token');
+    localStorage.removeItem('ksp_auth_user');
+    sessionStorage.clear();
     setUser(null);
   };
 

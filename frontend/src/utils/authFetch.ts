@@ -6,6 +6,7 @@ let refreshTokenPromise: Promise<string> | null = null;
 function clearAuthAndRedirect(errorData?: any) {
   localStorage.removeItem('token');
   localStorage.removeItem('ksp_auth_user');
+  sessionStorage.clear();
 
   const path = window.location.pathname;
   if (path.startsWith('/analytics')) {
@@ -13,7 +14,7 @@ function clearAuthAndRedirect(errorData?: any) {
   } else if (path.startsWith('/officer')) {
     window.location.href = '/login';
   } else {
-    window.location.href = '/admin-login';
+    window.location.href = '/admin';
   }
 
   return new Response(JSON.stringify({ error: 'Session expired. Redirecting to login.', details: errorData }), {

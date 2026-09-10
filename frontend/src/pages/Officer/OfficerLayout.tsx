@@ -12,7 +12,8 @@ export const OfficerLayout: React.FC = () => {
   const navigate = useNavigate();
 
   // Security route guard check
-  if (role !== 'Officer') {
+  const token = localStorage.getItem('token');
+  if (!token || role !== 'Officer') {
     return (
       <div className="flex-grow flex items-center justify-center p-8 bg-slate-100 min-h-screen select-none">
         <div className="bg-white p-8 rounded-xl border border-red-200 shadow-lg text-center max-w-md">

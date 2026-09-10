@@ -10,7 +10,8 @@ export const Home: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    const token = localStorage.getItem('token');
+    if (isAuthenticated && user && token) {
       if (user.role === 'Admin') navigate('/admin-portal');
       else if (user.role === 'Analytics') navigate('/analytics-portal');
       else navigate('/officer-portal');

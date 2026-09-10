@@ -12,7 +12,8 @@ export const AnalyticsLayout: React.FC = () => {
   const navigate = useNavigate();
 
   // Security route guard check
-  if (role !== 'Analytics') {
+  const token = localStorage.getItem('token');
+  if (!token || role !== 'Analytics') {
     return (
       <div className="flex-grow flex items-center justify-center bg-slate-100 flex-col gap-4 min-h-screen">
         <div className="text-red-500 font-bold text-lg">UNAUTHORIZED ACCESS</div>

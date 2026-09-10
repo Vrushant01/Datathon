@@ -19,18 +19,22 @@
     <!-- Clear any stale googtrans cookie BEFORE Google Translate loads so it never auto-applies Kannada -->
     <script>
       (function() {
-        var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC;';
         var h = location.hostname;
-        document.cookie = 'googtrans=; ' + exp;
-        document.cookie = 'googtrans=; ' + exp + ' domain=' + h + ';';
-        document.cookie = 'googtrans=; ' + exp + ' domain=.' + h + ';';
-        // Also clear parent domain (e.g. .onslate.in for subdomains)
+        var paths = ['/', location.pathname, ''];
+        var domains = ['', h, '.' + h];
         var parts = h.split('.');
         if (parts.length >= 2) {
           var parent = parts.slice(-2).join('.');
-          document.cookie = 'googtrans=; ' + exp + ' domain=' + parent + ';';
-          document.cookie = 'googtrans=; ' + exp + ' domain=.' + parent + ';';
+          domains.push(parent, '.' + parent);
         }
+        paths.forEach(function(p) {
+          var pathAttr = p ? ' path=' + p + ';' : ' path=/;';
+          domains.forEach(function(d) {
+            var domainAttr = d ? ' domain=' + d + ';' : '';
+            document.cookie = 'googtrans=; ' + exp + pathAttr + domainAttr;
+          });
+        });
       })();
     </script>
     <script type="text/javascript">

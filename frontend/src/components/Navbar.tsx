@@ -13,20 +13,26 @@ export const Navbar: React.FC = () => {
   const { status: dbConnectionStatus } = useDbConnection();
   const [lang, setLang] = React.useState('en');
 
-  // Helper: clears the googtrans cookie across all domain levels
+  // Helper: clears the googtrans cookie across all domain levels and paths
   const clearGoogTransCookie = () => {
-    const exp = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    const exp = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
     const hostname = window.location.hostname;
-    document.cookie = exp;
-    document.cookie = exp + ' domain=' + hostname + ';';
-    document.cookie = exp + ' domain=.' + hostname + ';';
-    // Also clear parent domain (e.g. .onslate.in for datathon-vnegltof.onslate.in)
+    const paths = ['/', window.location.pathname, ''];
+
+    const domains = ['', hostname, '.' + hostname];
     const parts = hostname.split('.');
     if (parts.length >= 2) {
       const parent = parts.slice(-2).join('.');
-      document.cookie = exp + ' domain=' + parent + ';';
-      document.cookie = exp + ' domain=.' + parent + ';';
+      domains.push(parent, '.' + parent);
     }
+
+    paths.forEach(p => {
+      const pathAttr = p ? ` path=${p};` : ' path=/;';
+      domains.forEach(d => {
+        const domainAttr = d ? ` domain=${d};` : '';
+        document.cookie = `${exp}${pathAttr}${domainAttr}`;
+      });
+    });
   };
 
   const handleLangChange = (newLang: string) => {
@@ -35,6 +41,11 @@ export const Navbar: React.FC = () => {
     if (newLang === 'en') {
       // Restore original: clear cookie on all domains then reload
       clearGoogTransCookie();
+      const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
+      if (select) {
+        select.value = '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       window.location.reload();
       return;
     }
@@ -53,14 +64,19 @@ export const Navbar: React.FC = () => {
 
 
   const handleLogout = () => {
-    // Clear googtrans cookie on ALL domain levels before redirecting
+    // 1. Clear googtrans cookie on ALL domain levels and paths
     clearGoogTransCookie();
-
     setLang('en');
+
+    // 2. Call auth context logout
     logout();
 
-    // Hard redirect — forces index.html to re-run the cookie-clearing <script>
-    // before Google Translate bootstraps, guaranteeing English on the next load
+    // 3. Purge storage directly to ensure no stale credentials remain
+    localStorage.removeItem('token');
+    localStorage.removeItem('ksp_auth_user');
+    sessionStorage.clear();
+
+    // 4. Hard redirect to '/' to completely reset Google Translate runtime and guarantee default English
     window.location.href = '/';
   };
 
@@ -90,10 +106,13 @@ Gateway: Zoho Catalyst CloudScale
 Data Source: Live CloudScale Database`);
   };
 
+  const normPath = location.pathname.replace(/\/$/, '') || '/';
   const isAuthOrLanding = 
-    location.pathname === '/' || 
-    location.pathname === '/login' || 
-    location.pathname === '/admin';
+    normPath === '/' || 
+    normPath === '/login' || 
+    normPath === '/admin' ||
+    normPath === '/admin-login' ||
+    normPath === '/analytics-login';
 
   // Determine portal brand names
   const isAdminPath = location.pathname.startsWith('/admin-portal');
