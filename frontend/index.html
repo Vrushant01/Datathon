@@ -20,9 +20,17 @@
     <script>
       (function() {
         var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        var h = location.hostname;
         document.cookie = 'googtrans=; ' + exp;
-        document.cookie = 'googtrans=; ' + exp + ' domain=' + location.hostname + ';';
-        document.cookie = 'googtrans=; ' + exp + ' domain=.' + location.hostname + ';';
+        document.cookie = 'googtrans=; ' + exp + ' domain=' + h + ';';
+        document.cookie = 'googtrans=; ' + exp + ' domain=.' + h + ';';
+        // Also clear parent domain (e.g. .onslate.in for subdomains)
+        var parts = h.split('.');
+        if (parts.length >= 2) {
+          var parent = parts.slice(-2).join('.');
+          document.cookie = 'googtrans=; ' + exp + ' domain=' + parent + ';';
+          document.cookie = 'googtrans=; ' + exp + ' domain=.' + parent + ';';
+        }
       })();
     </script>
     <script type="text/javascript">

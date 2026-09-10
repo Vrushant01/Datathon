@@ -13,61 +13,54 @@ export const Navbar: React.FC = () => {
   const { status: dbConnectionStatus } = useDbConnection();
   const [lang, setLang] = React.useState('en');
 
+  // Helper: clears the googtrans cookie across all domain levels
+  const clearGoogTransCookie = () => {
+    const exp = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    const hostname = window.location.hostname;
+    document.cookie = exp;
+    document.cookie = exp + ' domain=' + hostname + ';';
+    document.cookie = exp + ' domain=.' + hostname + ';';
+    // Also clear parent domain (e.g. .onslate.in for datathon-vnegltof.onslate.in)
+    const parts = hostname.split('.');
+    if (parts.length >= 2) {
+      const parent = parts.slice(-2).join('.');
+      document.cookie = exp + ' domain=' + parent + ';';
+      document.cookie = exp + ' domain=.' + parent + ';';
+    }
+  };
+
   const handleLangChange = (newLang: string) => {
     setLang(newLang);
-    
-    // Wire Google Translate
+
+    if (newLang === 'en') {
+      // Restore original: clear cookie on all domains then reload
+      clearGoogTransCookie();
+      window.location.reload();
+      return;
+    }
+
+    // Kannada: try combo first (no-reload, instant); fallback to cookie+reload
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-    
     if (select) {
-      if (newLang === 'en') {
-        // '' = restore original — do NOT set 'en' which would trigger an "translate to English" pass
-        select.value = '';
-      } else {
-        select.value = newLang; // e.g. 'kn' for Kannada
-      }
+      select.value = 'kn';
       select.dispatchEvent(new Event('change', { bubbles: true }));
-      
-      const hideBanner = () => {
-        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
-          || document.querySelector('iframe.skiptranslate') as HTMLElement;
-        if (frame) {
-          frame.style.setProperty('display', 'none', 'important');
-          frame.style.setProperty('visibility', 'hidden', 'important');
-          frame.style.setProperty('height', '0', 'important');
-        }
-        document.body.style.setProperty('top', '0px', 'important');
-        document.body.style.setProperty('position', 'static', 'important');
-      };
-      hideBanner();
     } else {
-      console.warn(`[Translate] Could not find .goog-te-combo. Is Google Translate loaded?`);
+      // Fallback: set cookie and reload
+      document.cookie = 'googtrans=/en/kn; path=/; domain=' + window.location.hostname;
+      window.location.reload();
     }
   };
 
 
   const handleLogout = () => {
-    // 1. Erase the googtrans cookie that Google Translate uses to persist language
-    //    across page navigations — must clear for all path+domain combinations
-    const hostname = window.location.hostname;
-    const cookieReset = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = cookieReset;
-    document.cookie = cookieReset + ' domain=' + hostname + ';';
-    document.cookie = cookieReset + ' domain=.' + hostname + ';';
-
-    // 2. Also attempt to reset via the combo select if it's available
-    const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-    if (select) {
-      select.value = '';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    // Clear googtrans cookie on ALL domain levels before redirecting
+    clearGoogTransCookie();
 
     setLang('en');
     logout();
 
-    // Hard redirect so index.html re-executes its cookie-clearing script
-    // before Google Translate bootstraps — this is the ONLY reliable way
-    // to guarantee the next page load starts in English in SPA mode
+    // Hard redirect — forces index.html to re-run the cookie-clearing <script>
+    // before Google Translate bootstraps, guaranteeing English on the next load
     window.location.href = '/';
   };
 
