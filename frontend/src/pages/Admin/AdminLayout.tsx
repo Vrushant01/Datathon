@@ -71,7 +71,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
 
   return (
-    <div className="min-w-0 bg-slate-50 relative select-none">
+    <div className="flex flex-col min-h-screen bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -81,50 +81,50 @@ export const AdminLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Desktop Sidebar Navigation (Hidden on < xl) */}
-      <aside 
-        className="hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl h-screen transition-all duration-300"
-      >
-        {/* Console title branding */}
-        <div className="p-6 border-b border-white/5 select-none">
-          <span className="text-[10px] uppercase text-ksp-gold font-bold tracking-widest block mb-1">State Administration</span>
-          <span className="text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
-            KSP System Console
-          </span>
-        </div>
+      <div className="hidden xl:block">
+        <Navbar />
+      </div>
 
-        {/* Sidebar Nav Links */}
-        <nav className="p-4 flex-grow space-y-1.5">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-               <Link 
-                key={item.label}
-                to={item.path}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
-                  isActive ? activeClass : inactiveClass
-                }`}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+      <div className="flex flex-row flex-1">
+        {/* Desktop Sidebar Navigation (Hidden on < xl) */}
+        <aside 
+          className="hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl transition-all duration-300"
+        >
+          {/* Console title branding */}
+          <div className="p-6 border-b border-white/5 select-none">
+            <span className="text-[10px] uppercase text-ksp-gold font-bold tracking-widest block mb-1">State Administration</span>
+            <span className="text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
+              KSP System Console
+            </span>
+          </div>
 
-        {/* Footer info in sidebar */}
-        <div className="p-4 border-t border-white/5 text-[10px] text-slate-400 select-none">
-          <p className="m-0 font-bold uppercase tracking-wider text-slate-500">Security Clearance</p>
-          <p className="m-0 mt-0.5 text-slate-300 font-medium">Level 1 Administrator</p>
-        </div>
-      </aside>
+          {/* Sidebar Nav Links */}
+          <nav className="p-4 flex-grow space-y-1.5">
+            {menuItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                 <Link 
+                  key={item.label}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                    isActive ? activeClass : inactiveClass
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-      {/* Main Content Area */}
-      {/* pb-24 on mobile ensures content isn't obscured by the bottom nav */}
-      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
-        <div className="hidden xl:block">
-          <Navbar />
-        </div>
+          {/* Footer info in sidebar */}
+          <div className="p-4 border-t border-white/5 text-[10px] text-slate-400 select-none">
+            <p className="m-0 font-bold uppercase tracking-wider text-slate-500">Security Clearance</p>
+            <p className="m-0 mt-0.5 text-slate-300 font-medium">Level 1 Administrator</p>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
         <main 
           className={`flex-1 min-w-0 ${
             (location.pathname.includes('/network') || location.pathname.includes('/assistant'))

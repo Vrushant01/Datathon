@@ -41,7 +41,7 @@ export const AnalyticsLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path || (i.path !== '/analytics-portal' && location.pathname.startsWith(i.path)))?.label || 'Analytics';
 
   return (
-    <div className="min-w-0 bg-slate-50 relative select-none">
+    <div className="flex flex-col min-h-screen bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -54,53 +54,54 @@ export const AnalyticsLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Desktop Sidebar Navigation (Hidden on < xl) */}
-      <aside className={`
-        hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl h-screen transition-all duration-300
-      `}>
-        <div className="p-6 border-b border-slate-700/50">
-          <div className="text-xs font-bold text-ksp-gold uppercase tracking-widest mb-1 flex items-center gap-2">
-            <BarChart3 size={14} /> Analytics
-          </div>
-          <div className="text-xl font-black tracking-tight leading-tight uppercase">
-            {user?.stationName}
-          </div>
-          <div className="text-[10px] text-slate-400 font-semibold mt-1">
-            {user?.districtName}
-          </div>
-        </div>
+      <div className="hidden xl:block">
+        <Navbar />
+      </div>
 
-        <nav className="flex-grow p-4 space-y-1.5">
-          {menuItems.map((item) => {
-            const isActive = location.pathname === item.path || (item.path !== '/analytics-portal' && location.pathname.startsWith(item.path));
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 p-3 rounded-r-lg transition-all duration-200 text-sm ${
-                  isActive ? activeClass : inactiveClass
-                }`}
-              >
-                {item.icon}
-                {item.label === 'Network' ? 'Network Analysis' : item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t border-slate-700/50">
-          <div className="bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-700">
-            <div className="text-xs font-bold text-slate-300">Auth User:</div>
-            <div className="text-sm font-semibold truncate text-ksp-gold">{user?.email}</div>
+      <div className="flex flex-row flex-1">
+        {/* Desktop Sidebar Navigation (Hidden on < xl) */}
+        <aside className={`
+          hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl transition-all duration-300
+        `}>
+          <div className="p-6 border-b border-slate-700/50">
+            <div className="text-xs font-bold text-ksp-gold uppercase tracking-widest mb-1 flex items-center gap-2">
+              <BarChart3 size={14} /> Analytics
+            </div>
+            <div className="text-xl font-black tracking-tight leading-tight uppercase">
+              {user?.stationName}
+            </div>
+            <div className="text-[10px] text-slate-400 font-semibold mt-1">
+              {user?.districtName}
+            </div>
           </div>
-        </div>
-      </aside>
 
-      {/* Main Content Area */}
-      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
-        <div className="hidden xl:block">
-          <Navbar />
-        </div>
+          <nav className="flex-grow p-4 space-y-1.5">
+            {menuItems.map((item) => {
+              const isActive = location.pathname === item.path || (item.path !== '/analytics-portal' && location.pathname.startsWith(item.path));
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-3 p-3 rounded-r-lg transition-all duration-200 text-sm ${
+                    isActive ? activeClass : inactiveClass
+                  }`}
+                >
+                  {item.icon}
+                  {item.label === 'Network' ? 'Network Analysis' : item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="p-4 border-t border-slate-700/50">
+            <div className="bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-700">
+              <div className="text-xs font-bold text-slate-300">Auth User:</div>
+              <div className="text-sm font-semibold truncate text-ksp-gold">{user?.email}</div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
         <main className={`flex-1 min-w-0 ${
           location.pathname.includes('/network') || location.pathname.includes('/map')
             ? 'p-0' 
