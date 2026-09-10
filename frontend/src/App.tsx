@@ -67,46 +67,62 @@ const App: React.FC = () => {
     document.cookie = cookieReset + ' domain=' + hostname + ';';
     document.cookie = cookieReset + ' domain=.' + hostname + ';';
 
-    // Nuclear Google Translate UI suppression via MutationObserver
+    // Google Translate UI suppression — targeted + debounced so it never blocks React rendering
     function suppressAllGoogleTranslateUI() {
       const HIDE_SELECTORS = [
         '.goog-te-banner-frame',
-        '.goog-te-banner-frame.skiptranslate',
         '.goog-tooltip',
-        '.goog-tooltip.skiptranslate',
         '.goog-te-balloon-frame',
         '.goog-te-spinner-pos',
         '.goog-te-spinner',
-        '.goog-te-spinner-animation',
         '.VIpgJd-ZVi9od-aZ2wEe-wOHMyf',
-        '.goog-logo-link',
         '#goog-gt-tt',
         'iframe.skiptranslate',
         'div.skiptranslate',
       ];
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
       const enforce = () => {
-        HIDE_SELECTORS.forEach(sel => {
-          document.querySelectorAll(sel).forEach(el => {
-            (el as HTMLElement).style.setProperty('display', 'none', 'important');
-            (el as HTMLElement).style.setProperty('visibility', 'hidden', 'important');
-            (el as HTMLElement).style.setProperty('height', '0', 'important');
-            (el as HTMLElement).style.setProperty('width', '0', 'important');
-            (el as HTMLElement).style.setProperty('opacity', '0', 'important');
-            (el as HTMLElement).style.setProperty('pointer-events', 'none', 'important');
+        // Debounce: coalesce rapid-fire mutations into a single run
+        if (timer) return;
+        timer = setTimeout(() => {
+          timer = null;
+          HIDE_SELECTORS.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+              (el as HTMLElement).style.setProperty('display', 'none', 'important');
+              (el as HTMLElement).style.setProperty('visibility', 'hidden', 'important');
+              (el as HTMLElement).style.setProperty('height', '0', 'important');
+              (el as HTMLElement).style.setProperty('pointer-events', 'none', 'important');
+            });
           });
-        });
-        document.body.style.setProperty('top', '0px', 'important');
-        document.body.style.setProperty('position', 'static', 'important');
+          // Fix Google's body top-offset injection
+          if (document.body.style.top && document.body.style.top !== '0px') {
+            document.body.style.setProperty('top', '0px', 'important');
+            document.body.style.setProperty('position', 'static', 'important');
+          }
+        }, 50);
       };
+
       enforce();
-      const observer = new MutationObserver(enforce);
-      observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['style', 'class'],
+
+      // Only watch body's DIRECT children (Google injects banner/iframe there)
+      // and body's own style attribute (for the top: Npx offset hack)
+      // NOT subtree — avoids firing on every React DOM update
+      const bodyObserver = new MutationObserver(enforce);
+      bodyObserver.observe(document.body, {
+        childList: true,          // catch Google injecting iframe/div into body
+        attributes: true,         // catch Google setting body.style.top
+        attributeFilter: ['style'],
+        subtree: false,           // CRITICAL: do NOT watch all descendants
       });
-      // Do NOT disconnect — stay active for the lifetime of the app
+
+      // Separately watch <html> class changes (translated-ltr / translated-rtl)
+      const htmlObserver = new MutationObserver(enforce);
+      htmlObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style'],
+        subtree: false,
+      });
     }
 
     suppressAllGoogleTranslateUI();
