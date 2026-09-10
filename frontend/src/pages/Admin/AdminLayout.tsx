@@ -70,7 +70,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
 
   return (
-    <div className="flex-grow flex flex-col xl:flex-row min-h-0 min-w-0 bg-slate-50 relative select-none">
+    <div className="flex flex-col xl:flex-row h-full min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -82,7 +82,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        hidden xl:flex w-64 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl shrink-0 z-40 transition-all duration-300 sticky top-0 h-screen overflow-y-auto
+        hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl z-40 transition-all duration-300 h-full overflow-y-auto
       `}>
         {/* Console title branding */}
         <div className="p-6 border-b border-white/5 select-none">
@@ -118,17 +118,14 @@ export const AdminLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      {/* 
-        We add pb-20 on xl:pb-0 so content isn't covered by the bottom nav. 
-        Exceptions are network and assistant which need full height, they will handle their own inner spacing.
-      */}
-      <main className={`flex-grow flex flex-col max-w-full min-h-0 min-w-0 ${
-        (location.pathname.includes('/network') || location.pathname.includes('/assistant')) 
-          ? 'p-0 pb-0' 
+      {/* Main Content Area — the ONLY vertical scroll container on desktop */}
+      {/* pb-24 on mobile ensures content isn't obscured by the bottom nav */}
+      <main className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden ${
+        (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
+          ? 'flex flex-col p-0'
           : 'px-4 pt-4 pb-24 xl:p-8'
       }`}>
-        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'flex-grow flex flex-col w-full h-full min-h-0 min-w-0' : 'container mx-auto min-w-0'}>
+        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'flex flex-col flex-1 w-full h-full min-h-0 min-w-0' : 'container mx-auto min-w-0'}>
           <Outlet />
         </div>
       </main>

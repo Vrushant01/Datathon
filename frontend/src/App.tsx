@@ -67,33 +67,33 @@ const App: React.FC = () => {
   return (
     <AuthProvider key={syncKey}>
       <Router>
-        <div className="flex flex-col min-h-screen bg-slate-50 min-w-0">
+        <div className="flex flex-col h-full overflow-hidden bg-slate-50">
           <Navbar />
           
-          <div className="flex-grow flex flex-col min-h-0 min-w-0">
+          <div className="flex-1 min-h-0 h-full overflow-hidden">
             <Routes>
               {/* Public Portal Routes */}
               <Route path="/" element={
-                <div className="flex-grow flex flex-col">
-                  <div className="flex-grow"><Home /></div>
+                <div className="h-full overflow-y-auto">
+                  <div className="min-h-full"><Home /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/login" element={
-                <div className="flex-grow flex flex-col">
-                  <div className="flex-grow"><OfficerLogin /></div>
+                <div className="h-full overflow-y-auto">
+                  <div className="min-h-full"><OfficerLogin /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/analytics-login" element={
-                <div className="flex-grow flex flex-col">
-                  <div className="flex-grow"><AnalyticsLogin /></div>
+                <div className="h-full overflow-y-auto">
+                  <div className="min-h-full"><AnalyticsLogin /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/admin" element={
-                <div className="flex-grow flex flex-col">
-                  <div className="flex-grow"><AdminLogin /></div>
+                <div className="h-full overflow-y-auto">
+                  <div className="min-h-full"><AdminLogin /></div>
                   <Footer />
                 </div>
               } />
