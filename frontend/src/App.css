@@ -1,5 +1,10 @@
 /* Custom Tailwind utilities or overrides */
 
+/* Prevent Google Translate from translating our custom language toggle labels */
+.notranslate {
+  -webkit-user-select: none;
+}
+
 /* Nuclear Google Translate UI suppression */
 .goog-te-banner-frame,
 .goog-te-banner-frame.skiptranslate,

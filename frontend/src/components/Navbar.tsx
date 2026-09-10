@@ -65,9 +65,10 @@ export const Navbar: React.FC = () => {
     setLang('en');
     logout();
 
-    // Use React navigate (not hard redirect) — googtrans cookie is cleared in
-    // index.html on every page load, so no hard reload needed to reset language
-    navigate('/');
+    // Hard redirect so index.html re-executes its cookie-clearing script
+    // before Google Translate bootstraps — this is the ONLY reliable way
+    // to guarantee the next page load starts in English in SPA mode
+    window.location.href = '/';
   };
 
   const getUnreadNotifications = () => {
@@ -156,13 +157,15 @@ Data Source: Live CloudScale Database`);
             <span>|</span>
             <span 
               onClick={() => handleLangChange('en')} 
-              className={`cursor-pointer transition text-[10px] ${lang === 'en' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
+              translate="no"
+              className={`notranslate cursor-pointer transition text-[10px] ${lang === 'en' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
             >
               ENGLISH
             </span>
             <span 
               onClick={() => handleLangChange('kn')} 
-              className={`cursor-pointer transition text-[10px] ${lang === 'kn' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
+              translate="no"
+              className={`notranslate cursor-pointer transition text-[10px] ${lang === 'kn' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
             >
               ಕನ್ನಡ
             </span>
