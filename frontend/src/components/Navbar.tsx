@@ -15,10 +15,12 @@ export const Navbar: React.FC = () => {
 
   const handleLangChange = (newLang: string) => {
     setLang(newLang);
-    console.log(`Language changed to ${newLang} (App localization required)`);
+    console.log(`[Translate] handleLangChange triggered for: ${newLang}`);
     
     // Wire Google Translate
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
+    console.log(`[Translate] .goog-te-combo element found:`, !!select);
+    
     if (select) {
       if (newLang === 'en') {
         select.value = 'en'; 
@@ -28,7 +30,11 @@ export const Navbar: React.FC = () => {
       } else {
         select.value = newLang;
       }
-      select.dispatchEvent(new Event('change'));
+      console.log(`[Translate] Set select.value to: "${select.value}"`);
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      console.log(`[Translate] Dispatched change event with bubbles: true`);
+    } else {
+      console.warn(`[Translate] Could not find .goog-te-combo. Is Google Translate loaded?`);
     }
   };
 
