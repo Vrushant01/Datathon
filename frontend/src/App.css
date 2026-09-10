@@ -1,17 +1,35 @@
 /* Custom Tailwind utilities or overrides */
 
-/* Google Translate overrides */
+/* Nuclear Google Translate UI suppression */
 .goog-te-banner-frame,
-.goog-te-banner-frame.skiptranslate {
+.goog-te-banner-frame.skiptranslate,
+.goog-tooltip,
+.goog-tooltip:hover,
+.goog-tooltip.skiptranslate,
+.goog-text-highlight,
+.goog-te-balloon-frame,
+.goog-te-menu-value,
+#goog-gt-tt,
+.goog-te-spinner-pos,
+iframe.skiptranslate {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 body {
   top: 0px !important;
   position: static !important;
 }
-.goog-tooltip { display: none !important; }
-.goog-tooltip:hover { display: none !important; }
-.goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+html.translated-ltr body,
+html.translated-rtl body {
+  top: 0px !important;
+}
 

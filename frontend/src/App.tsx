@@ -59,26 +59,44 @@ const App: React.FC = () => {
       setDataLoaded(true);
     }
 
-    // Google Translate banner suppression observer
-    function suppressGoogleTranslateBanner() {
-      const hideBanner = () => {
-        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
-          || document.querySelector('iframe.skiptranslate') as HTMLElement;
-        if (frame) {
-          frame.style.setProperty('display', 'none', 'important');
-          frame.style.setProperty('visibility', 'hidden', 'important');
-          frame.style.setProperty('height', '0', 'important');
-        }
+    // Nuclear Google Translate UI suppression via MutationObserver
+    function suppressAllGoogleTranslateUI() {
+      const HIDE_SELECTORS = [
+        '.goog-te-banner-frame',
+        '.goog-te-banner-frame.skiptranslate',
+        '.goog-tooltip',
+        '.goog-tooltip.skiptranslate',
+        '.goog-te-balloon-frame',
+        '#goog-gt-tt',
+        '.goog-te-spinner-pos',
+        'iframe.skiptranslate',
+      ];
+      const enforce = () => {
+        HIDE_SELECTORS.forEach(sel => {
+          document.querySelectorAll(sel).forEach(el => {
+            (el as HTMLElement).style.setProperty('display', 'none', 'important');
+            (el as HTMLElement).style.setProperty('visibility', 'hidden', 'important');
+            (el as HTMLElement).style.setProperty('height', '0', 'important');
+            (el as HTMLElement).style.setProperty('width', '0', 'important');
+            (el as HTMLElement).style.setProperty('opacity', '0', 'important');
+            (el as HTMLElement).style.setProperty('pointer-events', 'none', 'important');
+          });
+        });
         document.body.style.setProperty('top', '0px', 'important');
         document.body.style.setProperty('position', 'static', 'important');
       };
-
-      hideBanner();
-      const observer = new MutationObserver(hideBanner);
-      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      enforce();
+      const observer = new MutationObserver(enforce);
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+      });
+      // Do NOT disconnect — stay active for the lifetime of the app
     }
-    
-    suppressGoogleTranslateBanner();
+
+    suppressAllGoogleTranslateUI();
 
     return () => {
       // Cleanup if necessary
