@@ -47,28 +47,27 @@ export const Navbar: React.FC = () => {
 
 
   const handleLogout = () => {
-    // Reset language on logout — '' restores original, never translate-to-English
+    // 1. Erase the googtrans cookie that Google Translate uses to persist language
+    //    across page navigations — must clear for all path+domain combinations
+    const hostname = window.location.hostname;
+    const cookieReset = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = cookieReset;
+    document.cookie = cookieReset + ' domain=' + hostname + ';';
+    document.cookie = cookieReset + ' domain=.' + hostname + ';';
+
+    // 2. Also attempt to reset via the combo select if it's available
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
     if (select) {
       select.value = '';
       select.dispatchEvent(new Event('change', { bubbles: true }));
-      const hideBanner = () => {
-        const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
-          || document.querySelector('iframe.skiptranslate') as HTMLElement;
-        if (frame) {
-          frame.style.setProperty('display', 'none', 'important');
-          frame.style.setProperty('visibility', 'hidden', 'important');
-          frame.style.setProperty('height', '0', 'important');
-        }
-        document.body.style.setProperty('top', '0px', 'important');
-        document.body.style.setProperty('position', 'static', 'important');
-      };
-      hideBanner();
     }
-    setLang('en');
 
+    setLang('en');
     logout();
-    navigate('/');
+
+    // 3. Hard redirect (not React navigate) so the page cold-starts without
+    //    any residual Google Translate state — this guarantees English on reload
+    window.location.href = '/';
   };
 
   const getUnreadNotifications = () => {
