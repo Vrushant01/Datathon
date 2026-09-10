@@ -16,6 +16,20 @@ export const Navbar: React.FC = () => {
   const handleLangChange = (newLang: string) => {
     setLang(newLang);
     console.log(`Language changed to ${newLang} (App localization required)`);
+    
+    // Wire Google Translate
+    const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
+    if (select) {
+      if (newLang === 'en') {
+        select.value = 'en'; 
+        if (select.value !== 'en') {
+          select.value = ''; // fallback for restoring original language
+        }
+      } else {
+        select.value = newLang;
+      }
+      select.dispatchEvent(new Event('change'));
+    }
   };
 
 
