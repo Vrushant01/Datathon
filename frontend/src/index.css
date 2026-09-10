@@ -119,16 +119,6 @@
   border: 1px solid rgba(212, 175, 55, 0.15);
 }
 
-/* Hide Google Translate top bar and prevent body from pushing down */
-.goog-te-banner-frame.skiptranslate,
-iframe.VIpgJd-ZVi9od-xl07Ob-OEVmcd,
-iframe.goog-te-banner-frame {
-  display: none !important;
-}
-body {
-  top: 0px !important;
-}
-
 /* Stitch Specific Styles for Criminal Network */
 @keyframes pulse-emerald {
     0% { transform: scale(1); opacity: 1; }

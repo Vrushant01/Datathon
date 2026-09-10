@@ -11,16 +11,7 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { status: dbConnectionStatus } = useDbConnection();
-  const [lang, setLang] = React.useState('en');
 
-  const handleLangChange = (newLang: string) => {
-    setLang(newLang);
-    const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
-    if (combo) {
-      combo.value = newLang;
-      combo.dispatchEvent(new Event('change'));
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -110,19 +101,7 @@ Data Source: Live CloudScale Database`);
             <span onClick={() => adjustFontSize('up')} className="hover:text-white hover:scale-105 cursor-pointer transition font-bold" title="Increase text size">A+</span>
             <span onClick={() => adjustFontSize('reset')} className="hover:text-white hover:scale-105 cursor-pointer transition font-bold" title="Reset text size">A</span>
             <span onClick={() => adjustFontSize('down')} className="hover:text-white hover:scale-105 cursor-pointer transition font-bold" title="Decrease text size">A-</span>
-            <span>|</span>
-            <span 
-              onClick={() => handleLangChange('en')} 
-              className={`notranslate cursor-pointer transition text-[10px] ${lang === 'en' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              ENGLISH
-            </span>
-            <span 
-              onClick={() => handleLangChange('kn')} 
-              className={`notranslate cursor-pointer transition text-[10px] ${lang === 'kn' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              ಕನ್ನಡ
-            </span>
+
           </div>
         </div>
       )}
