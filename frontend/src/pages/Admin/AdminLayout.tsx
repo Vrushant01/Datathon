@@ -99,7 +99,7 @@ export const AdminLayout: React.FC = () => {
           </div>
 
           {/* Sidebar Nav Links */}
-          <nav className="p-4 flex-grow space-y-1.5">
+          <nav className="p-4 pb-8 flex-grow space-y-1.5">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -126,7 +126,7 @@ export const AdminLayout: React.FC = () => {
 
         {/* Main Content Area */}
         <main 
-          className={`flex-1 min-w-0 ${
+          className={`flex-1 min-w-0 max-h-[calc(100vh-104px)] overflow-y-auto ${
             (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
               ? 'p-0'
               : 'px-4 pt-4 pb-24 xl:p-8'

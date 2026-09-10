@@ -75,7 +75,7 @@ export const AnalyticsLayout: React.FC = () => {
             </div>
           </div>
 
-          <nav className="flex-grow p-4 space-y-1.5">
+          <nav className="flex-grow p-4 pb-8 space-y-1.5">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path || (item.path !== '/analytics-portal' && location.pathname.startsWith(item.path));
               return (
@@ -102,7 +102,7 @@ export const AnalyticsLayout: React.FC = () => {
         </aside>
 
         {/* Main Content Area */}
-        <main className={`flex-1 min-w-0 ${
+        <main className={`flex-1 min-w-0 max-h-[calc(100vh-104px)] overflow-y-auto ${
           location.pathname.includes('/network') || location.pathname.includes('/map')
             ? 'p-0' 
             : 'px-4 pt-4 pb-24 xl:p-8'
