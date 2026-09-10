@@ -60,10 +60,10 @@ export const OfficerLayout: React.FC = () => {
         <Navbar />
       </div>
 
-      <div className="flex flex-row flex-1">
+      <div className="flex flex-row flex-1 items-stretch">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside className={`
-          hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl transition-all duration-300
+          hidden xl:flex w-64 flex-shrink-0 self-stretch min-h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl transition-all duration-300
         `}>
           {/* Officer summary info */}
           <div className="p-6 border-b border-white/5 select-none text-center bg-ksp-navy-dark/40">

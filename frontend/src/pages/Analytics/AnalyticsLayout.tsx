@@ -58,10 +58,10 @@ export const AnalyticsLayout: React.FC = () => {
         <Navbar />
       </div>
 
-      <div className="flex flex-row flex-1">
+      <div className="flex flex-row flex-1 items-stretch">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside className={`
-          hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl transition-all duration-300
+          hidden xl:flex w-64 flex-shrink-0 self-stretch min-h-full bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl transition-all duration-300
         `}>
           <div className="p-6 border-b border-slate-700/50">
             <div className="text-xs font-bold text-ksp-gold uppercase tracking-widest mb-1 flex items-center gap-2">
