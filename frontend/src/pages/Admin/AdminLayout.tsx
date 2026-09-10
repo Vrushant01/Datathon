@@ -85,7 +85,7 @@ export const AdminLayout: React.FC = () => {
         <Navbar />
       </div>
 
-      <div className="flex flex-row flex-1 items-stretch">
+      <div className="flex flex-row items-stretch">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside 
           className="hidden xl:flex w-64 flex-shrink-0 self-stretch min-h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl transition-all duration-300"
@@ -126,7 +126,7 @@ export const AdminLayout: React.FC = () => {
 
         {/* Main Content Area */}
         <main 
-          className={`flex-1 min-w-0 max-h-[calc(100vh-104px)] overflow-y-auto ${
+          className={`flex-1 min-w-0 ${
             (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
               ? 'p-0'
               : 'px-4 pt-4 pb-24 xl:p-8'
