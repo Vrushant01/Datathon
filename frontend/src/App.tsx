@@ -67,10 +67,10 @@ const App: React.FC = () => {
   return (
     <AuthProvider key={syncKey}>
       <Router>
-        <div className="flex flex-col min-h-screen bg-slate-50">
+        <div className="flex flex-col min-h-screen bg-slate-50 min-w-0">
           <Navbar />
           
-          <div className="flex-grow flex flex-col">
+          <div className="flex-grow flex flex-col min-h-0 min-w-0">
             <Routes>
               {/* Public Portal Routes */}
               <Route path="/" element={

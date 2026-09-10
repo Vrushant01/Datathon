@@ -123,7 +123,7 @@ export const AIAssistant: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col flex-grow h-full bg-white shadow-lg border-x border-slate-200 overflow-hidden relative pb-20 xl:pb-0">
+    <div className="flex flex-col flex-grow h-full bg-white shadow-lg border-x border-slate-200 overflow-hidden relative pb-20 xl:pb-0 min-h-0 min-w-0">
       {/* Header */}
       <div className="flex items-center px-6 py-4 bg-ksp-navy text-white">
         <Bot className="text-ksp-gold" size={24} />
@@ -134,16 +134,16 @@ export const AIAssistant: React.FC = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-grow overflow-y-auto p-6 bg-slate-50/50">
+      <div className="flex-grow overflow-y-auto p-6 bg-slate-50/50 min-h-0 min-w-0">
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex gap-4 mb-6 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={msg.id} className={`flex gap-4 mb-6 min-w-0 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
               <div className="w-8 h-8 rounded-full bg-ksp-gold/20 flex items-center justify-center shrink-0">
                 <Bot size={16} className="text-ksp-navy" />
               </div>
             )}
 
-            <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${
+            <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm min-w-0 break-words ${
               msg.role === 'user'
                 ? 'bg-ksp-navy text-white rounded-tr-none'
                 : 'bg-white border border-slate-200 rounded-tl-none text-slate-800'
@@ -250,8 +250,8 @@ export const AIAssistant: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-white border-t border-slate-200">
-        <div className="mb-4 flex flex-nowrap overflow-x-auto pb-2 gap-2 hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="p-4 bg-white border-t border-slate-200 min-w-0">
+        <div className="mb-4 flex flex-nowrap overflow-x-auto pb-2 gap-2 hide-scrollbar min-w-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {suggestedQuestions.map((q, idx) => (
             <button
               key={idx}

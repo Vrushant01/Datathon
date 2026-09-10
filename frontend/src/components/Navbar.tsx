@@ -66,8 +66,8 @@ Data Source: Live CloudScale Database`);
     <header className="w-full bg-ksp-navy text-white shadow-md border-b-4 border-ksp-gold select-none">
       {/* Top Banner - Official Government Branding */}
       {!isAuthOrLanding && (
-        <div className="bg-ksp-navy-dark text-xs px-4 py-1.5 flex justify-between items-center border-b border-white/10 text-slate-300 font-medium select-none">
-          <div className="flex items-center gap-4">
+        <div className="bg-ksp-navy-dark text-xs px-4 py-1.5 flex flex-wrap justify-between items-center border-b border-white/10 text-slate-300 font-medium select-none min-w-0 gap-y-1">
+          <div className="flex flex-wrap items-center gap-4 min-w-0">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               GOVERNMENT OF KARNATAKA • ಕರ್ನಾಟಕ ಸರ್ಕಾರ
@@ -75,7 +75,7 @@ Data Source: Live CloudScale Database`);
             <span className="hidden md:inline">|</span>
             <span className="hidden md:inline">OFFICIAL GIS & CRIME ANALYTICS PORTAL</span>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex flex-wrap gap-3 items-center min-w-0">
             <span 
               onClick={showDbDetails}
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider cursor-pointer transition select-none ${

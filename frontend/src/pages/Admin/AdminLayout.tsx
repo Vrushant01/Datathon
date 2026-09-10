@@ -70,7 +70,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
 
   return (
-    <div className="flex-grow flex flex-col xl:flex-row min-h-full bg-slate-50 relative select-none">
+    <div className="flex-grow flex flex-col xl:flex-row min-h-0 min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -123,12 +123,12 @@ export const AdminLayout: React.FC = () => {
         We add pb-20 on xl:pb-0 so content isn't covered by the bottom nav. 
         Exceptions are network and assistant which need full height, they will handle their own inner spacing.
       */}
-      <main className={`flex-grow flex flex-col max-w-full ${
+      <main className={`flex-grow flex flex-col max-w-full min-h-0 min-w-0 ${
         (location.pathname.includes('/network') || location.pathname.includes('/assistant')) 
           ? 'p-0 pb-0' 
           : 'px-4 pt-4 pb-24 xl:p-8'
       }`}>
-        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'flex-grow flex flex-col w-full h-full' : 'container mx-auto'}>
+        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'flex-grow flex flex-col w-full h-full min-h-0 min-w-0' : 'container mx-auto min-w-0'}>
           <Outlet />
         </div>
       </main>
