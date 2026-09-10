@@ -67,32 +67,34 @@ const App: React.FC = () => {
   return (
     <AuthProvider key={syncKey}>
       <Router>
-        <div className="flex flex-col min-h-screen bg-slate-50">
-          <Navbar />
+        <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+          <div className="sticky top-0 z-50 flex-shrink-0">
+            <Navbar />
+          </div>
           
-          <div className="flex-grow flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col relative">
             <Routes>
               {/* Public Portal Routes */}
               <Route path="/" element={
-                <div className="flex-grow flex flex-col">
+                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
                   <div className="flex-grow"><Home /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/login" element={
-                <div className="flex-grow flex flex-col">
+                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
                   <div className="flex-grow"><OfficerLogin /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/analytics-login" element={
-                <div className="flex-grow flex flex-col">
+                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
                   <div className="flex-grow"><AnalyticsLogin /></div>
                   <Footer />
                 </div>
               } />
               <Route path="/admin" element={
-                <div className="flex-grow flex flex-col">
+                <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
                   <div className="flex-grow"><AdminLogin /></div>
                   <Footer />
                 </div>

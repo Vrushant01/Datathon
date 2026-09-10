@@ -42,7 +42,7 @@ export const OfficerLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'Console';
 
   return (
-    <div className="flex-grow flex flex-col xl:flex-row min-h-full bg-slate-50 relative select-none">
+    <div className="h-full flex flex-col xl:flex-row min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -57,7 +57,7 @@ export const OfficerLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        hidden xl:flex w-64 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl shrink-0 z-40 transition-all duration-300 sticky top-0 h-screen overflow-y-auto
+        hidden xl:flex w-64 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl shrink-0 z-40 transition-all duration-300 h-full overflow-hidden
       `}>
         {/* Officer summary info */}
         <div className="p-6 border-b border-white/5 select-none text-center bg-ksp-navy-dark/40">
@@ -95,7 +95,7 @@ export const OfficerLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-grow flex flex-col max-w-full ${
+      <main className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden ${
         location.pathname.includes('/network') 
           ? 'p-0 pb-0' 
           : 'px-4 pt-4 pb-24 xl:p-8'

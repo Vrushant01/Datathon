@@ -11,20 +11,6 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(104); // Approx default header height
-
-  useEffect(() => {
-    const updateHeaderHeight = () => {
-      const header = document.querySelector('header');
-      if (header) {
-        setHeaderHeight(header.offsetHeight);
-      }
-    };
-    
-    updateHeaderHeight();
-    window.addEventListener('resize', updateHeaderHeight);
-    return () => window.removeEventListener('resize', updateHeaderHeight);
-  }, []);
 
   // Security route guard check
   if (role !== 'Admin') {
@@ -84,7 +70,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
 
   return (
-    <div className="min-w-0 bg-slate-50 relative select-none">
+    <div className="h-full flex flex-col xl:flex-row min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -96,8 +82,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside 
-        className="hidden xl:flex fixed left-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-hidden transition-all duration-300"
-        style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
+        className="hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-hidden transition-all duration-300 h-full"
       >
         {/* Console title branding */}
         <div className="p-6 border-b border-white/5 select-none">
@@ -133,15 +118,14 @@ export const AdminLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area — normal document scroll; ml-64 clears the fixed sidebar */}
+      {/* Main Content Area */}
       {/* pb-24 on mobile ensures content isn't obscured by the bottom nav */}
       <main 
-        className={`xl:ml-64 min-w-0 ${
+        className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden ${
           (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
             ? 'p-0'
             : 'px-4 pt-4 pb-24 xl:p-8'
         }`}
-        style={{ minHeight: `calc(100vh - ${headerHeight}px)` }}
       >
         <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full' : 'container mx-auto min-w-0'}>
           <Outlet />
