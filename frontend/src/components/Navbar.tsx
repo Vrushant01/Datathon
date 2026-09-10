@@ -15,24 +15,18 @@ export const Navbar: React.FC = () => {
 
   const handleLangChange = (newLang: string) => {
     setLang(newLang);
-    console.log(`[Translate] handleLangChange triggered for: ${newLang}`);
     
     // Wire Google Translate
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-    console.log(`[Translate] .goog-te-combo element found:`, !!select);
     
     if (select) {
       if (newLang === 'en') {
-        select.value = 'en'; 
-        if (select.value !== 'en') {
-          select.value = ''; // fallback for restoring original language
-        }
+        // '' = restore original — do NOT set 'en' which would trigger an "translate to English" pass
+        select.value = '';
       } else {
-        select.value = newLang;
+        select.value = newLang; // e.g. 'kn' for Kannada
       }
-      console.log(`[Translate] Set select.value to: "${select.value}"`);
       select.dispatchEvent(new Event('change', { bubbles: true }));
-      console.log(`[Translate] Dispatched change event with bubbles: true`);
       
       const hideBanner = () => {
         const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
@@ -53,13 +47,10 @@ export const Navbar: React.FC = () => {
 
 
   const handleLogout = () => {
-    // Reset language on logout
+    // Reset language on logout — '' restores original, never translate-to-English
     const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
     if (select) {
-      select.value = 'en';
-      if (select.value !== 'en') {
-        select.value = '';
-      }
+      select.value = '';
       select.dispatchEvent(new Event('change', { bubbles: true }));
       const hideBanner = () => {
         const frame = document.querySelector('.goog-te-banner-frame') as HTMLElement 
