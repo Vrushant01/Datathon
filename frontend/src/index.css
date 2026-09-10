@@ -70,10 +70,8 @@
   * {
     @apply border-ksp-navy/10;
   }
-  html, body, #root {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
+  html, body {
+    overflow-x: hidden;
   }
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased;

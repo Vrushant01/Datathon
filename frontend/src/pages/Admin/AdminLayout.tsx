@@ -70,7 +70,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
 
   return (
-    <div className="flex flex-col xl:flex-row h-full min-w-0 bg-slate-50 relative select-none">
+    <div className="flex flex-col xl:flex-row xl:items-start xl:min-h-screen min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -82,7 +82,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl z-40 transition-all duration-300 h-full overflow-y-auto
+        hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl z-40 transition-all duration-300 sticky top-0 h-screen overflow-hidden
       `}>
         {/* Console title branding */}
         <div className="p-6 border-b border-white/5 select-none">
@@ -118,14 +118,14 @@ export const AdminLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area — the ONLY vertical scroll container on desktop */}
+      {/* Main Content Area — participates in normal document scroll */}
       {/* pb-24 on mobile ensures content isn't obscured by the bottom nav */}
-      <main className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden ${
+      <main className={`flex-1 min-w-0 ${
         (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
-          ? 'flex flex-col p-0'
+          ? 'p-0'
           : 'px-4 pt-4 pb-24 xl:p-8'
       }`}>
-        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'flex flex-col flex-1 w-full h-full min-h-0 min-w-0' : 'container mx-auto min-w-0'}>
+        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full' : 'container mx-auto min-w-0'}>
           <Outlet />
         </div>
       </main>
