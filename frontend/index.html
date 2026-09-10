@@ -16,6 +16,15 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <div id="google_translate_element" style="display:none;"></div>
+    <!-- Clear any stale googtrans cookie BEFORE Google Translate loads so it never auto-applies Kannada -->
+    <script>
+      (function() {
+        var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'googtrans=; ' + exp;
+        document.cookie = 'googtrans=; ' + exp + ' domain=' + location.hostname + ';';
+        document.cookie = 'googtrans=; ' + exp + ' domain=.' + location.hostname + ';';
+      })();
+    </script>
     <script type="text/javascript">
       function googleTranslateElementInit() {
         new google.translate.TranslateElement({

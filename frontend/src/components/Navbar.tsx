@@ -65,9 +65,9 @@ export const Navbar: React.FC = () => {
     setLang('en');
     logout();
 
-    // 3. Hard redirect (not React navigate) so the page cold-starts without
-    //    any residual Google Translate state — this guarantees English on reload
-    window.location.href = '/';
+    // Use React navigate (not hard redirect) — googtrans cookie is cleared in
+    // index.html on every page load, so no hard reload needed to reset language
+    navigate('/');
   };
 
   const getUnreadNotifications = () => {
