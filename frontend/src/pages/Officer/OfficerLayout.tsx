@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Navbar } from '../../components/Navbar';
 import { 
   FileText, Bell, LayoutDashboard, Menu, X, ShieldAlert, Share2 
 } from 'lucide-react';
@@ -10,6 +9,20 @@ export const OfficerLayout: React.FC = () => {
   const { user, role, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [headerHeight, setHeaderHeight] = useState(104);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const header = document.querySelector('header');
+      if (header) {
+        setHeaderHeight(header.offsetHeight);
+      }
+    };
+    
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, []);
 
   // Security route guard check
   if (role !== 'Officer') {
@@ -58,8 +71,8 @@ export const OfficerLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl h-screen transition-all duration-300
-      `}>
+        hidden xl:flex fixed left-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-y-auto transition-all duration-300
+      `} style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}>
         {/* Officer summary info */}
         <div className="p-6 border-b border-white/5 select-none text-center bg-ksp-navy-dark/40">
           <div className="w-12 h-12 rounded-full bg-ksp-gold/15 text-ksp-gold border border-ksp-gold/30 flex items-center justify-center mx-auto mb-3 text-lg font-bold">
@@ -96,10 +109,10 @@ export const OfficerLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
-        <div className="hidden xl:block">
-          <Navbar />
-        </div>
+      <div 
+        className="xl:ml-64 flex flex-col overflow-y-auto overflow-x-hidden"
+        style={{ marginTop: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
+      >
         <main className={`flex-1 min-w-0 ${
           location.pathname.includes('/network') 
             ? 'p-0' 

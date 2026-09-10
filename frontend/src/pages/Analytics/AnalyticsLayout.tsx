@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Navbar } from '../../components/Navbar';
 import { 
   LayoutDashboard, Users, MapPin, FileText, Network, BarChart3
 } from 'lucide-react';
@@ -10,6 +9,20 @@ export const AnalyticsLayout: React.FC = () => {
   const { user, role } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [headerHeight, setHeaderHeight] = useState(104);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const header = document.querySelector('header');
+      if (header) {
+        setHeaderHeight(header.offsetHeight);
+      }
+    };
+    
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, []);
 
   // Security route guard check
   if (role !== 'Analytics') {
@@ -56,8 +69,8 @@ export const AnalyticsLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl h-screen transition-all duration-300
-      `}>
+        hidden xl:flex fixed left-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl overflow-y-auto transition-all duration-300
+      `} style={{ top: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}>
         <div className="p-6 border-b border-slate-700/50">
           <div className="text-xs font-bold text-ksp-gold uppercase tracking-widest mb-1 flex items-center gap-2">
             <BarChart3 size={14} /> Analytics
@@ -97,10 +110,10 @@ export const AnalyticsLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
-        <div className="hidden xl:block">
-          <Navbar />
-        </div>
+      <div 
+        className="xl:ml-64 flex flex-col overflow-y-auto overflow-x-hidden"
+        style={{ marginTop: `${headerHeight}px`, height: `calc(100vh - ${headerHeight}px)` }}
+      >
         <main className={`flex-1 min-w-0 ${
           location.pathname.includes('/network') || location.pathname.includes('/map')
             ? 'p-0' 
