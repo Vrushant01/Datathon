@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Navbar } from '../../components/Navbar';
 import { 
   LayoutDashboard, Users, FileText, BarChart3, MapPin, 
   History, Menu, X, ShieldAlert, Share2, Building, Brain, Bot, Repeat, MoreHorizontal, Crosshair, Activity
@@ -70,7 +71,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
 
   return (
-    <div className="h-full flex flex-col xl:flex-row min-w-0 bg-slate-50 relative select-none">
+    <div className="min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -82,7 +83,7 @@ export const AdminLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside 
-        className="hidden xl:flex w-64 flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-hidden transition-all duration-300 h-full"
+        className="hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl h-screen transition-all duration-300"
       >
         {/* Console title branding */}
         <div className="p-6 border-b border-white/5 select-none">
@@ -120,17 +121,22 @@ export const AdminLayout: React.FC = () => {
 
       {/* Main Content Area */}
       {/* pb-24 on mobile ensures content isn't obscured by the bottom nav */}
-      <main 
-        className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden ${
-          (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
-            ? 'p-0'
-            : 'px-4 pt-4 pb-24 xl:p-8'
-        }`}
-      >
-        <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full' : 'container mx-auto min-w-0'}>
-          <Outlet />
+      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className="hidden xl:block">
+          <Navbar />
         </div>
-      </main>
+        <main 
+          className={`flex-1 min-w-0 ${
+            (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
+              ? 'p-0'
+              : 'px-4 pt-4 pb-24 xl:p-8'
+          }`}
+        >
+          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full' : 'container mx-auto min-w-0'}>
+            <Outlet />
+          </div>
+        </main>
+      </div>
 
       {/* Bottom Navigation Bar (Hidden on >= xl) */}
       <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.05)] z-50 px-2 pb-[env(safe-area-inset-bottom)]">

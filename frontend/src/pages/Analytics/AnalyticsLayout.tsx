@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Navbar } from '../../components/Navbar';
 import { 
   LayoutDashboard, Users, MapPin, FileText, Network, BarChart3
 } from 'lucide-react';
@@ -40,7 +41,7 @@ export const AnalyticsLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path || (i.path !== '/analytics-portal' && location.pathname.startsWith(i.path)))?.label || 'Analytics';
 
   return (
-    <div className="h-full flex flex-col xl:flex-row min-w-0 bg-slate-50 relative select-none">
+    <div className="min-w-0 bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -55,7 +56,7 @@ export const AnalyticsLayout: React.FC = () => {
 
       {/* Desktop Sidebar Navigation (Hidden on < xl) */}
       <aside className={`
-        hidden xl:flex w-64 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl shrink-0 z-40 transition-all duration-300 h-full overflow-hidden
+        hidden xl:flex fixed left-0 top-0 w-64 z-40 bg-ksp-navy text-white flex-col border-r border-slate-700 shadow-2xl h-screen transition-all duration-300
       `}>
         <div className="p-6 border-b border-slate-700/50">
           <div className="text-xs font-bold text-ksp-gold uppercase tracking-widest mb-1 flex items-center gap-2">
@@ -96,15 +97,20 @@ export const AnalyticsLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden ${
-        location.pathname.includes('/network') || location.pathname.includes('/map')
-          ? 'p-0 pb-0' 
-          : 'px-4 pt-4 pb-24 xl:p-8'
-      }`}>
-        <div className={location.pathname.includes('/network') || location.pathname.includes('/map') ? 'flex-grow flex flex-col w-full h-full' : 'container mx-auto'}>
-          <Outlet />
+      <div className="xl:ml-64 h-screen overflow-y-auto overflow-x-hidden flex flex-col">
+        <div className="hidden xl:block">
+          <Navbar />
         </div>
-      </main>
+        <main className={`flex-1 min-w-0 ${
+          location.pathname.includes('/network') || location.pathname.includes('/map')
+            ? 'p-0' 
+            : 'px-4 pt-4 pb-24 xl:p-8'
+        }`}>
+          <div className={location.pathname.includes('/network') || location.pathname.includes('/map') ? 'flex-grow flex flex-col w-full h-full' : 'container mx-auto min-w-0'}>
+            <Outlet />
+          </div>
+        </main>
+      </div>
 
       {/* Bottom Navigation Bar (Hidden on >= xl) */}
       <div className="xl:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.05)] z-50 px-2 pb-[env(safe-area-inset-bottom)]">
