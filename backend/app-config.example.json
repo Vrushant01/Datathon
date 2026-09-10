@@ -1,0 +1,39 @@
+{
+  "command": "node dist/app.js",
+  "buildPath": ".",
+  "stack": "node20",
+  "env_variables": {
+    "PORT": "5000",
+    "CHAT_HISTORY_LIMIT": "10",
+    "MAX_CONTEXT_DOCUMENTS": "8",
+    "ENABLE_STREAMING": "true",
+    "ENABLE_QUERY_CACHE": "true",
+    "CACHE_TTL": "300",
+    "MAX_REQUESTS_PER_MINUTE": "60",
+    "DB_PROVIDER": "cloudscale",
+    "JWT_SECRET": "replace_with_jwt_secret",
+    "REFRESH_TOKEN_SECRET": "replace_with_refresh_jwt_secret",
+    "QUICKML_ENDPOINT_URL": "replace_with_quickml_endpoint_url",
+    "QUICKML_ACCESS_TOKEN": "replace_with_quickml_access_token",
+    "QUICKML_REFRESH_TOKEN": "replace_with_quickml_refresh_token",
+    "QUICKML_ORG_ID": "replace_with_quickml_org_id",
+    "QUICKML_ENDPOINT_KEY": "replace_with_quickml_endpoint_key",
+    "QUICKML_LLM_ENDPOINT_URL": "replace_with_quickml_llm_endpoint_url",
+    "ZOHO_REFRESH_TOKEN": "replace_with_zoho_refresh_token",
+    "ZOHO_CLIENT_ID": "replace_with_zoho_client_id",
+    "ZOHO_CLIENT_SECRET": "replace_with_zoho_client_secret"
+  },
+  "memory": 512,
+  "scripts": {
+    "build": "npm install && npm run build"
+  },
+  "raw": {},
+  "cors": {
+    "origins": ["https://datathon-vnegltof.onslate.in"],
+    "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    "headers": ["Authorization", "Content-Type", "Origin", "Accept"],
+    "allowed_headers": ["Authorization", "Content-Type", "Origin", "Accept"],
+    "allowedHeaders": ["Authorization", "Content-Type", "Origin", "Accept"],
+    "credentials": true
+  }
+}
