@@ -25,10 +25,14 @@ export const AdminAnalytics: React.FC = () => {
   const [loadingGraph1, setLoadingGraph1] = React.useState<boolean>(false);
 
   React.useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     setLoadingGraph1(true);
-    authFetch(`${API_BASE_URL}/api/analytics/socio-economic?district=${selectedDistrict}&station=${selectedStation}`)
+    authFetch(`${API_BASE_URL}/api/analytics/socio-economic?district=${selectedDistrict}&station=${selectedStation}`, { signal })
       .then(res => res.json())
       .then(data => {
+         if (signal.aborted) return;
          setSocioEconomicData(data.data || []);
          setCorrelation(data.correlation || { urbanization: null, literacy: null });
          setTopCrimeAreas(data.topCrimeAreas || []);
@@ -36,9 +40,14 @@ export const AdminAnalytics: React.FC = () => {
          setLoadingGraph1(false);
       })
       .catch(e => {
+         if (signal.aborted) return;
          console.error(e);
          setLoadingGraph1(false);
       });
+      
+    return () => {
+      controller.abort();
+    };
   }, [selectedDistrict, selectedStation]);
 
   const cases = mockDb.getCases();

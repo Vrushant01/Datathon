@@ -45,85 +45,118 @@ function pearsonCorrelation(x: number[], y: number[]): number | null {
   return Number((numerator / denominator).toFixed(2));
 }
 
+// Cache for District Data
+interface DistrictCacheData {
+  dataPoints: any[];
+  correlation: any;
+  usesDemoData: boolean;
+  timestamp: number;
+}
+let globalDistrictCache: DistrictCacheData | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 router.get('/socio-economic', requireAuth, async (req, res) => {
+  const t0 = Date.now();
   try {
     const db = RepositoryFactory.getRepository(req);
-    const [districts, units, stationCounts] = await Promise.all([
-      db.getDistricts(),
-      db.getUnits(),
-      db.getStationCaseCounts()
-    ]);
-
-    const stationToDistrict = new Map<number, number>();
-    units.forEach(u => stationToDistrict.set(u.UnitID, u.DistrictID));
-
-    const firCounts = new Map<number, number>();
-    stationCounts.forEach(sc => {
-      const distId = stationToDistrict.get(sc.stationId);
-      if (distId) {
-        firCounts.set(distId, (firCounts.get(distId) || 0) + sc.count);
-      }
-    });
-
     const selectedDistrict = req.query.district ? req.query.district : 'ALL';
     const selectedStation = req.query.station ? req.query.station : 'ALL';
 
+    // 1. Load or Build District Cache
+    const now = Date.now();
+    if (!globalDistrictCache || (now - globalDistrictCache.timestamp > CACHE_TTL_MS)) {
+      const [districts, units, stationCounts] = await Promise.all([
+        db.getDistricts(),
+        db.getUnits(),
+        db.getStationCaseCounts()
+      ]);
+
+      const stationToDistrict = new Map<number, number>();
+      units.forEach(u => stationToDistrict.set(u.UnitID, u.DistrictID));
+
+      const firCounts = new Map<number, number>();
+      stationCounts.forEach(sc => {
+        const distId = stationToDistrict.get(sc.stationId);
+        if (distId) {
+          firCounts.set(distId, (firCounts.get(distId) || 0) + sc.count);
+        }
+      });
+
+      let cacheUsesDemoData = false;
+      const cacheDataPoints: any[] = [];
+      
+      districts.forEach(d => {
+        const firs = firCounts.get(d.DistrictID) || 0;
+        const refData = getSocioEconomicRefData(d.DistrictName);
+        if (!refData.isCensus) cacheUsesDemoData = true;
+
+        const urbanPercent = (refData.urbanPop / refData.pop) * 100;
+        const crimeRate = (firs / refData.pop) * 100000;
+        
+        cacheDataPoints.push({
+            DistrictID: d.DistrictID,
+            name: d.DistrictName, 
+            FIRCount: firs,
+            CrimeRate: Number(crimeRate.toFixed(2)),
+            Urbanization: Number(urbanPercent.toFixed(2)),
+            LiteracyRate: Number(refData.literacy.toFixed(2)),
+            Population: refData.pop,
+            isCensus: refData.isCensus
+        });
+      });
+
+      let corrUrban = null;
+      let corrLit = null;
+      if (cacheDataPoints.length > 1) {
+        const cr = cacheDataPoints.map(d => d.CrimeRate);
+        const ur = cacheDataPoints.map(d => d.Urbanization);
+        const lit = cacheDataPoints.map(d => d.LiteracyRate);
+        corrUrban = pearsonCorrelation(cr, ur);
+        corrLit = pearsonCorrelation(cr, lit);
+      }
+
+      globalDistrictCache = {
+        dataPoints: cacheDataPoints,
+        correlation: { urbanization: corrUrban, literacy: corrLit },
+        usesDemoData: cacheUsesDemoData,
+        timestamp: now
+      };
+    }
+
+    const cache = globalDistrictCache!;
+    let responseDataPoints = cache.dataPoints;
+    let responseCorrelation = cache.correlation;
     let targetDistrictId: number | 'ALL' = 'ALL';
+
     if (selectedStation !== 'ALL') {
-       targetDistrictId = stationToDistrict.get(Number(selectedStation)) || 'ALL';
+       // We need units to map station -> district
+       const units = await db.getUnits();
+       const u = units.find(unit => unit.UnitID === Number(selectedStation));
+       if (u) targetDistrictId = u.DistrictID;
     } else if (selectedDistrict !== 'ALL') {
        targetDistrictId = Number(selectedDistrict);
     }
 
-    let usesDemoData = false;
-    const dataPoints: any[] = [];
-
-    districts.forEach(d => {
-       if (targetDistrictId === 'ALL' || targetDistrictId === d.DistrictID) {
-           const firs = firCounts.get(d.DistrictID) || 0;
-           const refData = getSocioEconomicRefData(d.DistrictName);
-           if (!refData.isCensus) usesDemoData = true;
-
-           const urbanPercent = (refData.urbanPop / refData.pop) * 100;
-           const crimeRate = (firs / refData.pop) * 100000;
-           
-           dataPoints.push({
-               DistrictID: d.DistrictID,
-               name: d.DistrictName, 
-               FIRCount: firs,
-               CrimeRate: Number(crimeRate.toFixed(2)),
-               Urbanization: Number(urbanPercent.toFixed(2)),
-               LiteracyRate: Number(refData.literacy.toFixed(2)),
-               Population: refData.pop,
-               isCensus: refData.isCensus
-           });
-       }
-    });
-
-    let corrUrban = null;
-    let corrLit = null;
-
-    if (dataPoints.length > 1) {
-       const cr = dataPoints.map(d => d.CrimeRate);
-       const ur = dataPoints.map(d => d.Urbanization);
-       const lit = dataPoints.map(d => d.LiteracyRate);
-       corrUrban = pearsonCorrelation(cr, ur);
-       corrLit = pearsonCorrelation(cr, lit);
+    if (targetDistrictId !== 'ALL') {
+        responseDataPoints = cache.dataPoints.filter(d => d.DistrictID === targetDistrictId);
+        responseCorrelation = { urbanization: null, literacy: null };
     }
 
     // TOP CRIME AREAS LOGIC
     // We fetch cases for the specific target context and aggregate by CrimeSceneLocation
     let topCrimeAreas: { location: string, count: number }[] = [];
     if (targetDistrictId !== 'ALL' || selectedStation !== 'ALL') {
+        const units = await db.getUnits();
         const filter: any = {};
         if (selectedStation !== 'ALL') {
             filter.PoliceStationID = Number(selectedStation);
         } else {
-            // All stations in the target district
             const districtStations = units.filter(u => u.DistrictID === targetDistrictId).map(u => u.UnitID);
             filter.PoliceStationID = { $in: districtStations };
         }
         
+        // This is still a db.getCases call, but it's heavily filtered down to a single district/station.
+        // We do not do this when targetDistrictId === 'ALL'.
         const casesForAreas = await db.getCases(filter);
         const areaCounts = new Map<string, number>();
         casesForAreas.forEach(c => {
@@ -135,16 +168,16 @@ router.get('/socio-economic', requireAuth, async (req, res) => {
         topCrimeAreas = Array.from(areaCounts.entries())
             .map(([location, count]) => ({ location, count }))
             .sort((a, b) => b.count - a.count)
-            .slice(0, 5); // Top 5 areas
+            .slice(0, 5);
     }
 
+    const t1 = Date.now();
+    console.log(`[API] /api/analytics/socio-economic took ${t1 - t0}ms, response points: ${responseDataPoints.length}`);
+
     res.json({
-        data: dataPoints,
-        usesDemoData,
-        correlation: {
-           urbanization: corrUrban,
-           literacy: corrLit
-        },
+        data: responseDataPoints,
+        usesDemoData: cache.usesDemoData,
+        correlation: responseCorrelation,
         topCrimeAreas
     });
   } catch(e: any) {
