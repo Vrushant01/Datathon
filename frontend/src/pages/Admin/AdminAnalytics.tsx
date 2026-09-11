@@ -303,6 +303,11 @@ export const AdminAnalytics: React.FC = () => {
           <div className="flex justify-between items-center mb-4 border-b pb-2">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <TrendingUp size={14} className="text-ksp-blue" /> Socio-Economic Crime Correlation
+              {socioEconomicData.length > 10 && (
+                <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full ml-2 normal-case font-medium">
+                  Showing top 10 of {socioEconomicData.length} districts
+                </span>
+              )}
             </h3>
             {correlation.urbanization !== null && (
                <div className="flex gap-4 text-xs font-semibold text-slate-500">
@@ -316,7 +321,7 @@ export const AdminAnalytics: React.FC = () => {
               <div className="flex items-center justify-center h-full text-slate-400">Loading correlation data...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={socioEconomicData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <ComposedChart data={[...socioEconomicData].sort((a, b) => b.CrimeRate - a.CrimeRate).slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="name" />
                   <YAxis yAxisId="left" label={{ value: 'Crime Rate (per 100k)', angle: -90, position: 'insideLeft', offset: 10 }} />
