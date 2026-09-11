@@ -1,6 +1,8 @@
 import React from 'react';
 import { mockDb } from '../../../data/mockDb';
 import { useLanguage } from '../../context/LanguageContext';
+import { authFetch } from '../../utils/authFetch';
+import { API_BASE_URL } from '../../config/api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
@@ -15,6 +17,25 @@ export const AdminAnalytics: React.FC = () => {
   const { t } = useLanguage();
   const [selectedDistrict, setSelectedDistrict] = React.useState<number | 'ALL'>('ALL');
   const [selectedStation, setSelectedStation] = React.useState<number | 'ALL'>('ALL');
+
+  const [socioEconomicData, setSocioEconomicData] = React.useState<any[]>([]);
+  const [correlation, setCorrelation] = React.useState<any>({ urbanization: null, literacy: null });
+  const [loadingGraph1, setLoadingGraph1] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    setLoadingGraph1(true);
+    authFetch(`${API_BASE_URL}/api/analytics/socio-economic?district=${selectedDistrict}&station=${selectedStation}`)
+      .then(res => res.json())
+      .then(data => {
+         setSocioEconomicData(data.data || []);
+         setCorrelation(data.correlation || { urbanization: null, literacy: null });
+         setLoadingGraph1(false);
+      })
+      .catch(e => {
+         console.error(e);
+         setLoadingGraph1(false);
+      });
+  }, [selectedDistrict, selectedStation]);
 
   const cases = mockDb.getCases();
   const districts = mockDb.getDistricts();
@@ -105,38 +126,7 @@ export const AdminAnalytics: React.FC = () => {
     };
   }).filter(o => o.Assigned > 0).sort((a,b) => b.Assigned - a.Assigned).slice(0, 10);
 
-  // 6. Socio-Economic Correlation Data (Capability 3 of ER specification)
-  const socioEconomicData = React.useMemo(() => {
-    if (selectedDistrict === 'ALL') {
-      return [
-        { name: 'Bengaluru', CrimeRate: 4.8, LiteracyRate: 88, UnemploymentRate: 4.2, Urbanization: 95 },
-        { name: 'Mysuru', CrimeRate: 2.1, LiteracyRate: 82, UnemploymentRate: 5.1, Urbanization: 75 },
-        { name: 'Davanagere', CrimeRate: 3.2, LiteracyRate: 90, UnemploymentRate: 3.8, Urbanization: 80 },
-        { name: 'Belagavi', CrimeRate: 1.5, LiteracyRate: 74, UnemploymentRate: 6.2, Urbanization: 60 },
-        { name: 'Hubballi', CrimeRate: 2.8, LiteracyRate: 80, UnemploymentRate: 5.8, Urbanization: 70 },
-        { name: 'Udupi', CrimeRate: 1.2, LiteracyRate: 86, UnemploymentRate: 4.0, Urbanization: 50 }
-      ];
-    } else if (selectedStation === 'ALL') {
-      return displayStations.slice(0, 10).map((s, i) => {
-        const caseCount = filteredCases.filter(c => c.PoliceStationID === s.UnitID).length;
-        return {
-          name: String(s.UnitName || '').replace(' PS', ''),
-          CrimeRate: Number((caseCount / 20).toFixed(1)),
-          LiteracyRate: 75 + ((i * 3) % 15),
-          Urbanization: 60 + ((i * 7) % 35)
-        };
-      });
-    } else {
-      const s = stations.find(st => st.UnitID === selectedStation);
-      if (!s) return [];
-      return [{
-        name: String(s.UnitName || '').replace(' PS', ''),
-        CrimeRate: Number((totalCases / 20).toFixed(1)),
-        LiteracyRate: 85,
-        Urbanization: 90
-      }];
-    }
-  }, [selectedDistrict, selectedStation, displayStations, filteredCases, stations, totalCases]);
+  // 6. Socio-Economic Correlation Data (Now fetched from backend API)
 
   // 7. Risk Typology Forecast (Q3/Q4 2026 projection)
   const predictiveRiskData = React.useMemo(() => {
@@ -306,23 +296,56 @@ export const AdminAnalytics: React.FC = () => {
 
         {/* Chart 5: Socio-Economic Correlation composed chart (Matches Screenshot 3) */}
         <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5 border-b pb-2">
-            <TrendingUp size={14} className="text-ksp-blue" /> Socio-Economic Crime Correlation
-          </h3>
+          <div className="flex justify-between items-center mb-4 border-b pb-2">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <TrendingUp size={14} className="text-ksp-blue" /> Socio-Economic Crime Correlation
+            </h3>
+            {correlation.urbanization !== null && (
+               <div className="flex gap-4 text-xs font-semibold text-slate-500">
+                 <span>Pearson (Urban): <span className={correlation.urbanization > 0 ? 'text-red-500' : 'text-green-500'}>{correlation.urbanization}</span></span>
+                 <span>Pearson (Lit): <span className={correlation.literacy > 0 ? 'text-red-500' : 'text-green-500'}>{correlation.literacy}</span></span>
+               </div>
+            )}
+          </div>
           <div className="h-64 w-full text-xs">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={socioEconomicData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis yAxisId="left" label={{ value: 'Crime Density', angle: -90, position: 'insideLeft', offset: 10 }} />
-                <YAxis yAxisId="right" orientation="right" label={{ value: 'Index %', angle: 90, position: 'insideRight', offset: 10 }} />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="CrimeRate" name="Crime Index" fill="#00529B" radius={[4, 4, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="Urbanization" name="Urbanization %" stroke="#F97316" strokeWidth={2} />
-                <Line yAxisId="right" type="monotone" dataKey="LiteracyRate" name="Literacy %" stroke="#10B981" strokeWidth={2} />
-              </ComposedChart>
-            </ResponsiveContainer>
+            {loadingGraph1 ? (
+              <div className="flex items-center justify-center h-full text-slate-400">Loading correlation data...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={socioEconomicData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis yAxisId="left" label={{ value: 'Crime Rate (per 100k)', angle: -90, position: 'insideLeft', offset: 10 }} />
+                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Percentage (%)', angle: 90, position: 'insideRight', offset: 10 }} />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 border shadow-md rounded text-xs leading-5">
+                            <div className="font-bold border-b pb-1 mb-1">{data.name} {selectedStation !== 'ALL' ? '(District Level)' : ''}</div>
+                            <div>Population: {data.Population?.toLocaleString()}</div>
+                            <div>FIR Count: {data.FIRCount}</div>
+                            <div className="font-semibold mt-1" style={{ color: '#00529B' }}>Crime Rate: {data.CrimeRate} / 100k</div>
+                            <div className="font-semibold" style={{ color: '#F97316' }}>Urbanization: {data.Urbanization}%</div>
+                            <div className="font-semibold" style={{ color: '#10B981' }}>Literacy: {data.LiteracyRate}%</div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="CrimeRate" name="Crime Rate (per 100k)" fill="#00529B" radius={[4, 4, 0, 0]} />
+                  <Line yAxisId="right" type="monotone" dataKey="Urbanization" name="Urbanization %" stroke="#F97316" strokeWidth={2} />
+                  <Line yAxisId="right" type="monotone" dataKey="LiteracyRate" name="Literacy %" stroke="#10B981" strokeWidth={2} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="mt-3 text-[10px] text-slate-400 italic flex flex-col sm:flex-row justify-between gap-1">
+            <span>Socio-economic indicators: Census of India 2011. Crime data: available FIR records (2026).</span>
+            <span className="font-medium text-slate-500">Note: Correlation does not imply causation.</span>
           </div>
         </div>
 
