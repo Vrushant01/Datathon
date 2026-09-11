@@ -16,6 +16,16 @@ export const StationManagement: React.FC = () => {
   
   const districts = mockDb.getDistricts();
 
+  useEffect(() => {
+    const update = () => {
+      const u = mockDb.getUnits().filter(x => x.TypeID === 1);
+      if (u.length > 0) setStations(u);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Create modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', text: string } | null>(null);

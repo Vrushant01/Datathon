@@ -74,24 +74,24 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || t('sidebar.console_title');
 
   return (
-    <div className="flex flex-col min-h-[115vh] bg-slate-50 relative select-none">
+    <div className="app-shell bg-slate-50 select-none">
       
       {/* Tablet/Mobile Header - App Style */}
-      <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
+      <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow flex-shrink-0 border-b border-ksp-gold/20">
         <div className="flex flex-col">
           <span className="font-extrabold text-[10px] uppercase tracking-wide text-ksp-gold">KSP Console</span>
           <span className="font-semibold text-sm">{currentPageLabel}</span>
         </div>
       </div>
 
-      <div className="hidden xl:block sticky top-0 z-40 flex-shrink-0">
+      <header className="fixed-header hidden xl:block z-40">
         <Navbar />
-      </div>
+      </header>
 
-      <div className="flex flex-1 min-h-0 flex-row items-stretch relative">
+      <div className="dashboard-layout">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside 
-          className="hidden xl:flex w-[275px] flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl select-none z-30 sticky top-[111px] h-[calc(100vh-111px)] overflow-hidden"
+          className="fixed-sidebar hidden xl:flex bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl select-none z-30"
         >
           {/* Console title branding */}
           <div className="p-6 border-b border-white/5 select-none flex-shrink-0">
@@ -128,19 +128,17 @@ export const AdminLayout: React.FC = () => {
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col pr-1">
-          <main 
-            className={`flex-1 min-w-0 min-h-0 ${
-              (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
-                ? 'p-0 h-[calc(100vh-111px)] max-h-[calc(100vh-111px)] overflow-y-auto'
-                : 'px-4 pt-4 pb-24 xl:p-8 h-[calc(100vh-111px)] max-h-[calc(100vh-111px)] overflow-y-auto'
-            }`}
-          >
-            <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full' : 'container mx-auto min-w-0'}>
-              <Outlet />
-            </div>
-          </main>
-        </div>
+        <main 
+          className={`main-scroll-container ${
+            (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
+              ? 'p-0'
+              : 'px-4 pt-4 pb-24 xl:p-8'
+          }`}
+        >
+          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full' : 'container mx-auto min-w-0'}>
+            <Outlet />
+          </div>
+        </main>
       </div>
 
       {/* Bottom Navigation Bar (Hidden on >= xl) */}

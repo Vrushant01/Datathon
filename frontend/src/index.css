@@ -70,13 +70,54 @@
   * {
     @apply border-ksp-navy/10;
   }
-  html, body {
-    overflow-x: hidden;
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
   }
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
+}
+
+/* Fixed Dashboard App Shell Architecture */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fixed-header {
+  flex: 0 0 auto;
+  flex-shrink: 0;
+}
+
+.dashboard-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.fixed-sidebar {
+  flex: 0 0 275px;
+  width: 275px;
+  height: 100%;
+  overflow: hidden;
+}
+
+.main-scroll-container {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Custom scrollbars */
