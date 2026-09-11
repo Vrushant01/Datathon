@@ -46,7 +46,7 @@ export const OfficerLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'Console';
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 relative select-none">
+    <div className="flex flex-col min-h-screen xl:h-screen xl:overflow-hidden bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -59,17 +59,17 @@ export const OfficerLayout: React.FC = () => {
         </div>
       </div>
 
-      <div className="hidden xl:block">
+      <div className="hidden xl:block flex-shrink-0 z-40">
         <Navbar />
       </div>
 
-      <div className="flex flex-row items-stretch">
+      <div className="flex flex-1 min-h-0 relative xl:overflow-hidden">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside className={`
-          hidden xl:flex w-64 flex-shrink-0 self-stretch min-h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl transition-all duration-300
+          hidden xl:flex w-[275px] flex-shrink-0 h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-y-auto select-none z-30
         `}>
           {/* Officer summary info */}
-          <div className="p-6 border-b border-white/5 select-none text-center bg-ksp-navy-dark/40">
+          <div className="p-6 border-b border-white/5 select-none text-center bg-ksp-navy-dark/40 flex-shrink-0">
             <div className="w-12 h-12 rounded-full bg-ksp-gold/15 text-ksp-gold border border-ksp-gold/30 flex items-center justify-center mx-auto mb-3 text-lg font-bold">
               {user?.firstName?.charAt(0)}
             </div>
@@ -84,7 +84,7 @@ export const OfficerLayout: React.FC = () => {
               const isActive = location.pathname === item.path;
               return (
                 <Link 
-                  key={item.label}
+                  key={item.path}
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
                     isActive ? activeClass : inactiveClass
@@ -98,18 +98,18 @@ export const OfficerLayout: React.FC = () => {
           </nav>
 
           {/* Footer info in sidebar */}
-          <div className="p-4 border-t border-white/5 text-[9px] text-slate-400 select-none text-center italic">
+          <div className="p-4 border-t border-white/5 text-[9px] text-slate-400 select-none text-center italic flex-shrink-0">
             "ಸದಾ ತತ್ಪರ" (Always Alert)
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <main className={`flex-1 min-w-0 ${
+        <main className={`flex-1 min-w-0 h-full xl:overflow-y-auto ${
           location.pathname.includes('/network') 
             ? 'p-0' 
             : 'px-4 pt-4 pb-24 xl:p-8'
         }`}>
-          <div className={location.pathname.includes('/network') ? 'flex-grow flex flex-col w-full' : 'container mx-auto min-w-0'}>
+          <div className={location.pathname.includes('/network') ? 'flex-grow flex flex-col w-full h-full' : 'container mx-auto min-w-0'}>
             <Outlet />
           </div>
         </main>

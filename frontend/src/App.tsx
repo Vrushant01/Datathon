@@ -106,17 +106,20 @@ const App: React.FC = () => {
               <Route path="/admin-portal" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="intelligence" element={<IntelligenceCenter />} />
+                <Route path="intel" element={<Navigate to="/admin-portal/intelligence" replace />} />
                 <Route path="officers" element={<OfficerManagement />} />
                 <Route path="stations" element={<StationManagement />} />
                 <Route path="firs" element={<FIRManagement />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="gis" element={<AdminGISMap />} />
+                <Route path="maps" element={<Navigate to="/admin-portal/gis" replace />} />
                 <Route path="network" element={<CriminalNetwork />} />
                 <Route path="station-risk" element={<StationRisk />} />
                 <Route path="repeated-offenders" element={<RepeatedOffenders />} />
                 <Route path="assistant" element={<AIAssistant />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="audit" element={<AuditLogs />} />
+                <Route path="audit-logs" element={<Navigate to="/admin-portal/audit" replace />} />
               </Route>
 
               {/* Officer Portal Guarded Routes */}

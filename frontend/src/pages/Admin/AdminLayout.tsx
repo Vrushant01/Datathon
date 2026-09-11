@@ -74,7 +74,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || t('sidebar.console_title');
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 relative select-none">
+    <div className="flex flex-col min-h-screen xl:h-screen xl:overflow-hidden bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -84,17 +84,17 @@ export const AdminLayout: React.FC = () => {
         </div>
       </div>
 
-      <div className="hidden xl:block">
+      <div className="hidden xl:block flex-shrink-0 z-40">
         <Navbar />
       </div>
 
-      <div className="flex flex-row items-stretch">
+      <div className="flex flex-1 min-h-0 relative xl:overflow-hidden">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside 
-          className="hidden xl:flex w-64 flex-shrink-0 self-stretch min-h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl transition-all duration-300"
+          className="hidden xl:flex w-[275px] flex-shrink-0 h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-y-auto select-none z-30"
         >
           {/* Console title branding */}
-          <div className="p-6 border-b border-white/5 select-none">
+          <div className="p-6 border-b border-white/5 select-none flex-shrink-0">
             <span className="text-[10px] uppercase text-ksp-gold font-bold tracking-widest block mb-1">{t('sidebar.state_admin')}</span>
             <span className="text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
               {t('sidebar.console_title')}
@@ -121,7 +121,7 @@ export const AdminLayout: React.FC = () => {
           </nav>
 
           {/* Footer info in sidebar */}
-          <div className="p-4 border-t border-white/5 text-[10px] text-slate-400 select-none">
+          <div className="p-4 border-t border-white/5 text-[10px] text-slate-400 select-none flex-shrink-0">
             <p className="m-0 font-bold uppercase tracking-wider text-slate-500">{t('sidebar.security_clearance')}</p>
             <p className="m-0 mt-0.5 text-slate-300 font-medium">{t('sidebar.level_1_admin')}</p>
           </div>
@@ -129,13 +129,13 @@ export const AdminLayout: React.FC = () => {
 
         {/* Main Content Area */}
         <main 
-          className={`flex-1 min-w-0 ${
+          className={`flex-1 min-w-0 h-full xl:overflow-y-auto ${
             (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
               ? 'p-0'
               : 'px-4 pt-4 pb-24 xl:p-8'
           }`}
         >
-          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full' : 'container mx-auto min-w-0'}>
+          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full' : 'container mx-auto min-w-0'}>
             <Outlet />
           </div>
         </main>
