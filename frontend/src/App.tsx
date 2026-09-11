@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { syncData } from '../data/mockDb';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -61,84 +62,12 @@ const App: React.FC = () => {
         setDataLoaded(true); // still show the app even if sync fails
       });
     } else {
-      setDataLoaded(true);
     }
-
-    // Always clear the googtrans cookie on mount so the app starts in English.
-    // This prevents a previous Kannada session from bleeding into a fresh login.
-    const hostname = window.location.hostname;
-    const cookieReset = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = cookieReset;
-    document.cookie = cookieReset + ' domain=' + hostname + ';';
-    document.cookie = cookieReset + ' domain=.' + hostname + ';';
-
-    // Google Translate UI suppression — targeted + debounced so it never blocks React rendering
-    function suppressAllGoogleTranslateUI() {
-      const HIDE_SELECTORS = [
-        '.goog-te-banner-frame',
-        '.goog-tooltip',
-        '.goog-te-balloon-frame',
-        '.goog-te-spinner-pos',
-        '.goog-te-spinner',
-        '.VIpgJd-ZVi9od-aZ2wEe-wOHMyf',
-        '#goog-gt-tt',
-        'iframe.skiptranslate',
-        'div.skiptranslate',
-      ];
-
-      let timer: ReturnType<typeof setTimeout> | null = null;
-      const enforce = () => {
-        // Debounce: coalesce rapid-fire mutations into a single run
-        if (timer) return;
-        timer = setTimeout(() => {
-          timer = null;
-          HIDE_SELECTORS.forEach(sel => {
-            document.querySelectorAll(sel).forEach(el => {
-              (el as HTMLElement).style.setProperty('display', 'none', 'important');
-              (el as HTMLElement).style.setProperty('visibility', 'hidden', 'important');
-              (el as HTMLElement).style.setProperty('height', '0', 'important');
-              (el as HTMLElement).style.setProperty('pointer-events', 'none', 'important');
-            });
-          });
-          // Fix Google's body top-offset injection
-          if (document.body.style.top && document.body.style.top !== '0px') {
-            document.body.style.setProperty('top', '0px', 'important');
-            document.body.style.setProperty('position', 'static', 'important');
-          }
-        }, 50);
-      };
-
-      enforce();
-
-      // Only watch body's DIRECT children (Google injects banner/iframe there)
-      // and body's own style attribute (for the top: Npx offset hack)
-      // NOT subtree — avoids firing on every React DOM update
-      const bodyObserver = new MutationObserver(enforce);
-      bodyObserver.observe(document.body, {
-        childList: true,          // catch Google injecting iframe/div into body
-        attributes: true,         // catch Google setting body.style.top
-        attributeFilter: ['style'],
-        subtree: false,           // CRITICAL: do NOT watch all descendants
-      });
-
-      // Separately watch <html> class changes (translated-ltr / translated-rtl)
-      const htmlObserver = new MutationObserver(enforce);
-      htmlObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['class', 'style'],
-        subtree: false,
-      });
-    }
-
-    suppressAllGoogleTranslateUI();
-
-    return () => {
-      // Cleanup if necessary
-    };
   }, []);
 
   return (
-    <AuthProvider key={syncKey}>
+    <LanguageProvider>
+      <AuthProvider key={syncKey}>
       <Router>
         <div className="flex flex-col min-h-screen bg-slate-50">
           <Routes>
@@ -214,6 +143,7 @@ const App: React.FC = () => {
         </div>
       </Router>
     </AuthProvider>
+    </LanguageProvider>
   );
 };
 

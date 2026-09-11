@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Shield, LogOut, Bell, User, MapPin } from 'lucide-react';
 import { mockDb, dbConnectionError } from '../../data/mockDb';
 import { useDbConnection } from '../hooks/useDbConnection';
@@ -8,76 +9,21 @@ import { TransparentLogo } from './TransparentLogo';
 
 export const Navbar: React.FC = () => {
   const { user, role, isAuthenticated, logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { status: dbConnectionStatus } = useDbConnection();
-  const [lang, setLang] = React.useState('en');
 
-  // Helper: clears the googtrans cookie across all domain levels and paths
-  const clearGoogTransCookie = () => {
-    const exp = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
-    const hostname = window.location.hostname;
-    const paths = ['/', window.location.pathname, ''];
-
-    const domains = ['', hostname, '.' + hostname];
-    const parts = hostname.split('.');
-    if (parts.length >= 2) {
-      const parent = parts.slice(-2).join('.');
-      domains.push(parent, '.' + parent);
-    }
-
-    paths.forEach(p => {
-      const pathAttr = p ? ` path=${p};` : ' path=/;';
-      domains.forEach(d => {
-        const domainAttr = d ? ` domain=${d};` : '';
-        document.cookie = `${exp}${pathAttr}${domainAttr}`;
-      });
-    });
+  const handleLangChange = (newLang: 'en' | 'kn') => {
+    setLanguage(newLang);
   };
-
-  const handleLangChange = (newLang: string) => {
-    setLang(newLang);
-
-    if (newLang === 'en') {
-      // Restore original: clear cookie on all domains then reload
-      clearGoogTransCookie();
-      const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-      if (select) {
-        select.value = '';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      window.location.reload();
-      return;
-    }
-
-    // Kannada: try combo first (no-reload, instant); fallback to cookie+reload
-    const select = document.querySelector('.goog-te-combo') as HTMLSelectElement | null;
-    if (select) {
-      select.value = 'kn';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-      // Fallback: set cookie and reload
-      document.cookie = 'googtrans=/en/kn; path=/; domain=' + window.location.hostname;
-      window.location.reload();
-    }
-  };
-
 
   const handleLogout = () => {
-    // 1. Clear googtrans cookie on ALL domain levels and paths
-    clearGoogTransCookie();
-    setLang('en');
-
-    // 2. Call auth context logout
     logout();
-
-    // 3. Purge storage directly to ensure no stale credentials remain
     localStorage.removeItem('token');
     localStorage.removeItem('ksp_auth_user');
     sessionStorage.clear();
-
-    // 4. Hard redirect to '/' to completely reset Google Translate runtime and guarantee default English
-    window.location.href = '/';
+    navigate('/');
   };
 
   const getUnreadNotifications = () => {
@@ -126,10 +72,10 @@ Data Source: Live CloudScale Database`);
           <div className="flex flex-wrap items-center gap-4 min-w-0">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              GOVERNMENT OF KARNATAKA • ಕರ್ನಾಟಕ ಸರ್ಕಾರ
+              {t('banner.gov')}
             </span>
             <span className="hidden md:inline">|</span>
-            <span className="hidden md:inline">OFFICIAL GIS & CRIME ANALYTICS PORTAL</span>
+            <span className="hidden md:inline">{t('banner.portal_name')}</span>
           </div>
           <div className="flex flex-wrap gap-3 items-center min-w-0">
             <span 
@@ -155,12 +101,12 @@ Data Source: Live CloudScale Database`);
                   : 'bg-amber-500'
               }`}></span>
               {dbConnectionStatus === 'connected'
-                ? 'Live DB'
+                ? t('banner.db_live')
                 : dbConnectionStatus === 'error'
-                ? 'DB Offline'
+                ? t('banner.db_offline')
                 : dbConnectionStatus === 'connecting'
-                ? 'Connecting...'
-                : 'Offline Mode'}
+                ? t('banner.db_connecting')
+                : t('banner.db_offline_mode')}
             </span>
             <span>|</span>
             <span onClick={() => adjustFontSize('up')} className="hover:text-white hover:scale-105 cursor-pointer transition font-bold" title="Increase text size">A+</span>
@@ -168,16 +114,20 @@ Data Source: Live CloudScale Database`);
             <span onClick={() => adjustFontSize('down')} className="hover:text-white hover:scale-105 cursor-pointer transition font-bold" title="Decrease text size">A-</span>
             <span>|</span>
             <span 
+              id="lang-toggle-en"
+              role="button"
+              tabIndex={0}
               onClick={() => handleLangChange('en')} 
-              translate="no"
-              className={`notranslate cursor-pointer transition text-[10px] ${lang === 'en' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`cursor-pointer transition text-[10px] tracking-wider ${language === 'en' ? 'text-ksp-gold font-extrabold underline underline-offset-2' : 'text-slate-400 hover:text-slate-200'}`}
             >
               ENGLISH
             </span>
             <span 
+              id="lang-toggle-kn"
+              role="button"
+              tabIndex={0}
               onClick={() => handleLangChange('kn')} 
-              translate="no"
-              className={`notranslate cursor-pointer transition text-[10px] ${lang === 'kn' ? 'text-ksp-gold font-extrabold' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`cursor-pointer transition text-[10px] tracking-wider ${language === 'kn' ? 'text-ksp-gold font-extrabold underline underline-offset-2' : 'text-slate-400 hover:text-slate-200'}`}
             >
               ಕನ್ನಡ
             </span>
@@ -206,10 +156,10 @@ Data Source: Live CloudScale Database`);
           />
           <div className="leading-tight">
             <h1 className="text-lg md:text-xl font-bold tracking-tight text-white m-0">
-              KARNATAKA STATE POLICE
+              {t('banner.dept_name')}
             </h1>
             <p className="text-xs md:text-sm font-semibold text-ksp-gold m-0">
-              ಕಾನೂನು ಮತ್ತು ಸುವ್ಯವಸ್ಥೆ • Law & Order Department
+              {t('banner.dept_sub')}
             </p>
           </div>
         </Link>
@@ -239,7 +189,7 @@ Data Source: Live CloudScale Database`);
                   {user.firstName}
                 </span>
                 <span className="text-xs text-slate-300">
-                  {user.role === 'Admin' ? 'Administrator' : `${user.kgid || 'Officer'} • ${user.stationName || 'KSP'}`}
+                  {user.role === 'Admin' ? t('banner.admin') : `${user.kgid || t('banner.officer')} • ${user.stationName || 'KSP'}`}
                 </span>
               </div>
 
@@ -251,7 +201,7 @@ Data Source: Live CloudScale Database`);
                 className="bg-red-700/60 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-red-500/25 transition shadow-sm"
               >
                 <LogOut size={16} />
-                <span className="hidden sm:inline">Logout</span>
+                <span className="hidden sm:inline">{t('banner.logout')}</span>
               </button>
             </div>
           ) : null}

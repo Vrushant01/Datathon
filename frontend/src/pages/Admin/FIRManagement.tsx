@@ -2,6 +2,7 @@ import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { mockDb, CaseMasterRow, EmployeeRow } from '../../../data/mockDb';
+import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../config/api';
 import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
@@ -9,6 +10,7 @@ import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { useLocation } from 'react-router-dom';
 
 export const FIRManagement: React.FC = () => {
+  const { t } = useLanguage();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   
@@ -392,8 +394,8 @@ export const FIRManagement: React.FC = () => {
       {/* Header section */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Case Registry</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Register and transfer FIR case records</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('firs.title')}</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('firs.subtitle')}</p>
         </div>
         <button 
           onClick={handleOpenAdd}
@@ -421,7 +423,7 @@ export const FIRManagement: React.FC = () => {
           </span>
           <input 
             type="text" 
-            placeholder="Search by FIR/Case Number, Station, Investigating Officer..."
+            placeholder={t('firs.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-slate-300 transition"
@@ -436,7 +438,7 @@ export const FIRManagement: React.FC = () => {
           }}
           className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
-          <option value="ALL">All Districts</option>
+          <option value="ALL">{t('officers.all_districts')}</option>
           {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
         </select>
 
@@ -446,7 +448,7 @@ export const FIRManagement: React.FC = () => {
           disabled={filterDistrict === 'ALL'}
           className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="ALL">All Stations in District</option>
+          <option value="ALL">{t('officers.all_stations')}</option>
           {filterDistrict !== 'ALL' && stations.filter(s => s.DistrictID === filterDistrict).map(s => <option key={s.UnitID} value={s.UnitID}>{s.UnitName}</option>)}
         </select>
         

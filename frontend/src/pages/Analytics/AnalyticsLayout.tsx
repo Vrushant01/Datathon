@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Navbar } from '../../components/Navbar';
 import { 
   LayoutDashboard, Users, MapPin, FileText, Network, BarChart3
@@ -8,6 +9,7 @@ import {
 
 export const AnalyticsLayout: React.FC = () => {
   const { user, role } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -29,11 +31,11 @@ export const AnalyticsLayout: React.FC = () => {
   }
 
   const menuItems = [
-    { label: 'Dashboard', path: '/analytics-portal', icon: <LayoutDashboard size={18} /> },
-    { label: 'Officers', path: '/analytics-portal/officers', icon: <Users size={18} /> },
-    { label: 'Station GIS', path: '/analytics-portal/map', icon: <MapPin size={18} /> },
-    { label: 'Station FIRs', path: '/analytics-portal/firs', icon: <FileText size={18} /> },
-    { label: 'Network', path: '/analytics-portal/network', icon: <Network size={18} /> },
+    { label: t('nav.dashboard'), path: '/analytics-portal', icon: <LayoutDashboard size={18} /> },
+    { label: t('nav.officers'), path: '/analytics-portal/officers', icon: <Users size={18} /> },
+    { label: t('nav.gis'), path: '/analytics-portal/map', icon: <MapPin size={18} /> },
+    { label: t('nav.firs'), path: '/analytics-portal/firs', icon: <FileText size={18} /> },
+    { label: t('nav.network'), path: '/analytics-portal/network', icon: <Network size={18} /> },
   ];
 
   const activeClass = "bg-ksp-blue-light/10 text-white font-bold shadow-md scale-[1.02] border-l-4 border-ksp-gold";
@@ -121,7 +123,7 @@ export const AnalyticsLayout: React.FC = () => {
             const isActive = location.pathname === item.path || (item.path !== '/analytics-portal' && location.pathname.startsWith(item.path));
             return (
               <Link
-                key={item.label}
+                key={item.path}
                 to={item.path}
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 gap-1"
               >

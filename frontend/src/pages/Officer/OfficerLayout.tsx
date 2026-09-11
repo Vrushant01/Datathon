@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Navbar } from '../../components/Navbar';
 import { 
   FileText, Bell, LayoutDashboard, Menu, X, ShieldAlert, Share2 
@@ -8,6 +9,7 @@ import {
 
 export const OfficerLayout: React.FC = () => {
   const { user, role, logout } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -34,8 +36,8 @@ export const OfficerLayout: React.FC = () => {
   }
 
   const menuItems = [
-    { label: 'My Cases', path: '/officer-portal', icon: <LayoutDashboard size={18} /> },
-    { label: 'Criminal Network', path: '/officer-portal/network', icon: <Share2 size={18} /> }
+    { label: t('nav.firs'), path: '/officer-portal', icon: <LayoutDashboard size={18} /> },
+    { label: t('nav.network'), path: '/officer-portal/network', icon: <Share2 size={18} /> }
   ];
 
   const activeClass = "bg-ksp-gold text-ksp-navy font-bold shadow-md scale-[1.02]";
@@ -120,7 +122,7 @@ export const OfficerLayout: React.FC = () => {
             const isActive = location.pathname === item.path;
             return (
               <Link
-                key={item.label}
+                key={item.path}
                 to={item.path}
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 gap-1"
               >

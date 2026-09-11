@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Navbar } from '../../components/Navbar';
 import { 
   LayoutDashboard, Users, FileText, BarChart3, MapPin, 
@@ -9,11 +10,24 @@ import {
 
 export const AdminLayout: React.FC = () => {
   const { role, logout } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Security route guard check
+  // Prevent scrolling when More menu is open - called unconditionally at the top of the component
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
+
+  // Security route guard check (strictly after all hooks)
   const token = localStorage.getItem('token');
   if (!token || role !== 'Admin') {
     return (
@@ -36,18 +50,18 @@ export const AdminLayout: React.FC = () => {
   }
 
   const menuItems = [
-    { label: 'Dashboard', path: '/admin-portal', icon: <LayoutDashboard size={18} />, primary: true },
-    { label: 'Stations', path: '/admin-portal/stations', icon: <Building size={18} />, primary: false },
-    { label: 'Officers', path: '/admin-portal/officers', icon: <Users size={18} />, primary: false },
-    { label: 'FIRs & Cases', path: '/admin-portal/firs', icon: <FileText size={18} />, primary: true },
-    { label: 'Analytics', path: '/admin-portal/analytics', icon: <BarChart3 size={18} />, primary: true },
-    { label: 'GIS Maps', path: '/admin-portal/gis', icon: <MapPin size={18} />, primary: false },
-    { label: 'Criminal Network', path: '/admin-portal/network', icon: <Share2 size={18} />, primary: false },
-    { label: 'Intell Center', path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
-    { label: 'Station Risk', path: '/admin-portal/station-risk', icon: <Activity size={18} />, primary: false },
-    { label: 'Repeated Offenders', path: '/admin-portal/repeated-offenders', icon: <Repeat size={18} />, primary: false },
-    { label: 'AI Assistant', path: '/admin-portal/assistant', icon: <Bot size={18} />, primary: false },
-    { label: 'Audit Logs', path: '/admin-portal/audit', icon: <History size={18} />, primary: false }
+    { label: t('nav.dashboard'), path: '/admin-portal', icon: <LayoutDashboard size={18} />, primary: true },
+    { label: t('nav.stations'), path: '/admin-portal/stations', icon: <Building size={18} />, primary: false },
+    { label: t('nav.officers'), path: '/admin-portal/officers', icon: <Users size={18} />, primary: false },
+    { label: t('nav.firs'), path: '/admin-portal/firs', icon: <FileText size={18} />, primary: true },
+    { label: t('nav.analytics'), path: '/admin-portal/analytics', icon: <BarChart3 size={18} />, primary: true },
+    { label: t('nav.gis'), path: '/admin-portal/gis', icon: <MapPin size={18} />, primary: false },
+    { label: t('nav.network'), path: '/admin-portal/network', icon: <Share2 size={18} />, primary: false },
+    { label: t('nav.intelligence'), path: '/admin-portal/intelligence', icon: <Crosshair size={18} />, primary: true },
+    { label: t('nav.station_risk'), path: '/admin-portal/station-risk', icon: <Activity size={18} />, primary: false },
+    { label: t('nav.repeated_offenders'), path: '/admin-portal/repeated-offenders', icon: <Repeat size={18} />, primary: false },
+    { label: t('nav.assistant'), path: '/admin-portal/assistant', icon: <Bot size={18} />, primary: false },
+    { label: t('nav.audit'), path: '/admin-portal/audit', icon: <History size={18} />, primary: false }
   ];
 
   const primaryItems = menuItems.filter(i => i.primary);
@@ -56,20 +70,8 @@ export const AdminLayout: React.FC = () => {
   const activeClass = "bg-ksp-gold text-ksp-navy font-bold shadow-md scale-[1.02]";
   const inactiveClass = "text-slate-300 hover:bg-white/5 hover:text-white";
 
-  // Prevent scrolling when More menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [mobileMenuOpen]);
-
   // Determine page title for compact mobile header
-  const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'System Console';
+  const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || t('sidebar.console_title');
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 relative select-none">
@@ -93,9 +95,9 @@ export const AdminLayout: React.FC = () => {
         >
           {/* Console title branding */}
           <div className="p-6 border-b border-white/5 select-none">
-            <span className="text-[10px] uppercase text-ksp-gold font-bold tracking-widest block mb-1">State Administration</span>
+            <span className="text-[10px] uppercase text-ksp-gold font-bold tracking-widest block mb-1">{t('sidebar.state_admin')}</span>
             <span className="text-base font-extrabold text-white tracking-tight flex items-center gap-1.5">
-              KSP System Console
+              {t('sidebar.console_title')}
             </span>
           </div>
 
@@ -105,7 +107,7 @@ export const AdminLayout: React.FC = () => {
               const isActive = location.pathname === item.path;
               return (
                  <Link 
-                  key={item.label}
+                  key={item.path}
                   to={item.path}
                   className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
                     isActive ? activeClass : inactiveClass
@@ -120,8 +122,8 @@ export const AdminLayout: React.FC = () => {
 
           {/* Footer info in sidebar */}
           <div className="p-4 border-t border-white/5 text-[10px] text-slate-400 select-none">
-            <p className="m-0 font-bold uppercase tracking-wider text-slate-500">Security Clearance</p>
-            <p className="m-0 mt-0.5 text-slate-300 font-medium">Level 1 Administrator</p>
+            <p className="m-0 font-bold uppercase tracking-wider text-slate-500">{t('sidebar.security_clearance')}</p>
+            <p className="m-0 mt-0.5 text-slate-300 font-medium">{t('sidebar.level_1_admin')}</p>
           </div>
         </aside>
 
@@ -146,7 +148,7 @@ export const AdminLayout: React.FC = () => {
             const isActive = location.pathname === item.path;
             return (
               <Link 
-                key={item.label} 
+                key={item.path} 
                 to={item.path}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${
@@ -174,7 +176,7 @@ export const AdminLayout: React.FC = () => {
               <MoreHorizontal size={20} className={mobileMenuOpen ? 'text-white' : ''} />
             </div>
             <span className={`text-[10px] font-semibold ${mobileMenuOpen ? 'text-ksp-navy' : ''}`}>
-              More
+              {t('nav.more')}
             </span>
           </button>
         </nav>
@@ -192,13 +194,13 @@ export const AdminLayout: React.FC = () => {
           <div className="xl:hidden fixed bottom-16 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-40 transform transition-transform border-t border-slate-100 max-h-[70vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             <div className="p-4 pt-6">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Additional Modules</h3>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">{t('sidebar.more_modules')}</h3>
               <div className="grid grid-cols-1 gap-2">
                 {moreItems.map(item => {
                   const isActive = location.pathname === item.path;
                   return (
                     <Link
-                      key={item.label}
+                      key={item.path}
                       to={item.path}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-semibold transition-colors ${

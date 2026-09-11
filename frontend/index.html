@@ -15,37 +15,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <div id="google_translate_element" style="display:none;"></div>
-    <!-- Clear any stale googtrans cookie BEFORE Google Translate loads so it never auto-applies Kannada -->
-    <script>
-      (function() {
-        var exp = 'expires=Thu, 01 Jan 1970 00:00:00 UTC;';
-        var h = location.hostname;
-        var paths = ['/', location.pathname, ''];
-        var domains = ['', h, '.' + h];
-        var parts = h.split('.');
-        if (parts.length >= 2) {
-          var parent = parts.slice(-2).join('.');
-          domains.push(parent, '.' + parent);
-        }
-        paths.forEach(function(p) {
-          var pathAttr = p ? ' path=' + p + ';' : ' path=/;';
-          domains.forEach(function(d) {
-            var domainAttr = d ? ' domain=' + d + ';' : '';
-            document.cookie = 'googtrans=; ' + exp + pathAttr + domainAttr;
-          });
-        });
-      })();
-    </script>
-    <script type="text/javascript">
-      function googleTranslateElementInit() {
-        new google.translate.TranslateElement({
-          pageLanguage: 'en',
-          includedLanguages: 'en,hi,gu,mr,pa,bn,ta,te,kn,ml,or,as,ur,sa,ks,gom,mai,mni,ne,doi,sat,sd,brx',
-          autoDisplay: false
-        }, 'google_translate_element');
-      }
-    </script>
-    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
   </body>
 </html>

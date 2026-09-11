@@ -1,5 +1,6 @@
 import React from 'react';
 import { mockDb } from '../../../data/mockDb';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
@@ -10,8 +11,8 @@ import {
   Brain, TrendingUp, Search, FileText, CheckCircle, Clock
 } from 'lucide-react';
 
-
 export const AdminAnalytics: React.FC = () => {
+  const { t } = useLanguage();
   const [selectedDistrict, setSelectedDistrict] = React.useState<number | 'ALL'>('ALL');
   const [selectedStation, setSelectedStation] = React.useState<number | 'ALL'>('ALL');
 
@@ -153,8 +154,8 @@ export const AdminAnalytics: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Statistical Analytics</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Advanced aggregate charts and demographic filters</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('analytics.title')}</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('analytics.subtitle')}</p>
         </div>
       </div>
 
@@ -172,7 +173,7 @@ export const AdminAnalytics: React.FC = () => {
           }}
           className="w-full md:w-64 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
-          <option value="ALL">All Districts (Statewide)</option>
+          <option value="ALL">{t('officers.all_districts')} (Statewide)</option>
           {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
         </select>
 
@@ -182,7 +183,7 @@ export const AdminAnalytics: React.FC = () => {
           disabled={selectedDistrict === 'ALL'}
           className="w-full md:w-64 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="ALL">All Stations in District</option>
+          <option value="ALL">{t('officers.all_stations')}</option>
           {displayStations.map(s => <option key={s.UnitID} value={s.UnitID}>{s.UnitName}</option>)}
         </select>
       </div>
@@ -190,15 +191,15 @@ export const AdminAnalytics: React.FC = () => {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border shadow-sm border-l-4 border-l-ksp-blue flex flex-col">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><FileText size={12}/> Total FIRs</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><FileText size={12}/> {t('dashboard.total_firs')}</span>
           <span className="text-2xl font-black text-ksp-navy mt-1">{totalCases}</span>
         </div>
         <div className="bg-white p-4 rounded-xl border shadow-sm border-l-4 border-l-emerald-500 flex flex-col">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><CheckCircle size={12}/> Solved Cases</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><CheckCircle size={12}/> {t('dashboard.solved_cases')}</span>
           <span className="text-2xl font-black text-emerald-600 mt-1">{solvedCases} <span className="text-xs text-slate-400 font-semibold">({solvedRate}%)</span></span>
         </div>
         <div className="bg-white p-4 rounded-xl border shadow-sm border-l-4 border-l-amber-500 flex flex-col">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Clock size={12}/> Active Cases</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><Clock size={12}/> {t('dashboard.pending_cases')}</span>
           <span className="text-2xl font-black text-amber-600 mt-1">{activeCases}</span>
         </div>
       </div>

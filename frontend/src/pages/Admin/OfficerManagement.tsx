@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, EmployeeRow } from '../../../data/mockDb';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Users, UserPlus, Search, Edit2, ShieldAlert, Trash2, 
   CheckCircle2, XCircle, Check, X, ShieldCheck 
 } from 'lucide-react';
 
 export const OfficerManagement: React.FC = () => {
+  const { t } = useLanguage();
   const location = useLocation();
   const [employees, setEmployees] = useState<EmployeeRow[]>(mockDb.getEmployees());
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,14 +244,14 @@ export const OfficerManagement: React.FC = () => {
       {/* Header section */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Roster Directory</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Manage active police officers and ranks</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('officers.title')}</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('officers.subtitle')}</p>
         </div>
         <button 
           onClick={handleOpenAdd}
           className="bg-ksp-navy hover:bg-ksp-navy-light text-white text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow"
         >
-          <UserPlus size={16} /> Register Officer
+          <UserPlus size={16} /> {t('officers.add_officer')}
         </button>
       </div>
 
@@ -271,7 +273,7 @@ export const OfficerManagement: React.FC = () => {
           </span>
           <input 
             type="text" 
-            placeholder="Search by Officer Name, KGID, Rank, Station..."
+            placeholder={t('officers.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-slate-300 transition"
@@ -286,7 +288,7 @@ export const OfficerManagement: React.FC = () => {
           }}
           className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
-          <option value="ALL">All Districts</option>
+          <option value="ALL">{t('officers.all_districts')}</option>
           {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
         </select>
 
@@ -296,16 +298,16 @@ export const OfficerManagement: React.FC = () => {
           disabled={filterDistrict === 'ALL'}
           className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <option value="ALL">All Stations in District</option>
+          <option value="ALL">{t('officers.all_stations')}</option>
           {filterDistrict !== 'ALL' && units.filter(u => u.TypeID === 1 && u.DistrictID === filterDistrict).map(u => <option key={u.UnitID} value={u.UnitID}>{u.UnitName}</option>)}
         </select>
         
         <select 
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="w-full md:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
+          className="w-full md:w-36 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
-          <option value="ALL">All Statuses</option>
+          <option value="ALL">{t('officers.all_statuses')}</option>
           <option value="Active">Active</option>
           <option value="Suspended">Suspended</option>
         </select>

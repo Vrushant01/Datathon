@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authFetch } from '../../utils/authFetch';
+import { useLanguage } from '../../context/LanguageContext';
 import { Activity, ShieldAlert, MapPin, ExternalLink } from 'lucide-react';
 import { API_BASE_URL } from '../../config/api';
 
@@ -16,6 +17,7 @@ interface StationRiskResult {
 }
 
 export const StationRisk: React.FC = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [stationRisks, setStationRisks] = useState<StationRiskResult[]>([]);
@@ -93,7 +95,7 @@ export const StationRisk: React.FC = () => {
 
   return (
     <div className="p-6 h-full flex flex-col">
-      <h1 className="text-2xl font-extrabold text-ksp-navy mb-6">Station Risk Prediction</h1>
+      <h1 className="text-2xl font-extrabold text-ksp-navy mb-6">{t('risk.title')}</h1>
       
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex-1 flex flex-col">
         <div className="px-5 py-4 border-b bg-slate-50 flex items-center gap-3">
@@ -102,10 +104,10 @@ export const StationRisk: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-ksp-navy tracking-widest uppercase m-0">
-              XGBoost Predictive Model
+              {t('risk.title')}
             </h3>
             <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-              Assessing police station crime risk based on multi-variate historical data
+              {t('risk.subtitle')}
             </p>
           </div>
         </div>

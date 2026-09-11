@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mockDb, syncData } from '../../../data/mockDb';
 import { useDbConnection } from '../../hooks/useDbConnection';
+import { useLanguage } from '../../context/LanguageContext';
 import { getAIDashboard } from '../../services/aiService';
 import { 
   FileText, CheckCircle, Clock, AlertTriangle, Shield, MapPin, 
@@ -13,6 +14,7 @@ import {
 } from 'recharts';
 
 export const AdminDashboard: React.FC = () => {
+  const { t } = useLanguage();
   // Metrics computation
   const { status: dbConnectionStatus, dataLoaded } = useDbConnection();
   const isConnecting = dbConnectionStatus === 'connecting' || (dbConnectionStatus === 'connected' && !dataLoaded);
@@ -109,7 +111,7 @@ export const AdminDashboard: React.FC = () => {
       });
   }, [filteredCases, timeFilter]);
 
-  const trendTitle = timeFilter === '24H' ? 'Last 24 Hours' : timeFilter === '7D' ? 'Last 7 Days' : timeFilter === '30D' ? 'Last 30 Days' : 'Historical Registration Trend';
+  const trendTitle = timeFilter === '24H' ? t('time.24h') : timeFilter === '7D' ? t('time.7d') : timeFilter === '30D' ? t('time.30d') : t('charts.historical_trend');
 
   // Chart 2: Crime Categories (Based on CrimeHead)
   const categoryCounts = crimeHeads.map(ch => {
@@ -124,18 +126,18 @@ export const AdminDashboard: React.FC = () => {
       <div className="space-y-6 select-none">
         <div className="flex justify-between items-center border-b pb-4">
           <div>
-            <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Operations Control</h2>
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
+            <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('dashboard.title')}</h2>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('dashboard.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => syncData()} 
               className="text-xs bg-ksp-navy hover:bg-ksp-navy-light text-white px-3 py-1.5 rounded-full shadow-sm font-bold transition flex items-center gap-1"
             >
-              <RefreshCw size={14} /> Retry Connection
+              <RefreshCw size={14} /> {t('dashboard.retry')}
             </button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm bg-red-50 text-red-700 border-red-200">
-              <AlertTriangle size={14} /> DATABASE OFFLINE
+              <AlertTriangle size={14} /> {t('dashboard.offline')}
             </div>
           </div>
         </div>
@@ -144,10 +146,9 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-white p-4 rounded-full shadow-sm mb-4">
             <Database className="text-red-500" size={32} />
           </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-2">Database Connection Failed</h3>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">{t('dashboard.db_offline_title')}</h3>
           <p className="text-sm text-slate-500 max-w-md">
-            The dashboard cannot fetch live statistics because the CloudScale database is unreachable. 
-            Please check your local backend server and ensure it is running on the correct port.
+            {t('dashboard.db_offline_desc')}
           </p>
         </div>
       </div>
@@ -156,16 +157,14 @@ export const AdminDashboard: React.FC = () => {
 
   const COLORS = ['#0B2240', '#D4AF37', '#00529B', '#EF4444', '#10B981', '#8B5CF6'];
 
-
-
   return (
     <div className="space-y-6 select-none">
       
       {/* Header bar */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">KSP Operations Control</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Real-time Command Centre Dashboard</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('dashboard.title')}</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <select 
@@ -173,10 +172,10 @@ export const AdminDashboard: React.FC = () => {
             onChange={e => setTimeFilter(e.target.value as any)}
             className="text-xs font-bold border rounded px-2 py-1 outline-none text-slate-700 bg-slate-50"
           >
-            <option value="24H">Last 24 Hours</option>
-            <option value="7D">Last 7 Days</option>
-            <option value="30D">Last 30 Days</option>
-            <option value="ALL">All Time</option>
+            <option value="24H">{t('time.24h')}</option>
+            <option value="7D">{t('time.7d')}</option>
+            <option value="30D">{t('time.30d')}</option>
+            <option value="ALL">{t('time.all')}</option>
           </select>
 
           {dbConnectionStatus === 'error' && (
@@ -184,7 +183,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => syncData()} 
               className="text-xs bg-ksp-navy hover:bg-ksp-navy-light text-white px-3 py-1 rounded shadow-sm font-bold transition"
             >
-              Retry Connection
+              {t('dashboard.retry')}
             </button>
           )}
           <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
@@ -193,8 +192,8 @@ export const AdminDashboard: React.FC = () => {
             'bg-red-50 text-red-700 border border-red-200'
           }`}>
             <Activity size={14} className={dbConnectionStatus !== 'error' ? 'animate-pulse' : ''} /> 
-            {dbConnectionStatus === 'connected' ? 'Live Feed Connected' : 
-             dbConnectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+            {dbConnectionStatus === 'connected' ? t('dashboard.live_connected') : 
+             dbConnectionStatus === 'connecting' ? t('dashboard.connecting') : t('dashboard.offline')}
           </div>
         </div>
       </div>
@@ -207,8 +206,8 @@ export const AdminDashboard: React.FC = () => {
             <FileText size={20} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Total FIRs</div>
-            <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalFIR}</div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.total_firs')}</div>
+            <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : totalFIR}</div>
           </div>
         </div>
 
@@ -217,8 +216,8 @@ export const AdminDashboard: React.FC = () => {
             <Clock size={20} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Pending Cases</div>
-            <div className="text-xl font-extrabold text-amber-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : underInvestigation}</div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.pending_cases')}</div>
+            <div className="text-xl font-extrabold text-amber-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : underInvestigation}</div>
           </div>
         </div>
 
@@ -227,8 +226,8 @@ export const AdminDashboard: React.FC = () => {
             <CheckCircle size={20} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Solved / Closed</div>
-            <div className="text-xl font-extrabold text-emerald-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : solved}</div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.solved_cases')}</div>
+            <div className="text-xl font-extrabold text-emerald-600">{isConnecting ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : solved}</div>
           </div>
         </div>
 
@@ -237,8 +236,8 @@ export const AdminDashboard: React.FC = () => {
             <Users size={20} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Active Officers</div>
-            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : activeOfficersCount}</div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.active_officers')}</div>
+            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : activeOfficersCount}</div>
           </div>
         </div>
 
@@ -247,8 +246,8 @@ export const AdminDashboard: React.FC = () => {
             <MapPin size={20} />
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Police Stations</div>
-            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalStations}</div>
+            <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.police_stations')}</div>
+            <div className="text-xl font-extrabold text-slate-800">{isConnecting ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : totalStations}</div>
           </div>
         </div>
 
@@ -278,7 +277,7 @@ export const AdminDashboard: React.FC = () => {
         {/* Chart 2: Category Breakdown */}
         <div className="bg-white p-5 rounded-xl border shadow-sm flex flex-col">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <Shield size={14} className="text-ksp-gold-dark" /> Crime Category Distribution
+            <Shield size={14} className="text-ksp-gold-dark" /> {t('charts.category_distribution')}
           </h3>
           <div className="h-64 w-full text-xs relative flex items-center justify-center">
             {categoryCounts.length > 0 ? (
@@ -297,17 +296,17 @@ export const AdminDashboard: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} Cases`]} />
+                  <Tooltip formatter={(value) => [`${value} ${t('charts.cases')}`]} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <span className="text-slate-400">{isConnecting ? 'Loading...' : 'No category data'}</span>
+              <span className="text-slate-400">{isConnecting ? t('common.loading') : t('charts.no_category_data')}</span>
             )}
             
             {/* Center Summary Label */}
             <div className="absolute text-center">
               <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? '...' : totalFIR}</div>
-              <div className="text-[9px] uppercase tracking-wider font-bold text-slate-400">Cases</div>
+              <div className="text-[9px] uppercase tracking-wider font-bold text-slate-400">{t('charts.cases')}</div>
             </div>
           </div>
           {/* Custom Legends list */}

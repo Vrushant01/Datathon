@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, UnitRow } from '../../../data/mockDb';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Building, Plus, Search, MapPin, X
 } from 'lucide-react';
 
 export const StationManagement: React.FC = () => {
+  const { t } = useLanguage();
   const location = useLocation();
   const [stations, setStations] = useState<UnitRow[]>(mockDb.getUnits().filter(u => u.TypeID === 1));
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,14 +113,14 @@ export const StationManagement: React.FC = () => {
       {/* Header section */}
       <div className="flex justify-between items-center border-b pb-4">
         <div>
-          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">Police Stations Directory</h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Manage state police stations and geographic locations</p>
+          <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('stations.title')}</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('stations.subtitle')}</p>
         </div>
         <button 
           onClick={handleOpenAdd}
           className="bg-ksp-navy hover:bg-ksp-navy-light text-white text-xs font-bold px-4 py-2.5 rounded-lg flex items-center gap-1.5 shadow border border-ksp-gold/25"
         >
-          <Plus size={16} /> Add Station
+          <Plus size={16} /> {t('stations.add_station')}
         </button>
       </div>
 
@@ -139,7 +141,7 @@ export const StationManagement: React.FC = () => {
           </span>
           <input 
             type="text" 
-            placeholder="Search by Station Name or District..."
+            placeholder={t('stations.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-slate-300 transition"
@@ -151,7 +153,7 @@ export const StationManagement: React.FC = () => {
           onChange={(e) => setFilterDistrict(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
           className="w-full xl:w-48 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 focus:outline-none focus:border-slate-300 transition"
         >
-          <option value="ALL">All Districts</option>
+          <option value="ALL">{t('stations.all_districts')}</option>
           {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
         </select>
       </div>
