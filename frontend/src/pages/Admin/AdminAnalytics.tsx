@@ -95,7 +95,14 @@ export const AdminAnalytics: React.FC = () => {
   const officerData = officers.map(o => {
     const assignedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID).length;
     const solvedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID && (c.CaseStatusID === 2 || c.CaseStatusID === 3)).length;
-    return { name: String(o.FirstName || '').split(' ')[0], Assigned: assignedCount, Solved: solvedCount };
+    return { 
+      uid: o.KGID || String(o.EmployeeID),
+      kgid: o.KGID || 'N/A',
+      fullName: String(o.FirstName || ''),
+      name: String(o.FirstName || '').split(' ')[0], 
+      Assigned: assignedCount, 
+      Solved: solvedCount 
+    };
   }).filter(o => o.Assigned > 0).sort((a,b) => b.Assigned - a.Assigned).slice(0, 10);
 
   // 6. Socio-Economic Correlation Data (Capability 3 of ER specification)
@@ -349,9 +356,25 @@ export const AdminAnalytics: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={officerData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
+                <XAxis dataKey="uid" tickFormatter={(value, index) => officerData[index]?.name || value} />
                 <YAxis allowDecimals={false} />
-                <Tooltip />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 border border-slate-200 shadow-md rounded-md text-xs leading-5 text-slate-800">
+                          <div>{data.fullName}</div>
+                          <div>KGID: {data.kgid}</div>
+                          <div>Assigned Cases: {data.Assigned}</div>
+                          <div>Solved / Closed Cases: {data.Solved}</div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }} 
+                />
                 <Legend />
                 <Bar dataKey="Assigned" fill="#00529B" name="Assigned Cases" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Solved" fill="#10B981" name="Solved / Closed Cases" radius={[4, 4, 0, 0]} />
