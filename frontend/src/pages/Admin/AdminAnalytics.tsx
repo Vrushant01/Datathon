@@ -20,6 +20,8 @@ export const AdminAnalytics: React.FC = () => {
 
   const [socioEconomicData, setSocioEconomicData] = React.useState<any[]>([]);
   const [correlation, setCorrelation] = React.useState<any>({ urbanization: null, literacy: null });
+  const [topCrimeAreas, setTopCrimeAreas] = React.useState<{location: string, count: number}[]>([]);
+  const [usesDemoData, setUsesDemoData] = React.useState<boolean>(false);
   const [loadingGraph1, setLoadingGraph1] = React.useState<boolean>(false);
 
   React.useEffect(() => {
@@ -29,6 +31,8 @@ export const AdminAnalytics: React.FC = () => {
       .then(data => {
          setSocioEconomicData(data.data || []);
          setCorrelation(data.correlation || { urbanization: null, literacy: null });
+         setTopCrimeAreas(data.topCrimeAreas || []);
+         setUsesDemoData(data.usesDemoData || false);
          setLoadingGraph1(false);
       })
       .catch(e => {
@@ -344,9 +348,28 @@ export const AdminAnalytics: React.FC = () => {
             )}
           </div>
           <div className="mt-3 text-[10px] text-slate-400 italic flex flex-col sm:flex-row justify-between gap-1">
-            <span>Socio-economic indicators: Census of India 2011. Crime data: available FIR records (2026).</span>
+            <span>
+              {usesDemoData 
+                ? "Some socioeconomic indicators are reference/demo values and are not official Census figures." 
+                : "Socio-economic indicators: Census of India 2011."} 
+              {" "}Crime data: available FIR records (2026).
+            </span>
             <span className="font-medium text-slate-500">Note: Correlation does not imply causation.</span>
           </div>
+
+          {topCrimeAreas.length > 0 && (
+            <div className="mt-4 pt-3 border-t">
+              <h4 className="text-xs font-bold text-slate-500 mb-2">Top Crime Areas (Based on Real FIRs)</h4>
+              <div className="flex flex-wrap gap-2">
+                {topCrimeAreas.map((area, idx) => (
+                  <div key={idx} className="bg-slate-50 border px-2 py-1 rounded text-xs text-slate-700 flex items-center gap-1.5">
+                    <span className="font-semibold">{area.location}</span>
+                    <span className="bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-sm text-[10px]">{area.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Chart 6: Risk Forecasting area chart (Matches Screenshot 2) */}

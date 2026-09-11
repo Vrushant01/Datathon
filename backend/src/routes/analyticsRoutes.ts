@@ -4,15 +4,30 @@ import { RepositoryFactory } from '../repositories/RepositoryFactory';
 
 const router = express.Router();
 
-const CENSUS_DATA = [
-  { distId: 1001, censusCode: 572, name: 'Bangalore', pop: 9621551, urbanPop: 8749944, literacy: 87.67 },
-  { distId: 1002, censusCode: 577, name: 'Mysore', pop: 3001127, urbanPop: 1245413, literacy: 72.79 },
-  { distId: 1003, censusCode: 567, name: 'Davanagere', pop: 1945497, urbanPop: 628179, literacy: 75.74 },
-  { distId: 1004, censusCode: 555, name: 'Belgaum', pop: 4779661, urbanPop: 1211195, literacy: 75.40 },
-  { distId: 1005, censusCode: 562, name: 'Dharwad', pop: 1847023, urbanPop: 1049539, literacy: 80.00 },
-  { distId: 1006, censusCode: 568, name: 'Shimoga', pop: 1752753, urbanPop: 623727, literacy: 80.45 },
-  { distId: 1007, censusCode: 569, name: 'Udupi', pop: 1177361, urbanPop: 334061, literacy: 86.24 },
-];
+const CENSUS_DATA_MAPPING: Record<string, any> = {
+  'Bengaluru City': { pop: 9621551, urbanPop: 8749944, literacy: 87.67, isCensus: true },
+  'Mysuru City': { pop: 3001127, urbanPop: 1245413, literacy: 72.79, isCensus: true },
+  'Davanagere City': { pop: 1945497, urbanPop: 628179, literacy: 75.74, isCensus: true },
+  'Belagavi City': { pop: 4779661, urbanPop: 1211195, literacy: 75.40, isCensus: true },
+  'Hubballi-Dharwad City': { pop: 1847023, urbanPop: 1049539, literacy: 80.00, isCensus: true },
+  'Shivamogga': { pop: 1752753, urbanPop: 623727, literacy: 80.45, isCensus: true },
+  'Udupi': { pop: 1177361, urbanPop: 334061, literacy: 86.24, isCensus: true },
+};
+
+// Fallback logic for unmapped districts
+function getSocioEconomicRefData(districtName: string) {
+  if (CENSUS_DATA_MAPPING[districtName]) {
+    return CENSUS_DATA_MAPPING[districtName];
+  }
+  // Deterministic demo reference values based on length/hash of name
+  const nameLen = districtName.length;
+  return {
+    pop: 1000000 + (nameLen * 50000), // ~1M to 1.5M
+    urbanPop: 300000 + (nameLen * 20000), // ~30% to 40% urban
+    literacy: 70 + (nameLen % 15), // 70 to 85%
+    isCensus: false
+  };
+}
 
 function pearsonCorrelation(x: number[], y: number[]): number | null {
   if (x.length !== y.length || x.length < 2) return null;
@@ -33,17 +48,20 @@ function pearsonCorrelation(x: number[], y: number[]): number | null {
 router.get('/socio-economic', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
-    const cases = await db.getCases({});
-    const units = await db.getUnits(); 
+    const [districts, units, stationCounts] = await Promise.all([
+      db.getDistricts(),
+      db.getUnits(),
+      db.getStationCaseCounts()
+    ]);
 
     const stationToDistrict = new Map<number, number>();
     units.forEach(u => stationToDistrict.set(u.UnitID, u.DistrictID));
 
     const firCounts = new Map<number, number>();
-    cases.forEach(c => {
-      const distId = stationToDistrict.get(c.PoliceStationID);
+    stationCounts.forEach(sc => {
+      const distId = stationToDistrict.get(sc.stationId);
       if (distId) {
-        firCounts.set(distId, (firCounts.get(distId) || 0) + 1);
+        firCounts.set(distId, (firCounts.get(distId) || 0) + sc.count);
       }
     });
 
@@ -57,20 +75,27 @@ router.get('/socio-economic', requireAuth, async (req, res) => {
        targetDistrictId = Number(selectedDistrict);
     }
 
+    let usesDemoData = false;
     const dataPoints: any[] = [];
-    CENSUS_DATA.forEach(d => {
-       if (targetDistrictId === 'ALL' || targetDistrictId === d.distId) {
-           const firs = firCounts.get(d.distId) || 0;
-           const urbanPercent = (d.urbanPop / d.pop) * 100;
-           const crimeRate = (firs / d.pop) * 100000;
+
+    districts.forEach(d => {
+       if (targetDistrictId === 'ALL' || targetDistrictId === d.DistrictID) {
+           const firs = firCounts.get(d.DistrictID) || 0;
+           const refData = getSocioEconomicRefData(d.DistrictName);
+           if (!refData.isCensus) usesDemoData = true;
+
+           const urbanPercent = (refData.urbanPop / refData.pop) * 100;
+           const crimeRate = (firs / refData.pop) * 100000;
+           
            dataPoints.push({
-               DistrictID: d.distId,
-               name: d.name, 
+               DistrictID: d.DistrictID,
+               name: d.DistrictName, 
                FIRCount: firs,
                CrimeRate: Number(crimeRate.toFixed(2)),
                Urbanization: Number(urbanPercent.toFixed(2)),
-               LiteracyRate: d.literacy,
-               Population: d.pop
+               LiteracyRate: Number(refData.literacy.toFixed(2)),
+               Population: refData.pop,
+               isCensus: refData.isCensus
            });
        }
     });
@@ -86,12 +111,41 @@ router.get('/socio-economic', requireAuth, async (req, res) => {
        corrLit = pearsonCorrelation(cr, lit);
     }
 
+    // TOP CRIME AREAS LOGIC
+    // We fetch cases for the specific target context and aggregate by CrimeSceneLocation
+    let topCrimeAreas: { location: string, count: number }[] = [];
+    if (targetDistrictId !== 'ALL' || selectedStation !== 'ALL') {
+        const filter: any = {};
+        if (selectedStation !== 'ALL') {
+            filter.PoliceStationID = Number(selectedStation);
+        } else {
+            // All stations in the target district
+            const districtStations = units.filter(u => u.DistrictID === targetDistrictId).map(u => u.UnitID);
+            filter.PoliceStationID = { $in: districtStations };
+        }
+        
+        const casesForAreas = await db.getCases(filter);
+        const areaCounts = new Map<string, number>();
+        casesForAreas.forEach(c => {
+            let loc = c.CrimeSceneLocation || 'Unknown Location';
+            if (loc.trim() === '') loc = 'Unknown Location';
+            areaCounts.set(loc, (areaCounts.get(loc) || 0) + 1);
+        });
+
+        topCrimeAreas = Array.from(areaCounts.entries())
+            .map(([location, count]) => ({ location, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5); // Top 5 areas
+    }
+
     res.json({
         data: dataPoints,
+        usesDemoData,
         correlation: {
            urbanization: corrUrban,
            literacy: corrLit
-        }
+        },
+        topCrimeAreas
     });
   } catch(e: any) {
      res.status(500).json({ error: e.message });
