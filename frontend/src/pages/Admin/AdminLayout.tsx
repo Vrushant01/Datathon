@@ -74,7 +74,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || t('sidebar.console_title');
 
   return (
-    <div className="flex flex-col min-h-screen xl:h-screen xl:overflow-hidden bg-slate-50 relative select-none">
+    <div className="flex flex-col min-h-[115vh] bg-slate-50 relative select-none">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow sticky top-0 z-40 border-b border-ksp-gold/20">
@@ -84,14 +84,14 @@ export const AdminLayout: React.FC = () => {
         </div>
       </div>
 
-      <div className="hidden xl:block flex-shrink-0 z-40">
+      <div className="hidden xl:block sticky top-0 z-40 flex-shrink-0">
         <Navbar />
       </div>
 
-      <div className="flex flex-1 min-h-0 relative xl:overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-row items-stretch relative">
         {/* Desktop Sidebar Navigation (Hidden on < xl) */}
         <aside 
-          className="hidden xl:flex w-[275px] flex-shrink-0 h-full bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl overflow-y-auto select-none z-30"
+          className="hidden xl:flex w-[275px] flex-shrink-0 bg-ksp-navy text-white flex-col border-r border-ksp-gold/25 shadow-xl select-none z-30 sticky top-[111px] h-[calc(100vh-111px)] overflow-hidden"
         >
           {/* Console title branding */}
           <div className="p-6 border-b border-white/5 select-none flex-shrink-0">
@@ -102,7 +102,7 @@ export const AdminLayout: React.FC = () => {
           </div>
 
           {/* Sidebar Nav Links */}
-          <nav className="p-4 pb-8 flex-grow space-y-1.5">
+          <nav className="p-4 pb-8 flex-grow space-y-1.5 overflow-hidden">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -128,17 +128,19 @@ export const AdminLayout: React.FC = () => {
         </aside>
 
         {/* Main Content Area */}
-        <main 
-          className={`flex-1 min-w-0 h-full xl:overflow-y-auto ${
-            (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
-              ? 'p-0'
-              : 'px-4 pt-4 pb-24 xl:p-8'
-          }`}
-        >
-          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full' : 'container mx-auto min-w-0'}>
-            <Outlet />
-          </div>
-        </main>
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col pr-1">
+          <main 
+            className={`flex-1 min-w-0 min-h-0 ${
+              (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
+                ? 'p-0 h-[calc(100vh-111px)] max-h-[calc(100vh-111px)] overflow-y-auto'
+                : 'px-4 pt-4 pb-24 xl:p-8 h-[calc(100vh-111px)] max-h-[calc(100vh-111px)] overflow-y-auto'
+            }`}
+          >
+            <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full' : 'container mx-auto min-w-0'}>
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
 
       {/* Bottom Navigation Bar (Hidden on >= xl) */}
