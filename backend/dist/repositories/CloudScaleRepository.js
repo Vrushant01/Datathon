@@ -95,7 +95,7 @@ class CloudScaleRepository {
         if (tableName === 'Victim')
             actualTableName = 'victims';
         if (tableName === 'CaseEntity')
-            actualTableName = 'caseentities';
+            actualTableName = 'case_entities';
         const cacheEntry = GLOBAL_CACHE[actualTableName];
         if (!cacheEntry)
             throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -204,8 +204,12 @@ class CloudScaleRepository {
                 console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
             }
             const cleaned = allItems.map(item => {
+                let unwrapped = item;
+                if (item && typeof item === 'object' && item[actualTableName]) {
+                    unwrapped = item[actualTableName];
+                }
                 const clean = {};
-                for (const [k, v] of Object.entries(item)) {
+                for (const [k, v] of Object.entries(unwrapped)) {
                     if (v && typeof v === 'object') {
                         if ('S' in v)
                             clean[k] = v.S;
@@ -810,21 +814,63 @@ class CloudScaleRepository {
         return edge;
     }
     async getCaseEntities(caseId) {
-        const all = await this.scanAll('CaseEntity'); // actualTableName will be caseentitys => wait, let's just use caseentities
-        return all.filter(e => Number(e.CaseMasterID) === caseId);
+        // CaseEntity rows are stored with EntityID = Date.now() (not enumerable),
+        // so scanAll is impossible. Use queryTable keyed by CaseMasterID — the same
+        // supported pattern used by getChargesheetsByCase / getTimelineNotesByCase.
+        const nosql = this.app.nosql();
+        const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        try {
+            const resp = await nosql.table('case_entities').queryTable({
+                key_condition: {
+                    attribute: ['CaseMasterID'],
+                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                    value: NoSQLMarshall.makeNumber(caseId)
+                }
+            });
+            const raw = resp;
+            return (raw.get || []).map((d) => {
+                const item = typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item;
+                if (!item)
+                    return null;
+                // Unwrap Catalyst SDK type wrappers ({S:..., N:..., BOOL:...}) without coercing value to a number.
+                const clean = {};
+                for (const [k, v] of Object.entries(item)) {
+                    if (v && typeof v === 'object') {
+                        if ('S' in v)
+                            clean[k] = v.S; // string — preserves "4", "44", "444" exactly
+                        else if ('N' in v)
+                            clean[k] = Number(v.N);
+                        else if ('BOOL' in v)
+                            clean[k] = v.BOOL === true || v.BOOL === 'true';
+                        else if ('NULL' in v)
+                            clean[k] = null;
+                        else
+                            clean[k] = v;
+                    }
+                    else {
+                        clean[k] = v;
+                    }
+                }
+                return clean;
+            }).filter(Boolean);
+        }
+        catch (e) {
+            console.warn('[DB] getCaseEntities queryTable failed:', e?.message);
+            return [];
+        }
     }
     async addCaseEntity(entityType, entity, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        // We create a new table 'caseentities' in Catalyst if it exists, otherwise it will just error.
+        // We create a new table 'case_entities' in Catalyst if it exists, otherwise it will just error.
         // If it errors, we will fallback to accuseds like before for legacy support.
         try {
             const item = NoSQLItem.from(entity);
-            await nosql.table('caseentities').insertItems({ item });
-            GLOBAL_CACHE['caseentities'] = { data: null, promise: null, timestamp: 0 };
+            await nosql.table('case_entities').insertItems({ item });
+            GLOBAL_CACHE['case_entities'] = { data: null, promise: null, timestamp: 0 };
         }
         catch (e) {
-            console.warn("Table caseentities might not exist, falling back to accuseds");
+            console.warn("Table case_entities might not exist, falling back to accuseds");
             let table = 'accuseds';
             if (entityType === 'Victim')
                 table = 'victims';

@@ -339,13 +339,3 @@ router.post('/cases/:caseId/edges', authMiddleware_1.requireAuth, async (req, re
         res.status(500).json({ error: e.message });
     }
 });
-router.get('/debug', async (req, res) => {
-    try {
-        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const data = await db.scanAll('CaseEntity');
-        res.json(data);
-    }
-    catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});

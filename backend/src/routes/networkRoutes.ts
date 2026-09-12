@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/authMiddleware';
 import { RepositoryFactory } from '../repositories/RepositoryFactory';
+import { sseService } from '../services/sseService';
 
 const router = express.Router();
 
@@ -326,6 +327,7 @@ router.post('/cases/:caseId/entities', requireAuth, async (req, res) => {
             description
         }, userEmail);
 
+        sseService.broadcast('CASE_ENTITY_CREATED', newEntity);
         res.json(newEntity);
     } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -338,16 +340,18 @@ router.post('/cases/:caseId/edges', requireAuth, async (req, res) => {
         const { source, target, label } = req.body;
         const db = RepositoryFactory.getRepository(req);
         
-        const newEdge = await db.addCustomEdge({
+        const userEmail = (req as any).user?.email || 'system';
+        const newEdge = await (db as any).addCustomEdge({
+            EdgeID: `${Date.now()}`,
             CaseMasterID: caseId,
             source,
             target,
             label
-        });
+        }, userEmail);
 
+        sseService.broadcast('CASE_EDGE_CREATED', newEdge);
         res.json(newEdge);
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
-

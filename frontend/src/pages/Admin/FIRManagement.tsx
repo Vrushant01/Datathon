@@ -2,10 +2,12 @@ import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { mockDb, CaseMasterRow, EmployeeRow } from '../../../data/mockDb';
+import { useMockDb } from '../../hooks/useMockDb';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../config/api';
-import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
+import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck, Printer } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
+import { PrintFIR } from '../../components/PrintFIR';
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { useLocation } from 'react-router-dom';
 
@@ -13,8 +15,9 @@ export const FIRManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
+  const dbVersion = useMockDb();
+  const cases = React.useMemo(() => mockDb.getCases(), [dbVersion]);
   
-  const [cases, setCases] = useState<CaseMasterRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>(() => {
@@ -147,24 +150,6 @@ export const FIRManagement: React.FC = () => {
     setNotification({ type, text });
     setTimeout(() => setNotification(null), 3000);
   };
-
-  const fetchCases = async () => {
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/cases`);
-      if (res.ok) {
-        const data = await res.json();
-        setCases(data);
-      }
-    } catch (e) {
-      console.error('Failed to fetch cases', e);
-    }
-  };
-
-  useEffect(() => {
-    fetchCases();
-    const interval = setInterval(fetchCases, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const stationOfficers = employees.filter(e => e.UnitID === stationId);
@@ -330,8 +315,7 @@ export const FIRManagement: React.FC = () => {
       showNotification('success', 'FIR Case Registered officially and assigned.');
       setModalOpen(false);
       
-      // Refresh only the cases to update the UI
-      await fetchCases();
+      setModalOpen(false);
     } catch (e: any) {
       console.error("Error creating case:", e);
       showNotification('error', `Failed to save case record. Error: ${e.message}`);
@@ -343,7 +327,6 @@ export const FIRManagement: React.FC = () => {
       try {
         const res = await authFetch(`${API_BASE_URL}/api/cases/${id}`, { method: 'DELETE' });
         if (res.ok) {
-          await fetchCases();
           showNotification('success', 'Case record deleted.');
         } else {
           showNotification('error', 'Failed to delete case.');
@@ -441,6 +424,9 @@ export const FIRManagement: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* Official Print Layout (Hidden unless printing) */}
+      <PrintFIR firData={selectedFirDetails?.mainCase || null} />
 
       {/* Search and Filters */}
       <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center shrink-0">
@@ -585,6 +571,16 @@ export const FIRManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2 justify-center">
+                      <button 
+                        title="Print FIR"
+                        onClick={() => {
+                          setSelectedFirDetails(mockDb.getCaseDetails(c.CaseMasterID));
+                          setTimeout(() => window.print(), 100);
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-ksp-navy hover:bg-slate-100 border rounded transition"
+                      >
+                        <Printer size={14} />
+                      </button>
                       <button 
                         onClick={() => {
                           setSelectedFirDetails(mockDb.getCaseDetails(c.CaseMasterID));

@@ -46,6 +46,8 @@ import fixDataBugsRoute from './routes/fixDataBugsRoute';
 import verifySeedRoute from './routes/verifySeedRoute';
 import analyticsRoutes from './routes/analyticsRoutes';
 import networkRoutes from './routes/networkRoutes';
+import eventsRoute from './routes/eventsRoute';
+import { sseService } from './services/sseService';
 
 dotenv.config();
 
@@ -80,6 +82,7 @@ app.use('/api/fix-data-bugs', fixDataBugsRoute);
 app.use('/api/verify-seed', verifySeedRoute);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/network', networkRoutes);
+app.use('/api/events', eventsRoute);
 
 app.get("/", (req, res) => {
   res.status(200).send("Backend is Connected with pipeline 🚀");
@@ -249,6 +252,9 @@ app.get('/api/units', async (req, res) => {
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       const newEmployee = await (db as any).createEmployee(req.body, actorId);
       invalidateHotspotCache();
+      
+      sseService.broadcast('OFFICER_CREATED', newEmployee, { stationId: req.body.UnitID });
+      
       res.status(201).json(newEmployee);
     } catch (error) {
       res.status(500).json({ error: 'Failed to create employee' });
@@ -285,6 +291,7 @@ app.get('/api/units', async (req, res) => {
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       const newUnit = await (db as any).createUnit(req.body, actorId);
       invalidateHotspotCache();
+      sseService.broadcast('STATION_CREATED', newUnit);
       res.status(201).json(newUnit);
     } catch (error) {
       res.status(500).json({ error: 'Failed to create unit' });
@@ -571,6 +578,10 @@ app.post('/api/cases', requireAuth, async (req, res) => {
     }
 
     invalidateHotspotCache();
+    
+    // Broadcast FIR_CREATED event
+    sseService.broadcast('FIR_CREATED', newCase, { stationId: caseData.PoliceStationID, officerId: caseData.PolicePersonID });
+    
     res.status(201).json(newCase);
   } catch (error) {
     res.status(500).json({ error: 'Failed to create case' });

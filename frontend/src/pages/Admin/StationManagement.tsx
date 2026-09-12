@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, UnitRow } from '../../../data/mockDb';
+import { useMockDb } from '../../hooks/useMockDb';
 import { authFetch } from '../../utils/authFetch';
 import { API_BASE_URL } from '../../config/api';
 import { useLanguage } from '../../context/LanguageContext';
@@ -12,29 +13,14 @@ import {
 export const StationManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
-  const [stations, setStations] = useState<UnitRow[]>([]);
+  const dbVersion = useMockDb();
+  const stations = React.useMemo(() => mockDb.getUnits().filter(u => u.TypeID === 1), [dbVersion]);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
   
   const districts = mockDb.getDistricts();
 
-  const fetchStations = async () => {
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/units`);
-      if (res.ok) {
-        const data = await res.json();
-        setStations(data.filter((u: any) => u.TypeID === 1));
-      }
-    } catch (e) {
-      console.error('Failed to fetch stations', e);
-    }
-  };
-
-  useEffect(() => {
-    fetchStations();
-    const interval = setInterval(fetchStations, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Create modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -117,7 +103,6 @@ export const StationManagement: React.FC = () => {
 
       if (res.ok) {
         showNotification('success', 'Police Station created successfully.');
-        await fetchStations();
         setModalOpen(false);
       }
     } catch (e: any) {

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { syncData } from '../data/mockDb';
+import { sseClient } from './utils/SSEClient';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 
@@ -58,6 +59,10 @@ const App: React.FC = () => {
       Promise.race([syncData(), syncTimeout]).then(() => {
         setDataLoaded(true);
         setSyncKey(k => k + 1);
+        
+        // Connect to Realtime Events once data is loaded
+        sseClient.connect();
+        
       }).catch(() => {
         setDataLoaded(true); // still show the app even if sync fails
       });

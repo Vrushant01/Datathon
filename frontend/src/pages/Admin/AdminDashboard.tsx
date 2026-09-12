@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mockDb, syncData } from '../../../data/mockDb';
 import { useDbConnection } from '../../hooks/useDbConnection';
+import { useMockDb } from '../../hooks/useMockDb';
 import { useLanguage } from '../../context/LanguageContext';
 import { getAIDashboard } from '../../services/aiService';
 import { 
@@ -20,13 +21,13 @@ export const AdminDashboard: React.FC = () => {
   const isConnecting = dbConnectionStatus === 'connecting' || (dbConnectionStatus === 'connected' && !dataLoaded);
   const navigate = useNavigate();
 
-  // Re-read from mockDb every time dataLoaded changes.
-  // Without useMemo keyed on dataLoaded, the data variables captured at initial render
-  // remain stale empty arrays — they never see the records that arrive after syncFromMongo completes.
-  const cases = useMemo(() => mockDb.getCases(), [dataLoaded]);
-  const officers = useMemo(() => mockDb.getEmployees(), [dataLoaded]);
-  const units = useMemo(() => mockDb.getUnits(), [dataLoaded]);
-  const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), [dataLoaded]);
+  const dbVersion = useMockDb();
+
+  // Re-read from mockDb every time dataLoaded or dbVersion changes.
+  const cases = useMemo(() => mockDb.getCases(), [dataLoaded, dbVersion]);
+  const officers = useMemo(() => mockDb.getEmployees(), [dataLoaded, dbVersion]);
+  const units = useMemo(() => mockDb.getUnits(), [dataLoaded, dbVersion]);
+  const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), [dataLoaded, dbVersion]);
 
   const [timeFilter, setTimeFilter] = React.useState<'24H' | '7D' | '30D' | 'ALL'>('ALL');
 

@@ -1,5 +1,6 @@
 import { authFetch } from '../src/utils/authFetch';
 import { API_BASE_URL } from '../src/config/api';
+import { sseClient } from '../src/utils/SSEClient';
 // KSP Mock Database and Client-Side State Manager
 // Implements the exact ER Schema of the Karnataka Police Department
 // Stores state in LocalStorage for persistence across page reloads
@@ -732,8 +733,20 @@ export const loadDbState = (): DbState => {
   return memoryDbState;
 };
 
+const dbListeners = new Set<() => void>();
+
+export const subscribeDb = (callback: () => void) => {
+  dbListeners.add(callback);
+  return () => dbListeners.delete(callback);
+};
+
+export const emitDbChange = () => {
+  dbListeners.forEach(cb => cb());
+};
+
 export const saveDbState = (state: DbState): void => {
   memoryDbState = state;
+  emitDbChange();
 };
 
 export const resetDbState = (): void => {
@@ -1619,3 +1632,35 @@ export const mockDb = {
     return true;
   }
 };
+
+// Bind SSE updates directly to mockDb
+sseClient.subscribe('FIR_CREATED', (newCase) => {
+    const state = loadDbState();
+    if (!state.cases.find((c: any) => c.CaseMasterID === newCase.CaseMasterID)) {
+        state.cases.push(newCase);
+        saveDbState(state);
+    }
+});
+
+sseClient.subscribe('OFFICER_CREATED', (newOfficer) => {
+    const state = loadDbState();
+    if (!state.employees.find((e: any) => e.EmployeeID === newOfficer.EmployeeID)) {
+        state.employees.push(newOfficer);
+        saveDbState(state);
+    }
+});
+
+sseClient.subscribe('STATION_CREATED', (newStation) => {
+    const state = loadDbState();
+    if (!state.units.find((u: any) => u.UnitID === newStation.UnitID)) {
+        state.units.push(newStation);
+        saveDbState(state);
+    }
+});
+
+sseClient.subscribe('CASE_ENTITY_CREATED', (newEntity) => {
+    const state = loadDbState();
+    // We don't necessarily keep all entities in mockDb (they are dynamically fetched in CriminalNetwork)
+    // but if we did, we could push them here. For now, just trigger a generic update.
+    emitDbChange();
+});

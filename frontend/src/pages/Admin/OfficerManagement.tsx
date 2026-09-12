@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, EmployeeRow, UnitRow, DistrictRow } from '../../../data/mockDb';
+import { useMockDb } from '../../hooks/useMockDb';
 import { authFetch } from '../../utils/authFetch';
 import { API_BASE_URL } from '../../config/api';
 import { useLanguage } from '../../context/LanguageContext';
@@ -13,7 +14,9 @@ import {
 export const OfficerManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
-  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
+  const dbVersion = useMockDb();
+  const employees = React.useMemo(() => mockDb.getEmployees(), [dbVersion]);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
   const [filterStation, setFilterStation] = useState<number | 'ALL'>('ALL');
@@ -85,23 +88,6 @@ export const OfficerManagement: React.FC = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const fetchEmployees = async () => {
-    try {
-      const res = await authFetch(`${API_BASE_URL}/api/employees`);
-      if (res.ok) {
-        const data = await res.json();
-        setEmployees(data);
-      }
-    } catch (e) {
-      console.error('Failed to fetch employees', e);
-    }
-  };
-
-  useEffect(() => {
-    fetchEmployees();
-    const interval = setInterval(fetchEmployees, 15000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,7 +185,9 @@ export const OfficerManagement: React.FC = () => {
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          showNotification('success', `Officer ${firstName} details updated.`);
+          showNotification('success', 'Officer details updated successfully.');
+        } else {
+          showNotification('error', 'Failed to update officer.');
         }
       } else {
         // Add new
@@ -210,10 +198,11 @@ export const OfficerManagement: React.FC = () => {
         });
         if (res.ok) {
           showNotification('success', `Officer ${firstName} registered successfully.`);
+        } else {
+          showNotification('error', 'Failed to register officer.');
         }
       }
       setModalOpen(false);
-      await fetchEmployees();
     } catch (e: any) {
       showNotification('error', `Error saving officer: ${e.message}`);
     }
@@ -230,8 +219,9 @@ export const OfficerManagement: React.FC = () => {
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
-        await fetchEmployees();
-        showNotification('success', `Officer ${emp.FirstName} status toggled.`);
+        showNotification('success', `Officer status updated to ${newStatus}`);
+      } else {
+        showNotification('error', 'Failed to update status.');
       }
     } catch (e: any) {
       showNotification('error', `Failed to toggle status: ${e.message}`);
@@ -243,8 +233,9 @@ export const OfficerManagement: React.FC = () => {
       try {
         const res = await authFetch(`${API_BASE_URL}/api/employees/${id}`, { method: 'DELETE' });
         if (res.ok) {
-          await fetchEmployees();
-          showNotification('success', 'Officer profile deleted from database.');
+          showNotification('success', 'Officer record deleted.');
+        } else {
+          showNotification('error', 'Failed to delete officer.');
         }
       } catch (e: any) {
         showNotification('error', `Failed to delete officer: ${e.message}`);
