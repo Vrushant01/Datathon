@@ -94,7 +94,7 @@ export class CloudScaleRepository implements IDataRepository {
     if (tableName === 'CaseMaster') actualTableName = 'casemasters';
     if (tableName === 'Accused') actualTableName = 'accuseds';
     if (tableName === 'Victim') actualTableName = 'victims';
-    if (tableName === 'CaseEntity') actualTableName = 'caseentities';
+    if (tableName === 'CaseEntity') actualTableName = 'case_entities';
 
     const cacheEntry = GLOBAL_CACHE[actualTableName];
     if (!cacheEntry) throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -843,7 +843,7 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
     try {
-      const resp = await nosql.table('caseentities').queryTable({
+      const resp = await nosql.table('case_entities').queryTable({
         key_condition: {
           attribute: ['CaseMasterID'],
           operator: NoSQLEnum.NoSQLOperator.EQUALS,
@@ -879,14 +879,14 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
-    // We create a new table 'caseentities' in Catalyst if it exists, otherwise it will just error.
+    // We create a new table 'case_entities' in Catalyst if it exists, otherwise it will just error.
     // If it errors, we will fallback to accuseds like before for legacy support.
     try {
       const item = NoSQLItem.from(entity);
-      await nosql.table('caseentities').insertItems({ item });
-      GLOBAL_CACHE['caseentities'] = { data: null, promise: null, timestamp: 0 };
+      await nosql.table('case_entities').insertItems({ item });
+      GLOBAL_CACHE['case_entities'] = { data: null, promise: null, timestamp: 0 };
     } catch (e) {
-      console.warn("Table caseentities might not exist, falling back to accuseds");
+      console.warn("Table case_entities might not exist, falling back to accuseds");
       let table = 'accuseds';
       if (entityType === 'Victim') table = 'victims';
       if (entityType === 'Complainant') table = 'complainants';

@@ -232,7 +232,7 @@ export const CriminalNetwork: React.FC = () => {
       graphCache.current.delete(selectedFirId!);
       const current = selectedFirId;
       setSelectedFirId(null);
-      setTimeout(() => setSelectedFirId(current), 10);
+      setTimeout(() => setSelectedFirId(current), 150);
     } catch (e) {
       showNotification('error', 'Failed to link nodes');
     }
@@ -269,11 +269,16 @@ export const CriminalNetwork: React.FC = () => {
           payload.description = `Age: ${newSuspectAge}, Gender: ${newSuspectGender === 1 ? 'Male' : (newSuspectGender === 2 ? 'Female' : 'Other')}`;
       }
       
-      await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities`, {
+      const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+      
+      if (!res.ok) {
+        throw new Error('Failed to save entity');
+      }
+
       showNotification('success', `Added node: "${newEntityValue}"`);
       
       setNewEntityValue('');
@@ -283,9 +288,9 @@ export const CriminalNetwork: React.FC = () => {
       graphCache.current.delete(selectedFirId);
       const current = selectedFirId;
       setSelectedFirId(null);
-      setTimeout(() => setSelectedFirId(current), 10);
-    } catch (e) {
-      showNotification('error', 'Failed to add entity');
+      setTimeout(() => setSelectedFirId(current), 150);
+    } catch (e: any) {
+      showNotification('error', e.message || 'Failed to add entity');
     }
   };
 
@@ -309,7 +314,7 @@ export const CriminalNetwork: React.FC = () => {
     setTimeout(() => {
         setSelectedFirId(current);
         setSelectedNodeData({...selectedNodeData, label: editNodeValue, rawData: {...selectedNodeData.rawData, value: editNodeValue, description: editNodeDesc}});
-    }, 10);
+    }, 150);
   };
 
   const handleDeleteEntityNode = (entityId: number) => {
@@ -327,7 +332,7 @@ export const CriminalNetwork: React.FC = () => {
       
       const current = selectedFirId;
       setSelectedFirId(null);
-      setTimeout(() => setSelectedFirId(current), 10);
+      setTimeout(() => setSelectedFirId(current), 150);
     }
   };
 
