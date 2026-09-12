@@ -127,15 +127,14 @@ export const AdminLayout: React.FC = () => {
           </div>
         </aside>
 
-        {/* Main Content Area */}
         <main 
           className={`main-scroll-container ${
             (location.pathname.includes('/network') || location.pathname.includes('/assistant'))
               ? 'p-0'
-              : 'px-4 pt-4 pb-24 xl:p-8'
+              : 'px-4 pt-4 pb-24 xl:p-8 flex flex-col'
           }`}
         >
-          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full' : 'container mx-auto min-w-0'}>
+          <div className={(location.pathname.includes('/network') || location.pathname.includes('/assistant')) ? 'w-full h-full flex flex-col' : 'w-full flex-1 flex flex-col min-w-0'}>
             <Outlet />
           </div>
         </main>

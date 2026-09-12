@@ -107,9 +107,9 @@ export const OfficerLayout: React.FC = () => {
         <main className={`main-scroll-container ${
           location.pathname.includes('/network') 
             ? 'p-0' 
-            : 'px-4 pt-4 pb-24 xl:p-8'
+            : 'px-4 pt-4 pb-24 xl:p-8 flex flex-col'
         }`}>
-          <div className={location.pathname.includes('/network') ? 'flex-grow flex flex-col w-full h-full' : 'container mx-auto min-w-0'}>
+          <div className={location.pathname.includes('/network') ? 'flex-grow flex flex-col w-full h-full' : 'w-full flex-1 flex flex-col min-w-0'}>
             <Outlet />
           </div>
         </main>
