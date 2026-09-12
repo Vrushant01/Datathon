@@ -406,15 +406,65 @@ export const CriminalNetwork: React.FC = () => {
       });
       
       if (!res.ok) {
-        throw new Error('Failed to save entity');
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to save entity');
       }
 
-      showNotification('success', `Added node: "${newEntityValue}"`);
+      const newEntity = await res.json();
+      showNotification('success', `Node added successfully`);
       
       setNewEntityValue('');
       setNewEntityDesc('');
       
-      // The SSE listener (CASE_ENTITY_CREATED) will automatically patch this node into the graph instantly
+      // Update local graph immediately
+      const entityNodeId = `entity-${newEntity.EntityID}`;
+      setNodes(prev => {
+        if (prev.find(n => n.id === entityNodeId)) return prev;
+        const newNode: Node = {
+          id: entityNodeId,
+          type: 'custom',
+          position: { x: 400 + Math.random() * 100 - 50, y: 300 + Math.random() * 100 - 50 },
+          data: {
+            label: newEntity.value,
+            color: getNodeColor(newEntity.type, false),
+            symbol: getNodeSymbol(newEntity.type),
+            type: newEntity.type,
+            rawData: newEntity
+          }
+        };
+        if (graphCache.current.has(selectedFirId)) {
+          graphCache.current.get(selectedFirId)!.nodes.push(newNode);
+        }
+        return [...prev, newNode];
+      });
+
+      setEdges(prev => {
+        const edgeId = `e-case-${selectedFirId}-${entityNodeId}`;
+        if (prev.find(edge => edge.id === edgeId)) return prev;
+        let relationLabel = 'Associated';
+        if (newEntity.type === 'Vehicle') relationLabel = 'Transported In';
+        if (newEntity.type === 'Phone') relationLabel = 'Calls From';
+        if (newEntity.type === 'Bank') relationLabel = 'Wire Transfer';
+        if (newEntity.type === 'Location') relationLabel = 'Frequents';
+        if (newEntity.type === 'Weapon') relationLabel = 'Used In Crime';
+        if (newEntity.type === 'Evidence') relationLabel = 'Seized';
+
+        const newEdge: Edge = {
+          id: edgeId,
+          source: `fir:${selectedFirId}`,
+          target: entityNodeId,
+          type: 'straight',
+          label: relationLabel,
+          animated: true,
+          style: { stroke: getNodeColor(newEntity.type, false), strokeWidth: 1.5, opacity: 0.6 },
+          labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+          labelBgStyle: { fill: '#0f172a' }
+        };
+        if (graphCache.current.has(selectedFirId)) {
+          graphCache.current.get(selectedFirId)!.edges.push(newEdge);
+        }
+        return [...prev, newEdge];
+      });
 
     } catch (e: any) {
       showNotification('error', e.message || 'Failed to add entity');

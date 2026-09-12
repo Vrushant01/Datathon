@@ -882,20 +882,22 @@ class CloudScaleRepository {
     }
     async deleteCaseEntity(caseId, entityId, actorId = 'system') {
         const nosql = this.app.nosql();
-        const { NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         const zcql = this.app.zcql();
-        // Using simple target lookup matching the exact Node ID
-        const res = await zcql.executeZCQLQuery(`SELECT ROWID FROM customedges WHERE CaseMasterID = ${caseId} AND target = '${entityId}' AND source = 'entity'`);
+        // First, delete the entity node itself
+        const res = await zcql.executeZCQLQuery(`SELECT EdgeID FROM customedges WHERE CaseMasterID = ${caseId} AND target = '${entityId}' AND source = 'entity'`);
         if (res.length > 0) {
-            const rowId = res[0].customedges.ROWID;
-            await nosql.table('customedges').deleteItems({ index_names: ['ROWID'], index_values: [NoSQLMarshall.makeNumber(rowId)] });
+            const edgeIdStr = res[0].customedges.EdgeID;
+            const keys = new NoSQLItem().addString('EdgeID', edgeIdStr);
+            await nosql.table('customedges').deleteItems({ keys: [keys] });
             GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
         }
         // Also delete any edges attached to this node
-        const edgesRes = await zcql.executeZCQLQuery(`SELECT ROWID FROM customedges WHERE CaseMasterID = ${caseId} AND (source = 'entity-${entityId}' OR target = 'entity-${entityId}')`);
+        const edgesRes = await zcql.executeZCQLQuery(`SELECT EdgeID FROM customedges WHERE CaseMasterID = ${caseId} AND (source = 'entity-${entityId}' OR target = 'entity-${entityId}')`);
         for (const edge of edgesRes) {
-            const rowId = edge.customedges.ROWID;
-            await nosql.table('customedges').deleteItems({ index_names: ['ROWID'], index_values: [NoSQLMarshall.makeNumber(rowId)] });
+            const edgeIdStr = edge.customedges.EdgeID;
+            const keys = new NoSQLItem().addString('EdgeID', edgeIdStr);
+            await nosql.table('customedges').deleteItems({ keys: [keys] });
         }
         // Audit log
         await this.createAuditLog({
