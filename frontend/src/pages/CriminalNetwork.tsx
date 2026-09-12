@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { mockDb } from '../../data/mockDb';
 import { authFetch } from '../utils/authFetch';
+import { sseClient } from '../utils/SSEClient';
 import { API_BASE_URL } from '../config/api';
 import { 
   Share2, FileText, Search, Activity, ShieldAlert, ArrowLeft, Network,
@@ -164,6 +165,98 @@ export const CriminalNetwork: React.FC = () => {
     return 'EVI';
   };
 
+  // Real-time synchronization for nodes and edges
+  useEffect(() => {
+    const unsubEntity = sseClient.subscribe('CASE_ENTITY_CREATED', (e: any) => {
+      const newEntity = e.detail;
+      if (selectedFirId !== null && Number(newEntity.CaseMasterID) === selectedFirId) {
+        const entityNodeId = `entity-${newEntity.EntityID}`;
+        setNodes(prev => {
+          if (prev.find(n => n.id === entityNodeId)) return prev;
+          
+          const newNode: Node = {
+            id: entityNodeId,
+            type: 'custom',
+            position: { x: 400 + Math.random() * 100 - 50, y: 300 + Math.random() * 100 - 50 },
+            data: {
+              label: newEntity.value,
+              color: getNodeColor(newEntity.type, false),
+              symbol: getNodeSymbol(newEntity.type),
+              type: newEntity.type,
+              rawData: newEntity
+            }
+          };
+          
+          if (graphCache.current.has(selectedFirId)) {
+            graphCache.current.get(selectedFirId)!.nodes.push(newNode);
+          }
+          return [...prev, newNode];
+        });
+
+        setEdges(prev => {
+          const edgeId = `e-case-${selectedFirId}-${entityNodeId}`;
+          if (prev.find(edge => edge.id === edgeId)) return prev;
+
+          let relationLabel = 'Associated';
+          if (newEntity.type === 'Vehicle') relationLabel = 'Transported In';
+          if (newEntity.type === 'Phone') relationLabel = 'Calls From';
+          if (newEntity.type === 'Bank') relationLabel = 'Wire Transfer';
+          if (newEntity.type === 'Location') relationLabel = 'Frequents';
+          if (newEntity.type === 'Weapon') relationLabel = 'Used In Crime';
+          if (newEntity.type === 'Evidence') relationLabel = 'Seized';
+
+          const newEdge: Edge = {
+            id: edgeId,
+            source: `fir:${selectedFirId}`,
+            target: entityNodeId,
+            type: 'straight',
+            label: relationLabel,
+            animated: true,
+            style: { stroke: getNodeColor(newEntity.type, false), strokeWidth: 1.5, opacity: 0.6 },
+            labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+            labelBgStyle: { fill: '#0f172a' }
+          };
+
+          if (graphCache.current.has(selectedFirId)) {
+            graphCache.current.get(selectedFirId)!.edges.push(newEdge);
+          }
+          return [...prev, newEdge];
+        });
+      }
+    });
+
+    const unsubEdge = sseClient.subscribe('CASE_EDGE_CREATED', (e: any) => {
+      const newEdgeData = e.detail;
+      if (selectedFirId !== null && Number(newEdgeData.CaseMasterID) === selectedFirId) {
+        setEdges(prev => {
+          if (prev.find(edge => edge.id === newEdgeData.EdgeID)) return prev;
+          
+          const newEdge: Edge = {
+            id: newEdgeData.EdgeID,
+            source: newEdgeData.source,
+            target: newEdgeData.target,
+            type: 'straight',
+            label: newEdgeData.label || 'Linked',
+            animated: true,
+            style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
+            labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
+            labelBgStyle: { fill: '#0f172a' }
+          };
+          if (graphCache.current.has(selectedFirId)) {
+            graphCache.current.get(selectedFirId)!.edges.push(newEdge);
+          }
+          return [...prev, newEdge];
+        });
+      }
+    });
+
+    return () => {
+      unsubEntity();
+      unsubEdge();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFirId, setNodes, setEdges]);
+
   // Recompute graph when FIR is selected
   useEffect(() => {
     if (selectedFirId === null) {
@@ -228,11 +321,7 @@ export const CriminalNetwork: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: params.source, target: params.target, label: 'Linked' })
       });
-      // Invalidate cache and reload
-      graphCache.current.delete(selectedFirId!);
-      const current = selectedFirId;
-      setSelectedFirId(null);
-      setTimeout(() => setSelectedFirId(current), 150);
+      // The SSE listener will automatically patch this edge in for all clients including this one
     } catch (e) {
       showNotification('error', 'Failed to link nodes');
     }
@@ -284,11 +373,8 @@ export const CriminalNetwork: React.FC = () => {
       setNewEntityValue('');
       setNewEntityDesc('');
       
-      // Invalidate cache
-      graphCache.current.delete(selectedFirId);
-      const current = selectedFirId;
-      setSelectedFirId(null);
-      setTimeout(() => setSelectedFirId(current), 150);
+      // The SSE listener (CASE_ENTITY_CREATED) will automatically patch this node into the graph instantly
+
     } catch (e: any) {
       showNotification('error', e.message || 'Failed to add entity');
     }
