@@ -180,8 +180,12 @@ export class CloudScaleRepository implements IDataRepository {
       }
 
       const cleaned = allItems.map(item => {
+        let unwrapped = item;
+        if (item && typeof item === 'object' && item[actualTableName]) {
+          unwrapped = item[actualTableName];
+        }
         const clean: any = {};
-        for (const [k, v] of Object.entries(item)) {
+        for (const [k, v] of Object.entries(unwrapped)) {
           if (v && typeof v === 'object') {
             if ('S' in (v as any)) clean[k] = (v as any).S;
             else if ('N' in (v as any)) clean[k] = Number((v as any).N);

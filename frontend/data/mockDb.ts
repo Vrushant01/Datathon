@@ -629,54 +629,61 @@ export const syncData = async (): Promise<void> => {
     console.log('[DB] LIVE');
     setDbStatus('connected', null, false);
 
-    // 2. Fetch data (no longer blocks the connection status)
+    // 2. Fetch data using allSettled so individual endpoint failures don't wipe all data.
+    // If a table returns 500 (e.g. Catalyst cold-start), we skip it and keep existing state.
+    // A 401 on any endpoint still propagates as a hard auth error.
     console.log('[Dashboard] stats request started');
-    const fetchTable = async (route: string) => {
-      const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('Authentication required');
-        if (res.status === 403) throw new Error('Permission denied');
-        if (res.status === 404) throw new Error('Resource not found');
-        if (res.status === 409) throw new Error('Conflict');
-        if (res.status === 422) throw new Error('Validation error');
-        if (res.status === 429) throw new Error('Rate limit exceeded');
-        if (res.status >= 500) throw new Error('Server error');
-        throw new Error(`HTTP error ${res.status}`);
+    const fetchTableSettled = async (route: string): Promise<any[] | null> => {
+      try {
+        const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
+        if (!res.ok) {
+          if (res.status === 401) throw new Error('Authentication required');
+          if (res.status === 403) {
+            console.warn(`[CloudScale Sync] ${route}: 403 Permission denied — skipping.`);
+            return null;
+          }
+          console.warn(`[CloudScale Sync] ${route}: HTTP ${res.status} — skipping.`);
+          return null;
+        }
+        const data = await res.json();
+        return Array.isArray(data) ? data : null;
+      } catch (e: any) {
+        if (e.message === 'Authentication required') throw e; // re-throw auth errors
+        console.warn(`[CloudScale Sync] ${route} failed: ${e.message} — skipping.`);
+        return null;
       }
-      return await res.json();
     };
 
     const [
-      districts,
-      units,
-      employees,
-      cases,
-      victims,
-      accused,
-      customEdges,
-      complainants,
-      actSections
+      districtsRes,
+      unitsRes,
+      employeesRes,
+      casesRes,
+      victimsRes,
+      accusedRes,
+      customEdgesRes,
+      complainantsRes,
+      actSectionsRes
     ] = await Promise.all([
-      fetchTable('districts'),
-      fetchTable('units'),
-      fetchTable('employees'),
-      fetchTable('cases'),
-      fetchTable('victims'),
-      fetchTable('accused'),
-      fetchTable('customedges'),
-      fetchTable('complainants'),
-      fetchTable('actsections')
+      fetchTableSettled('districts'),
+      fetchTableSettled('units'),
+      fetchTableSettled('employees'),
+      fetchTableSettled('cases'),
+      fetchTableSettled('victims'),
+      fetchTableSettled('accused'),
+      fetchTableSettled('customedges'),
+      fetchTableSettled('complainants'),
+      fetchTableSettled('actsections')
     ]);
-
-    console.log('[Dashboard] stats response: Data loaded successfully');
 
     const state = loadDbState();
 
-    // Update in-memory state
-    if (districts && districts.length > 0) state.districts = districts;
-    if (units && units.length > 0) state.units = units;
-    if (employees && employees.length > 0) {
-      state.employees = employees.map((emp: any) => {
+    // Only overwrite a table's state if the fetch returned real data.
+    // This preserves existing cached data when individual endpoints fail.
+    if (districtsRes && districtsRes.length > 0) state.districts = districtsRes;
+    if (unitsRes && unitsRes.length > 0) state.units = unitsRes;
+    if (employeesRes && employeesRes.length > 0) {
+      state.employees = employeesRes.map((emp: any) => {
         const existing = state.employees.find(e => e.EmployeeID === emp.EmployeeID);
         return {
           ...emp,
@@ -685,18 +692,24 @@ export const syncData = async (): Promise<void> => {
         };
       });
     }
-    if (cases && cases.length > 0) state.cases = cases;
-    if (victims && victims.length > 0) state.victims = victims;
-    if (accused && accused.length > 0) state.accused = accused;
-    if (complainants && complainants.length > 0) state.complainants = complainants;
-    if (actSections && actSections.length > 0) state.actSections = actSections;
-    if (customEdges && customEdges.length > 0) state.customEdges = customEdges;
+    if (casesRes && casesRes.length > 0) state.cases = casesRes;
+    if (victimsRes && victimsRes.length > 0) state.victims = victimsRes;
+    if (accusedRes && accusedRes.length > 0) state.accused = accusedRes;
+    if (complainantsRes && complainantsRes.length > 0) state.complainants = complainantsRes;
+    if (actSectionsRes && actSectionsRes.length > 0) state.actSections = actSectionsRes;
+    if (customEdgesRes && customEdgesRes.length > 0) state.customEdges = customEdgesRes;
+
+    const totalLoaded = [districtsRes, unitsRes, employeesRes, casesRes, victimsRes, accusedRes, complainantsRes, actSectionsRes]
+      .filter(r => r && r.length > 0).length;
+    const totalSkipped = 8 - totalLoaded;
 
     saveDbState(state);
-    
-    // Notify that data is fully loaded
-    setDbStatus('connected', null, true);
-    console.log('[CloudScale Sync] Complete. In-memory cache synchronized.');
+
+    // Mark as loaded if at least cases came through (core dashboard metric).
+    // Even partial data is better than showing all zeros.
+    const dataLoaded = (casesRes !== null && casesRes.length > 0) || totalLoaded > 0;
+    setDbStatus('connected', null, dataLoaded);
+    console.log(`[CloudScale Sync] Complete. ${totalLoaded} tables loaded, ${totalSkipped} skipped.`);
   } catch (err: any) {
     const errorMsg = err.message || 'Sync failed';
     setDbStatus('error', errorMsg, false);
