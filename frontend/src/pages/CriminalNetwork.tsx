@@ -471,27 +471,57 @@ export const CriminalNetwork: React.FC = () => {
     }
   };
 
-  const handleUpdateNode = (e: React.FormEvent) => {
+  const handleUpdateNode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedNodeData || selectedNodeData.type === 'case') return;
     
-    if (selectedNodeData.type === 'accused') {
-        mockDb.updateCaseAccused(selectedNodeData.rawData.AccusedMasterID, editNodeValue, editSuspectAge, editSuspectGender, user?.email || 'officer@ksp.gov.in');
-    } else if (selectedNodeData.type === 'victim') {
-        mockDb.updateCaseVictim(selectedNodeData.rawData.VictimMasterID, editNodeValue, editSuspectAge, editSuspectGender, user?.email || 'officer@ksp.gov.in');
-    } else {
-        mockDb.updateCaseEntity(selectedNodeData.rawData.EntityID, editNodeValue, editNodeDesc, user?.email || 'officer@ksp.gov.in');
+    if (selectedNodeData.type === 'accused' || selectedNodeData.type === 'victim') {
+      showNotification('error', 'Cannot edit system generated individuals');
+      return;
     }
-    showNotification('success', 'Node updated successfully');
-    setIsEditingNode(false);
-    
-    // trigger rerender
-    const current = selectedFirId;
-    setSelectedFirId(null);
-    setTimeout(() => {
-        setSelectedFirId(current);
-        setSelectedNodeData({...selectedNodeData, label: editNodeValue, rawData: {...selectedNodeData.rawData, value: editNodeValue, description: editNodeDesc}});
-    }, 150);
+
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${selectedNodeData.rawData.EntityID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: selectedNodeData.type,
+          value: editNodeValue,
+          description: editNodeDesc
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to update entity');
+      
+      const updatedEntity = await res.json();
+      showNotification('success', 'Node updated successfully');
+      setIsEditingNode(false);
+      
+      // Update local graph immediately
+      const entityNodeId = `entity-${updatedEntity.EntityID}`;
+      setNodes(prev => prev.map(n => {
+        if (n.id === entityNodeId) {
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              label: updatedEntity.value,
+              rawData: updatedEntity
+            }
+          };
+        }
+        return n;
+      }));
+
+      setSelectedNodeData({
+        ...selectedNodeData,
+        label: updatedEntity.value,
+        rawData: updatedEntity
+      });
+
+    } catch (e: any) {
+      showNotification('error', e.message || 'Update failed');
+    }
   };
 
   const handleDeleteEntityNode = async (entityId: number | string) => {
@@ -515,9 +545,15 @@ export const CriminalNetwork: React.FC = () => {
         
         showNotification('success', 'Association node deleted.');
         setSelectedNodeData(null);
+        
+        // Update local graph immediately
+        const entityNodeId = `entity-${entityId}`;
+        setNodes(prev => prev.filter(n => n.id !== entityNodeId));
+        setEdges(prev => prev.filter(e => e.source !== entityNodeId && e.target !== entityNodeId));
+        
       } catch (error: any) {
         console.error('Delete entity error:', error);
-        showNotification('error', 'Failed to delete association node.');
+        showNotification('error', error.message || 'Failed to delete association node.');
       }
     }
   };

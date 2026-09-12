@@ -359,3 +359,18 @@ router.delete('/cases/:caseId/entities/:entityId', authMiddleware_1.requireAuth,
         res.status(500).json({ error: e.message });
     }
 });
+router.put('/cases/:caseId/entities/:entityId', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const caseId = Number(req.params.caseId);
+        const entityId = req.params.entityId;
+        const { type, value, description } = req.body;
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const userEmail = req.user?.email || 'system';
+        const updatedEntity = await db.updateCaseEntity(entityId, type, value, description, userEmail);
+        sseService_1.sseService.broadcast('CASE_ENTITY_UPDATED', { CaseMasterID: caseId, ...updatedEntity });
+        res.json(updatedEntity);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});

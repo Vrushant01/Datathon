@@ -50,7 +50,7 @@ export interface IDataRepository {
   // Network Mutations
   addCustomEdge(edge: any): Promise<any>;
   addCaseEntity(entityType: string, entity: any, actorId?: string): Promise<any>;
-  updateCaseEntity(entityType: string, entity: any): Promise<any>;
+  updateCaseEntity(entityId: string, entityType: string, value: string, description: string, actorId?: string): Promise<any>;
   deleteCaseEntity(caseId: number, entityId: string, actorId?: string): Promise<void>;
   
   // New Case Update Operations

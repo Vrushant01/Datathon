@@ -986,8 +986,24 @@ class CloudScaleRepository {
                 throw new Error(`Metric '${metric}' is not supported.`);
         }
     }
-    async updateCaseEntity(entityType, entity) {
-        throw new Error('Update entity not fully implemented in CloudScale repo mock');
+    async updateCaseEntity(entityId, entityType, value, description, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const edgeId = `entity-${entityId}`;
+        // Fetch the existing record to keep its CaseMasterID intact
+        const itemToUpdate = new NoSQLItem();
+        itemToUpdate.set('EdgeID', edgeId);
+        itemToUpdate.set('label', JSON.stringify({ type: entityType, value, description }));
+        await nosql.table('customedges').updateItems({ item: itemToUpdate });
+        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        await this.createAuditLog({
+            Action: 'UPDATE_CASE_ENTITY',
+            EntityType: 'CUSTOM_ENTITY',
+            EntityID: entityId,
+            Description: `Updated entity ${entityId} to type ${entityType}, value ${value}`,
+            ActorID: actorId
+        });
+        return { EntityID: entityId, type: entityType, value, description };
     }
     // --- Audit Logs ---
     async createAuditLog(log) {
