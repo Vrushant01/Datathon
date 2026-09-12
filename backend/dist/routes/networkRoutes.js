@@ -330,8 +330,9 @@ router.post('/cases/:caseId/edges', authMiddleware_1.requireAuth, async (req, re
         const { source, target, label } = req.body;
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const userEmail = req.user?.email || 'system';
+        const crypto = require('crypto');
         const newEdge = await db.addCustomEdge({
-            EdgeID: `${Date.now()}`,
+            EdgeID: crypto.randomUUID(),
             CaseMasterID: caseId,
             source,
             target,
@@ -339,6 +340,20 @@ router.post('/cases/:caseId/edges', authMiddleware_1.requireAuth, async (req, re
         }, userEmail);
         sseService_1.sseService.broadcast('CASE_EDGE_CREATED', newEdge);
         res.json(newEdge);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.delete('/cases/:caseId/entities/:entityId', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const caseId = Number(req.params.caseId);
+        const entityId = req.params.entityId;
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const userEmail = req.user?.email || 'system';
+        await db.deleteCaseEntity(caseId, entityId, userEmail);
+        sseService_1.sseService.broadcast('CASE_ENTITY_DELETED', { CaseMasterID: caseId, id: entityId });
+        res.json({ success: true, id: entityId });
     }
     catch (e) {
         res.status(500).json({ error: e.message });

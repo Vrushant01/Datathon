@@ -857,7 +857,8 @@ class CloudScaleRepository {
     async addCaseEntity(entityType, entity, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || Date.now();
+        const crypto = require('crypto');
+        const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || crypto.randomUUID();
         // Persist to customedges to avoid unsupported table errors
         const edge = {
             EdgeID: `entity-${entityId}`,
@@ -878,6 +879,32 @@ class CloudScaleRepository {
             ActorID: actorId || entity.userEmail || 'system'
         }).catch(e => console.error(e));
         return { ...entity, EntityID: entityId };
+    }
+    async deleteCaseEntity(caseId, entityId, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const { NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const zcql = this.app.zcql();
+        // Using simple target lookup matching the exact Node ID
+        const res = await zcql.executeZCQLQuery(`SELECT ROWID FROM customedges WHERE CaseMasterID = ${caseId} AND target = '${entityId}' AND source = 'entity'`);
+        if (res.length > 0) {
+            const rowId = res[0].customedges.ROWID;
+            await nosql.table('customedges').deleteItems({ index_names: ['ROWID'], index_values: [NoSQLMarshall.makeNumber(rowId)] });
+            GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        }
+        // Also delete any edges attached to this node
+        const edgesRes = await zcql.executeZCQLQuery(`SELECT ROWID FROM customedges WHERE CaseMasterID = ${caseId} AND (source = 'entity-${entityId}' OR target = 'entity-${entityId}')`);
+        for (const edge of edgesRes) {
+            const rowId = edge.customedges.ROWID;
+            await nosql.table('customedges').deleteItems({ index_names: ['ROWID'], index_values: [NoSQLMarshall.makeNumber(rowId)] });
+        }
+        // Audit log
+        await this.createAuditLog({
+            Action: 'DELETE_CASE_ENTITY',
+            EntityType: 'CUSTOM_ENTITY',
+            EntityID: entityId,
+            Description: `Deleted entity ${entityId} from Case ${caseId}`,
+            ActorID: actorId
+        }).catch(e => console.error(e));
     }
     async getCaseStatistics(metric, filters) {
         const cases = await this.scanAll('CaseMaster');
@@ -941,9 +968,6 @@ class CloudScaleRepository {
     }
     async updateCaseEntity(entityType, entity) {
         throw new Error('Update entity not fully implemented in CloudScale repo mock');
-    }
-    async deleteCaseEntity(entityType, entityId) {
-        throw new Error('Delete entity not fully implemented in CloudScale repo mock');
     }
     // --- Audit Logs ---
     async createAuditLog(log) {

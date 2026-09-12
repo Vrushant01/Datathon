@@ -266,9 +266,34 @@ export const CriminalNetwork: React.FC = () => {
       }
     });
 
+    const unsubEntityDeleted = sseClient.subscribe('CASE_ENTITY_DELETED', (payload: any) => {
+      try {
+        const delData = payload?.data ?? payload;
+        const caseMasterId = delData?.CaseMasterID ?? delData?.caseMasterId;
+        const deletedId = delData?.id ?? delData?.EntityID;
+
+        if (!caseMasterId || !deletedId) return;
+
+        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
+          const entityNodeId = `entity-${deletedId}`;
+          setNodes(prev => prev.filter(n => n.id !== entityNodeId));
+          setEdges(prev => prev.filter(e => e.source !== entityNodeId && e.target !== entityNodeId));
+          
+          if (graphCache.current.has(selectedFirId)) {
+            const cache = graphCache.current.get(selectedFirId)!;
+            cache.nodes = cache.nodes.filter(n => n.id !== entityNodeId);
+            cache.edges = cache.edges.filter(e => e.source !== entityNodeId && e.target !== entityNodeId);
+          }
+        }
+      } catch (err) {
+        console.error("[SSE] Invalid CASE_ENTITY_DELETED payload", payload, err);
+      }
+    });
+
     return () => {
       unsubEntity();
       unsubEdge();
+      unsubEntityDeleted();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFirId, setNodes, setEdges]);
@@ -419,7 +444,7 @@ export const CriminalNetwork: React.FC = () => {
     }, 150);
   };
 
-  const handleDeleteEntityNode = (entityId: number) => {
+  const handleDeleteEntityNode = async (entityId: number | string) => {
     if (selectedFirId === null) return;
 
     if (!isCaseEditable(selectedFirId)) {
@@ -428,13 +453,22 @@ export const CriminalNetwork: React.FC = () => {
     }
 
     if (window.confirm("Remove this association node from the case file?")) {
-      mockDb.deleteCaseEntity(entityId, user?.email || 'officer@ksp.gov.in');
-      showNotification('success', 'Association node deleted.');
-      setSelectedNodeData(null);
-      
-      const current = selectedFirId;
-      setSelectedFirId(null);
-      setTimeout(() => setSelectedFirId(current), 150);
+      try {
+        const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${entityId}`, {
+          method: 'DELETE'
+        });
+        
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Delete failed');
+        }
+        
+        showNotification('success', 'Association node deleted.');
+        setSelectedNodeData(null);
+      } catch (error: any) {
+        console.error('Delete entity error:', error);
+        showNotification('error', 'Failed to delete association node.');
+      }
     }
   };
 

@@ -51,7 +51,7 @@ export interface IDataRepository {
   addCustomEdge(edge: any): Promise<any>;
   addCaseEntity(entityType: string, entity: any, actorId?: string): Promise<any>;
   updateCaseEntity(entityType: string, entity: any): Promise<any>;
-  deleteCaseEntity(entityType: string, entityId: number): Promise<boolean>;
+  deleteCaseEntity(caseId: number, entityId: string, actorId?: string): Promise<void>;
   
   // New Case Update Operations
   updateCase(caseId: number, updateData: CaseUpdatePayload, actorId?: string): Promise<any>;
