@@ -41,6 +41,8 @@ const fixDataBugsRoute_1 = __importDefault(require("./routes/fixDataBugsRoute"))
 const verifySeedRoute_1 = __importDefault(require("./routes/verifySeedRoute"));
 const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
 const networkRoutes_1 = __importDefault(require("./routes/networkRoutes"));
+const eventsRoute_1 = __importDefault(require("./routes/eventsRoute"));
+const sseService_1 = require("./services/sseService");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const corsOptions = {
@@ -70,6 +72,7 @@ app.use('/api/fix-data-bugs', fixDataBugsRoute_1.default);
 app.use('/api/verify-seed', verifySeedRoute_1.default);
 app.use('/api/analytics', analyticsRoutes_1.default);
 app.use('/api/network', networkRoutes_1.default);
+app.use('/api/events', eventsRoute_1.default);
 app.get("/", (req, res) => {
     res.status(200).send("Backend is Connected with pipeline 🚀");
 });
@@ -200,8 +203,36 @@ app.get('/api/districts', async (req, res) => {
 app.get('/api/units', async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const data = await db.getUnits();
-        res.json(data);
+        let data = await db.getUnits();
+        const districts = await db.getDistricts();
+        if (req.query.search) {
+            const term = req.query.search.toLowerCase();
+            data = data.filter(u => (u.UnitName || '').toLowerCase().includes(term) ||
+                (u.UnitID || '').toString().includes(term));
+        }
+        if (req.query.type) {
+            data = data.filter(u => u.TypeID === parseInt(req.query.type));
+        }
+        if (req.query.district) {
+            data = data.filter(u => u.DistrictID === parseInt(req.query.district));
+        }
+        // Sort by UnitID
+        data.sort((a, b) => Number(a.UnitID) - Number(b.UnitID));
+        if (req.query.page) {
+            const page = parseInt(req.query.page) || 1;
+            const pageSize = parseInt(req.query.pageSize) || 30;
+            const total = data.length;
+            const start = (page - 1) * pageSize;
+            const sliced = data.slice(start, start + pageSize);
+            const enriched = sliced.map(u => {
+                const district = districts.find(d => d.DistrictID === u.DistrictID);
+                return { ...u, districtName: district?.DistrictName || 'Unknown' };
+            });
+            res.json({ data: enriched, total, page, pageSize });
+        }
+        else {
+            res.json(data);
+        }
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to fetch units' });
@@ -210,8 +241,51 @@ app.get('/api/units', async (req, res) => {
 app.get('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const data = await db.getEmployees();
-        res.json(data);
+        let data = await db.getEmployees();
+        const units = await db.getUnits();
+        const districts = await db.getDistricts();
+        if (req.query.search) {
+            const term = req.query.search.toLowerCase();
+            data = data.filter(e => (e.EmployeeName || e.FirstName || '').toLowerCase().includes(term) ||
+                (e.KGID || '').toString().toLowerCase().includes(term) ||
+                (e.EmployeeID || '').toString().includes(term));
+        }
+        if (req.query.station) {
+            data = data.filter(e => e.UnitID === parseInt(req.query.station));
+        }
+        if (req.query.status) {
+            data = data.filter(e => e.status === req.query.status);
+        }
+        if (req.query.district) {
+            const districtId = parseInt(req.query.district);
+            data = data.filter(e => {
+                const station = units.find(u => u.UnitID === e.UnitID);
+                return station?.DistrictID === districtId;
+            });
+        }
+        // Sort descending by EmployeeID (simulating latest first)
+        data.sort((a, b) => Number(b.EmployeeID) - Number(a.EmployeeID));
+        if (req.query.page) {
+            const page = parseInt(req.query.page) || 1;
+            const pageSize = parseInt(req.query.pageSize) || 30;
+            const total = data.length;
+            const start = (page - 1) * pageSize;
+            const sliced = data.slice(start, start + pageSize);
+            // Attach relations
+            const enriched = sliced.map(e => {
+                const station = units.find(u => u.UnitID === e.UnitID);
+                const district = station ? districts.find(d => d.DistrictID === station.DistrictID) : null;
+                return {
+                    ...e,
+                    stationName: station?.UnitName || 'Unknown',
+                    districtName: district?.DistrictName || 'Unknown'
+                };
+            });
+            res.json({ data: enriched, total, page, pageSize });
+        }
+        else {
+            res.json(data);
+        }
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to fetch employees' });
@@ -223,6 +297,7 @@ app.post('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const newEmployee = await db.createEmployee(req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('OFFICER_CREATED', newEmployee, { stationId: req.body.UnitID });
         res.status(201).json(newEmployee);
     }
     catch (error) {
@@ -259,6 +334,7 @@ app.post('/api/units', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const newUnit = await db.createUnit(req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('STATION_CREATED', newUnit);
         res.status(201).json(newUnit);
     }
     catch (error) {
@@ -292,8 +368,54 @@ app.delete('/api/units/:id', authMiddleware_1.requireAuth, async (req, res) => {
 app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const data = await db.getCases({});
-        res.json(data);
+        // Convert query params for filter
+        const filter = {};
+        if (req.query.search)
+            filter.search = req.query.search;
+        if (req.query.requireLocation === 'true')
+            filter.requireLocation = true;
+        if (req.query.district) {
+            // If we needed to filter by district, it requires joining with units.
+            // But CloudScaleRepository already has getCases. We can just add it here if needed.
+        }
+        if (req.query.station)
+            filter.PoliceStationID = parseInt(req.query.station);
+        if (req.query.status)
+            filter.CaseStatusID = parseInt(req.query.status);
+        let data = await db.getCases(filter);
+        // Sort descending by default
+        data.sort((a, b) => {
+            const dateA = a.CrimeRegisteredDate ? new Date(a.CrimeRegisteredDate).getTime() : 0;
+            const dateB = b.CrimeRegisteredDate ? new Date(b.CrimeRegisteredDate).getTime() : 0;
+            return dateB - dateA;
+        });
+        if (req.query.page) {
+            const page = parseInt(req.query.page) || 1;
+            const pageSize = parseInt(req.query.pageSize) || 30;
+            const total = data.length;
+            const start = (page - 1) * pageSize;
+            const sliced = data.slice(start, start + pageSize);
+            // Attach lightweight relations to avoid N+1 on frontend
+            const [allVictims, allAccused, allUnits, allEmployees] = await Promise.all([
+                db.getAllVictims(),
+                db.getAllAccused(),
+                db.getUnits(),
+                db.getEmployees()
+            ]);
+            const enrichedSliced = sliced.map(c => {
+                return {
+                    ...c,
+                    caseVictims: allVictims.filter(v => v.CaseMasterID === c.CaseMasterID).map(v => v.VictimName).join(', ') || 'N/A',
+                    caseAccused: allAccused.filter(a => a.CaseMasterID === c.CaseMasterID).map(a => a.AccusedName).join(', ') || 'Unknown',
+                    stationName: allUnits.find(u => u.UnitID === c.PoliceStationID)?.UnitName || 'Unknown',
+                    officerName: allEmployees.find(e => e.EmployeeID === c.PolicePersonID)?.EmployeeName || 'Unassigned'
+                };
+            });
+            res.json({ data: enrichedSliced, total, page, pageSize });
+        }
+        else {
+            res.json(data);
+        }
     }
     catch (error) {
         console.error('getCases error:', error);
@@ -531,6 +653,8 @@ app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
             }
         }
         (0, hotspotController_1.invalidateHotspotCache)();
+        // Broadcast FIR_CREATED event
+        sseService_1.sseService.broadcast('FIR_CREATED', newCase, { stationId: caseData.PoliceStationID, officerId: caseData.PolicePersonID });
         res.status(201).json(newCase);
     }
     catch (error) {

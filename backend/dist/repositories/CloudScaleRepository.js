@@ -427,10 +427,20 @@ class CloudScaleRepository {
     async getCases(filter) {
         const cases = await this.scanAll('CaseMaster');
         return cases.filter(c => {
-            if (c.latitude == null || c.latitude === 0)
-                return false;
-            if (c.longitude == null || c.longitude === 0)
-                return false;
+            if (filter.requireLocation) {
+                if (c.latitude == null || c.latitude === 0 || c.latitude === "0")
+                    return false;
+                if (c.longitude == null || c.longitude === 0 || c.longitude === "0")
+                    return false;
+            }
+            // Allow searching by case number or other string fields if search query is provided
+            if (filter.search) {
+                const term = filter.search.toLowerCase();
+                const caseNoStr = (c.CaseNo || '').toLowerCase();
+                const firNoStr = (c.FIRNo || '').toLowerCase();
+                if (!caseNoStr.includes(term) && !firNoStr.includes(term))
+                    return false;
+            }
             if (filter.PoliceStationID) {
                 if (typeof filter.PoliceStationID === 'number' && Number(c.PoliceStationID) !== filter.PoliceStationID)
                     return false;
@@ -474,7 +484,15 @@ class CloudScaleRepository {
         return all.filter(v => Number(v.CaseMasterID) === caseId);
     }
     async getCustomEdgesByCase(caseId) {
-        return [];
+        try {
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId} AND source != 'entity' LIMIT 200`);
+            return res.map((r) => r.customedges);
+        }
+        catch (e) {
+            console.error('getCustomEdgesByCase ZCQL error:', e.message);
+            return [];
+        }
     }
     async getAllCustomEdges() {
         try {
@@ -814,87 +832,44 @@ class CloudScaleRepository {
         return edge;
     }
     async getCaseEntities(caseId) {
-        // CaseEntity rows are stored with EntityID = Date.now() (not enumerable),
-        // so scanAll is impossible. Use queryTable keyed by CaseMasterID — the same
-        // supported pattern used by getChargesheetsByCase / getTimelineNotesByCase.
-        const nosql = this.app.nosql();
-        const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         try {
-            const resp = await nosql.table('case_entities').queryTable({
-                key_condition: {
-                    attribute: ['CaseMasterID'],
-                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                    value: NoSQLMarshall.makeNumber(caseId)
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId} AND source = 'entity' LIMIT 200`);
+            return res.map((r) => {
+                const edge = r.customedges;
+                try {
+                    return {
+                        EntityID: edge.target,
+                        CaseMasterID: edge.CaseMasterID,
+                        ...JSON.parse(edge.label || '{}')
+                    };
                 }
-            });
-            const raw = resp;
-            return (raw.get || []).map((d) => {
-                const item = typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item;
-                if (!item)
+                catch (e) {
                     return null;
-                // Unwrap Catalyst SDK type wrappers ({S:..., N:..., BOOL:...}) without coercing value to a number.
-                const clean = {};
-                for (const [k, v] of Object.entries(item)) {
-                    if (v && typeof v === 'object') {
-                        if ('S' in v)
-                            clean[k] = v.S; // string — preserves "4", "44", "444" exactly
-                        else if ('N' in v)
-                            clean[k] = Number(v.N);
-                        else if ('BOOL' in v)
-                            clean[k] = v.BOOL === true || v.BOOL === 'true';
-                        else if ('NULL' in v)
-                            clean[k] = null;
-                        else
-                            clean[k] = v;
-                    }
-                    else {
-                        clean[k] = v;
-                    }
                 }
-                return clean;
             }).filter(Boolean);
         }
         catch (e) {
-            console.warn('[DB] getCaseEntities queryTable failed:', e?.message);
+            console.error('getCaseEntities ZCQL error:', e.message);
             return [];
         }
     }
     async addCaseEntity(entityType, entity, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        // We create a new table 'case_entities' in Catalyst if it exists, otherwise it will just error.
-        // If it errors, we will fallback to accuseds like before for legacy support.
-        try {
-            const item = NoSQLItem.from(entity);
-            await nosql.table('case_entities').insertItems({ item });
-            GLOBAL_CACHE['case_entities'] = { data: null, promise: null, timestamp: 0 };
-        }
-        catch (e) {
-            console.warn("Table case_entities might not exist, falling back to accuseds");
-            let table = 'accuseds';
-            if (entityType === 'Victim')
-                table = 'victims';
-            if (entityType === 'Complainant')
-                table = 'complainants';
-            let fallbackEntity = { CaseMasterID: entity.CaseMasterID };
-            if (table === 'accuseds') {
-                fallbackEntity.AccusedMasterID = entity.EntityID;
-                fallbackEntity.AccusedName = `[${entity.type}] ${entity.value}`;
-            }
-            else if (table === 'victims') {
-                fallbackEntity.VictimMasterID = entity.EntityID;
-                fallbackEntity.VictimName = `[${entity.type}] ${entity.value}`;
-            }
-            else if (table === 'complainants') {
-                fallbackEntity.ComplainantID = entity.EntityID;
-                fallbackEntity.ComplainantName = `[${entity.type}] ${entity.value}`;
-            }
-            const item = NoSQLItem.from(fallbackEntity);
-            await nosql.table(table).insertItems({ item });
-            GLOBAL_CACHE[table] = { data: null, promise: null, timestamp: 0 };
-        }
-        // Audit log
         const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || Date.now();
+        // Persist to customedges to avoid unsupported table errors
+        const edge = {
+            EdgeID: `entity-${entityId}`,
+            CaseMasterID: entity.CaseMasterID,
+            source: 'entity',
+            target: String(entityId),
+            label: JSON.stringify({ type: entityType, value: entity.value, description: entity.description })
+        };
+        const item = NoSQLItem.from(edge);
+        await nosql.table('customedges').insertItems({ item });
+        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        // Audit log
         await this.createAuditLog({
             Action: 'CREATE_CASE_ENTITY',
             EntityType: entityType.toUpperCase(),
@@ -902,7 +877,7 @@ class CloudScaleRepository {
             Description: `${entityType} added to Case ${entity.CaseMasterID}`,
             ActorID: actorId || entity.userEmail || 'system'
         }).catch(e => console.error(e));
-        return entity;
+        return { ...entity, EntityID: entityId };
     }
     async getCaseStatistics(metric, filters) {
         const cases = await this.scanAll('CaseMaster');

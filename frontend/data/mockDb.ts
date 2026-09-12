@@ -733,15 +733,15 @@ export const loadDbState = (): DbState => {
   return memoryDbState;
 };
 
-const dbListeners = new Set<() => void>();
+const dbStateListeners = new Set<() => void>();
 
 export const subscribeDb = (callback: () => void) => {
-  dbListeners.add(callback);
-  return () => dbListeners.delete(callback);
+  dbStateListeners.add(callback);
+  return () => dbStateListeners.delete(callback);
 };
 
 export const emitDbChange = () => {
-  dbListeners.forEach(cb => cb());
+  dbStateListeners.forEach(cb => cb());
 };
 
 export const saveDbState = (state: DbState): void => {

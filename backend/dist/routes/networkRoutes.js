@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
+const sseService_1 = require("../services/sseService");
 const router = express_1.default.Router();
 // GET /api/network/search?query=...
 router.get('/search', authMiddleware_1.requireAuth, async (req, res) => {
@@ -316,6 +317,7 @@ router.post('/cases/:caseId/entities', authMiddleware_1.requireAuth, async (req,
             value,
             description
         }, userEmail);
+        sseService_1.sseService.broadcast('CASE_ENTITY_CREATED', newEntity);
         res.json(newEntity);
     }
     catch (e) {
@@ -327,12 +329,15 @@ router.post('/cases/:caseId/edges', authMiddleware_1.requireAuth, async (req, re
         const caseId = Number(req.params.caseId);
         const { source, target, label } = req.body;
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const userEmail = req.user?.email || 'system';
         const newEdge = await db.addCustomEdge({
+            EdgeID: `${Date.now()}`,
             CaseMasterID: caseId,
             source,
             target,
             label
-        });
+        }, userEmail);
+        sseService_1.sseService.broadcast('CASE_EDGE_CREATED', newEdge);
         res.json(newEdge);
     }
     catch (e) {

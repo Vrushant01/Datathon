@@ -48,7 +48,7 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    import('../../../utils/SSEClient').then(({ sseClient }) => {
+    import('../../utils/SSEClient').then(({ sseClient }) => {
       const unsubFIR = sseClient.subscribe('FIR_CREATED', (e) => {
         const newCase = e.data;
         setStats(prev => {

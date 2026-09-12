@@ -259,21 +259,8 @@ export const StationManagement: React.FC = () => {
                     )}
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-slate-500">
-                  No stations found matching your criteria.
-                </td>
-              </tr>
-            )}
-            {filteredStations.length > 50 && (
-              <tr>
-                <td colSpan={5} className="text-center p-4 text-slate-500 font-semibold bg-slate-50 border-t">
-                  Showing top 50 results out of {filteredStations.length}. Please use the search bar to refine.
-                </td>
-              </tr>
-            )}
+              );
+            })}
           </tbody>
         </table>
         </div>
