@@ -14,7 +14,11 @@ export const StationManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
   const dbVersion = useMockDb();
-  const stations = React.useMemo(() => mockDb.getUnits().filter(u => u.TypeID === 1), [dbVersion]);
+  
+  const [serverStations, setServerStations] = useState<any[]>([]);
+  const [totalStations, setTotalStations] = useState(0);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
@@ -110,16 +114,33 @@ export const StationManagement: React.FC = () => {
     }
   };
 
-  const filteredStations = stations.filter(st => {
-    if (filterDistrict !== 'ALL' && st.DistrictID !== filterDistrict) return false;
-    
-    const term = String(searchQuery || '').toLowerCase();
-    const distName = String(districts.find(d => d.DistrictID === st.DistrictID)?.DistrictName || '').toLowerCase();
-    return (
-      String(st.UnitName || '').toLowerCase().includes(term) ||
-      distName.includes(term)
-    );
-  });
+  const fetchStations = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: '30',
+        type: '1' // Police Stations
+      });
+      if (searchQuery) params.append('search', searchQuery);
+      if (filterDistrict !== 'ALL') params.append('district', filterDistrict.toString());
+      
+      const res = await authFetch(`${API_BASE_URL}/api/units?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setServerStations(data.data || []);
+        setTotalStations(data.total || 0);
+      }
+    } catch (e) {
+      console.error("Failed to fetch paginated stations", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStations();
+  }, [page, searchQuery, filterDistrict, dbVersion]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
@@ -185,17 +206,36 @@ export const StationManagement: React.FC = () => {
               <th className="p-4">Status</th>
             </tr>
           </thead>
-          <tbody className="font-semibold text-slate-600">
-            {filteredStations.length > 0 ? (
-              filteredStations.slice(0, 50).map(st => (
-                <tr key={st.UnitID} className="border-b last:border-0 hover:bg-slate-50 transition">
+          <tbody className="divide-y divide-slate-100">
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className="p-8 text-center text-slate-400 font-semibold">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-ksp-gold border-t-transparent animate-spin"></div>
+                    Loading stations...
+                  </div>
+                </td>
+              </tr>
+            ) : serverStations.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="p-8 text-center text-slate-400 font-semibold">
+                  No active police stations found matching filters.
+                </td>
+              </tr>
+            ) : serverStations.map((st: any) => {
+              const districtName = st.districtName;
+              
+              return (
+                <tr key={st.UnitID} className="hover:bg-slate-50 transition group">
                   <td className="p-4">{st.UnitID}</td>
-                  <td className="p-4 flex items-center gap-2">
-                    <Building size={14} className="text-ksp-navy" />
-                    <span className="text-slate-800">{st.UnitName}</span>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Building size={14} className="text-ksp-navy" />
+                      <span className="text-slate-800">{st.UnitName}</span>
+                    </div>
                   </td>
                   <td className="p-4">
-                    {districts.find(d => d.DistrictID === st.DistrictID)?.DistrictName}
+                    {districtName || districts.find(d => d.DistrictID === st.DistrictID)?.DistrictName}
                   </td>
                   <td className="p-4">
                     {st.latitude && st.longitude ? (

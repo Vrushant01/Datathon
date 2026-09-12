@@ -229,8 +229,44 @@ app.get('/api/districts', async (req, res) => {
 app.get('/api/units', async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
-    const data = await db.getUnits();
-    res.json(data);
+    let data = await db.getUnits();
+    const districts = await db.getDistricts();
+    
+    if (req.query.search) {
+      const term = (req.query.search as string).toLowerCase();
+      data = data.filter(u => 
+        (u.UnitName || '').toLowerCase().includes(term) ||
+        (u.UnitID || '').toString().includes(term)
+      );
+    }
+    
+    if (req.query.type) {
+      data = data.filter(u => u.TypeID === parseInt(req.query.type as string));
+    }
+    
+    if (req.query.district) {
+      data = data.filter(u => u.DistrictID === parseInt(req.query.district as string));
+    }
+    
+    // Sort by UnitID
+    data.sort((a, b) => Number(a.UnitID) - Number(b.UnitID));
+
+    if (req.query.page) {
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 30;
+      const total = data.length;
+      const start = (page - 1) * pageSize;
+      const sliced = data.slice(start, start + pageSize);
+      
+      const enriched = sliced.map(u => {
+         const district = districts.find(d => d.DistrictID === u.DistrictID);
+         return { ...u, districtName: district?.DistrictName || 'Unknown' };
+      });
+      
+      res.json({ data: enriched, total, page, pageSize });
+    } else {
+      res.json(data);
+    }
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch units' });
   }
@@ -239,8 +275,60 @@ app.get('/api/units', async (req, res) => {
   app.get('/api/employees', requireAuth, async (req, res) => {
     try {
       const db = RepositoryFactory.getRepository(req);
-      const data = await db.getEmployees();
-      res.json(data);
+      let data = await db.getEmployees();
+      const units = await db.getUnits();
+      const districts = await db.getDistricts();
+      
+      if (req.query.search) {
+        const term = (req.query.search as string).toLowerCase();
+        data = data.filter(e => 
+          (e.EmployeeName || e.FirstName || '').toLowerCase().includes(term) ||
+          (e.KGID || '').toString().toLowerCase().includes(term) ||
+          (e.EmployeeID || '').toString().includes(term)
+        );
+      }
+      
+      if (req.query.station) {
+        data = data.filter(e => e.UnitID === parseInt(req.query.station as string));
+      }
+      
+      if (req.query.status) {
+        data = data.filter(e => e.status === req.query.status);
+      }
+      
+      if (req.query.district) {
+        const districtId = parseInt(req.query.district as string);
+        data = data.filter(e => {
+          const station = units.find(u => u.UnitID === e.UnitID);
+          return station?.DistrictID === districtId;
+        });
+      }
+      
+      // Sort descending by EmployeeID (simulating latest first)
+      data.sort((a, b) => Number(b.EmployeeID) - Number(a.EmployeeID));
+
+      if (req.query.page) {
+        const page = parseInt(req.query.page as string) || 1;
+        const pageSize = parseInt(req.query.pageSize as string) || 30;
+        const total = data.length;
+        const start = (page - 1) * pageSize;
+        const sliced = data.slice(start, start + pageSize);
+        
+        // Attach relations
+        const enriched = sliced.map(e => {
+           const station = units.find(u => u.UnitID === e.UnitID);
+           const district = station ? districts.find(d => d.DistrictID === station.DistrictID) : null;
+           return {
+             ...e,
+             stationName: station?.UnitName || 'Unknown',
+             districtName: district?.DistrictName || 'Unknown'
+           };
+        });
+        
+        res.json({ data: enriched, total, page, pageSize });
+      } else {
+        res.json(data);
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch employees' });
     }
@@ -325,8 +413,56 @@ app.get('/api/units', async (req, res) => {
 app.get('/api/cases', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
-    const data = await db.getCases({});
-    res.json(data);
+    
+    // Convert query params for filter
+    const filter: any = {};
+    if (req.query.search) filter.search = req.query.search;
+    if (req.query.requireLocation === 'true') filter.requireLocation = true;
+    if (req.query.district) {
+      // If we needed to filter by district, it requires joining with units.
+      // But CloudScaleRepository already has getCases. We can just add it here if needed.
+    }
+    if (req.query.station) filter.PoliceStationID = parseInt(req.query.station as string);
+    if (req.query.status) filter.CaseStatusID = parseInt(req.query.status as string);
+    
+    let data = await db.getCases(filter);
+    
+    // Sort descending by default
+    data.sort((a, b) => {
+      const dateA = a.CrimeRegisteredDate ? new Date(a.CrimeRegisteredDate).getTime() : 0;
+      const dateB = b.CrimeRegisteredDate ? new Date(b.CrimeRegisteredDate).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    if (req.query.page) {
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 30;
+      const total = data.length;
+      const start = (page - 1) * pageSize;
+      const sliced = data.slice(start, start + pageSize);
+      
+      // Attach lightweight relations to avoid N+1 on frontend
+      const [allVictims, allAccused, allUnits, allEmployees] = await Promise.all([
+         db.getAllVictims(),
+         db.getAllAccused(),
+         db.getUnits(),
+         db.getEmployees()
+      ]);
+      
+      const enrichedSliced = sliced.map(c => {
+         return {
+           ...c,
+           caseVictims: allVictims.filter(v => v.CaseMasterID === c.CaseMasterID).map(v => v.VictimName).join(', ') || 'N/A',
+           caseAccused: allAccused.filter(a => a.CaseMasterID === c.CaseMasterID).map(a => a.AccusedName).join(', ') || 'Unknown',
+           stationName: allUnits.find(u => u.UnitID === c.PoliceStationID)?.UnitName || 'Unknown',
+           officerName: allEmployees.find(e => e.EmployeeID === c.PolicePersonID)?.EmployeeName || 'Unassigned'
+         };
+      });
+      
+      res.json({ data: enrichedSliced, total, page, pageSize });
+    } else {
+      res.json(data);
+    }
   } catch (error: any) {
     console.error('getCases error:', error);
     res.status(500).json({ error: 'Failed to fetch cases', details: error?.message });

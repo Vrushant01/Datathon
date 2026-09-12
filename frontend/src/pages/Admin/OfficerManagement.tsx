@@ -15,7 +15,11 @@ export const OfficerManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
   const dbVersion = useMockDb();
-  const employees = React.useMemo(() => mockDb.getEmployees(), [dbVersion]);
+  
+  const [serverEmployees, setServerEmployees] = useState<any[]>([]);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
@@ -243,26 +247,34 @@ export const OfficerManagement: React.FC = () => {
     }
   };
 
-  // Filter list
-  const filteredEmployees = employees.filter(emp => {
-    if (filterDistrict !== 'ALL') {
-      const station = units.find(u => u.UnitID === emp.UnitID);
-      if (station?.DistrictID !== filterDistrict) return false;
+  const fetchEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: '30'
+      });
+      if (searchQuery) params.append('search', searchQuery);
+      if (filterDistrict !== 'ALL') params.append('district', filterDistrict.toString());
+      if (filterStation !== 'ALL') params.append('station', filterStation.toString());
+      if (filterStatus !== 'ALL') params.append('status', filterStatus);
+      
+      const res = await authFetch(`${API_BASE_URL}/api/employees?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setServerEmployees(data.data || []);
+        setTotalEmployees(data.total || 0);
+      }
+    } catch (e) {
+      console.error("Failed to fetch paginated employees", e);
+    } finally {
+      setIsLoading(false);
     }
-    if (filterStation !== 'ALL' && emp.UnitID !== filterStation) return false;
-    if (filterStatus !== 'ALL' && emp.status !== filterStatus) return false;
+  };
 
-    const term = String(searchQuery || '').toLowerCase();
-    const rankName = String(ranks.find(r => r.RankID === emp.RankID)?.RankName || '').toLowerCase();
-    const unitName = String(units.find(u => u.UnitID === emp.UnitID)?.UnitName || '').toLowerCase();
-    return (
-      String(emp.FirstName || '').toLowerCase().includes(term) ||
-      String(emp.KGID || '').toLowerCase().includes(term) ||
-      String(emp.EmployeeID || '').toLowerCase().includes(term) ||
-      rankName.includes(term) ||
-      unitName.includes(term)
-    );
-  });
+  useEffect(() => {
+    fetchEmployees();
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
@@ -354,8 +366,23 @@ export const OfficerManagement: React.FC = () => {
               <th className="p-4 text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
-            {filteredEmployees.slice(0, 50).map((emp) => {
+          <tbody className="divide-y divide-slate-100">
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-slate-400 font-semibold">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-ksp-gold border-t-transparent animate-spin"></div>
+                    Loading officers...
+                  </div>
+                </td>
+              </tr>
+            ) : serverEmployees.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-slate-400 font-semibold">
+                  No active officers found matching filters.
+                </td>
+              </tr>
+            ) : serverEmployees.map((emp: any) => {
               const rankName = ranks.find(r => r.RankID === emp.RankID)?.RankName || 'Unknown';
               const desigName = designations.find(d => d.DesignationID === emp.DesignationID)?.DesignationName || 'Unknown';
               const unitName = units.find(u => u.UnitID === emp.UnitID)?.UnitName || 'Unknown';

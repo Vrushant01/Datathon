@@ -16,7 +16,11 @@ export const FIRManagement: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const dbVersion = useMockDb();
-  const cases = React.useMemo(() => mockDb.getCases(), [dbVersion]);
+  
+  const [serverCases, setServerCases] = useState<any[]>([]);
+  const [totalCases, setTotalCases] = useState(0);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -366,37 +370,34 @@ export const FIRManagement: React.FC = () => {
     }
   };
 
-  const filteredCases = cases.filter(c => {
-    // 1. Core exact-match anomaly filters
-    const isAnomalyMatch = getCasesForAnomaly([c], {
-      district: filterDistrict,
-      station: filterStation,
-      crimeType: filterCrimeHead,
-      startDate: filterDateFrom,
-      endDate: filterDateTo,
-      status: filterStatus,
-      personId: filterPersonId || undefined
-    }).length === 1;
-
-    if (!isAnomalyMatch) return false;
-
-    // 2. Extra local text search
-    if (searchQuery) {
-      const term = String(searchQuery || '').toLowerCase();
-      const stationName = String(stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || '').toLowerCase();
-      const officerName = String(employees.find(e => e.EmployeeID === c.PolicePersonID)?.FirstName || '').toLowerCase();
+  const fetchCases = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: '30'
+      });
+      if (searchQuery) params.append('search', searchQuery);
+      if (filterDistrict !== 'ALL') params.append('district', filterDistrict.toString());
+      if (filterStation !== 'ALL') params.append('station', filterStation.toString());
+      if (filterStatus !== 'ALL') params.append('status', filterStatus.toString());
       
-      const matchID = String(c.CaseNo || '').toLowerCase().includes(term) || String(c.CrimeNo || '').toLowerCase().includes(term);
-      const matchFIR = String(c.FIRNo || '').toLowerCase().includes(term);
-      const matchStation = stationName.includes(term);
-      const matchOfficer = officerName.includes(term);
-      const matchFacts = String(c.BriefFacts || '').toLowerCase().includes(term);
-      
-      if (!matchID && !matchFIR && !matchStation && !matchOfficer && !matchFacts) return false;
+      const res = await authFetch(`${API_BASE_URL}/api/cases?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setServerCases(data.data || []);
+        setTotalCases(data.total || 0);
+      }
+    } catch (e) {
+      console.error("Failed to fetch paginated cases", e);
+    } finally {
+      setIsLoading(false);
     }
-    
-    return true;
-  });
+  };
+
+  useEffect(() => {
+    fetchCases();
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
@@ -533,14 +534,29 @@ export const FIRManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {filteredCases.slice(0, 50).map((c) => {
-              const stationName = stations.find(s => s.UnitID === c.PoliceStationID)?.UnitName || 'Unknown';
-              const officer = employees.find(e => e.EmployeeID === c.PolicePersonID);
+            {isLoading ? (
+              <tr>
+                <td colSpan={9} className="p-8 text-center text-slate-400 font-semibold">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-ksp-gold border-t-transparent animate-spin"></div>
+                    Loading cases...
+                  </div>
+                </td>
+              </tr>
+            ) : serverCases.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="p-8 text-center text-slate-400 font-semibold">
+                  No active FIR records found matching filters.
+                </td>
+              </tr>
+            ) : serverCases.map((c: any) => {
+              const stationName = c.stationName || 'Unknown';
+              const officerName = c.officerName || 'Unassigned';
               const categoryName = String(categories.find(cat => cat.CaseCategoryID === c.CaseCategoryID)?.LookupValue || 'FIR').split(' ')[0];
               const statusName = caseStatuses.find(s => s.CaseStatusID === c.CaseStatusID)?.CaseStatusName || 'Active';
               
-              const caseVictims = victims.filter(v => v.CaseMasterID === c.CaseMasterID).map(v => v.VictimName).join(', ') || 'N/A';
-              const caseAccused = accused.filter(a => a.CaseMasterID === c.CaseMasterID).map(a => a.AccusedName).join(', ') || 'Unknown';
+              const caseVictims = c.caseVictims || 'N/A';
+              const caseAccused = c.caseAccused || 'Unknown';
 
               return (
                 <tr key={c.CaseMasterID} className="hover:bg-slate-50 transition">
@@ -550,7 +566,7 @@ export const FIRManagement: React.FC = () => {
                   </td>
                   <td className="p-4 font-semibold text-slate-600">{c.CrimeRegisteredDate}</td>
                   <td className="p-4 font-semibold text-slate-700">{stationName}</td>
-                  <td className="p-4 font-bold text-slate-800">{officer ? officer.FirstName : 'Unassigned'}</td>
+                  <td className="p-4 font-bold text-slate-800">{officerName}</td>
                   <td className="p-4 font-semibold text-slate-700 max-w-[120px] truncate" title={caseVictims}>{caseVictims}</td>
                   <td className="p-4 font-semibold text-slate-700 max-w-[120px] truncate" title={caseAccused}>{caseAccused}</td>
                   <td className="p-4">

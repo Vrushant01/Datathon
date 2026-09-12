@@ -16,7 +16,24 @@ import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 export const AdminGISMap: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const cases = mockDb.getCases();
+  
+  // Natively load GIS cases from backend instead of relying on mockDb cache
+  const [cases, setCases] = useState<any[]>([]);
+  const [casesLoaded, setCasesLoaded] = useState(false);
+  
+  useEffect(() => {
+    authFetch(`${API_BASE_URL}/api/cases?requireLocation=true`)
+      .then(res => res.json())
+      .then(data => {
+        setCases(Array.isArray(data) ? data : (data.data || []));
+        setCasesLoaded(true);
+      })
+      .catch(err => {
+        console.error("GIS failed to load cases", err);
+        setCasesLoaded(true);
+      });
+  }, []);
+
   const districts = mockDb.getDistricts();
   const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
   const crimeHeads = mockDb.getCrimeHeads();

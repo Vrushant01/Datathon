@@ -426,8 +426,19 @@ export class CloudScaleRepository implements IDataRepository {
   async getCases(filter: any): Promise<any[]> {
     const cases = await this.scanAll('CaseMaster');
     return cases.filter(c => {
-      if (c.latitude == null || c.latitude === 0) return false;
-      if (c.longitude == null || c.longitude === 0) return false;
+      if (filter.requireLocation) {
+        if (c.latitude == null || c.latitude === 0 || c.latitude === "0") return false;
+        if (c.longitude == null || c.longitude === 0 || c.longitude === "0") return false;
+      }
+      
+      // Allow searching by case number or other string fields if search query is provided
+      if (filter.search) {
+        const term = filter.search.toLowerCase();
+        const caseNoStr = (c.CaseNo || '').toLowerCase();
+        const firNoStr = (c.FIRNo || '').toLowerCase();
+        if (!caseNoStr.includes(term) && !firNoStr.includes(term)) return false;
+      }
+      
       if (filter.PoliceStationID) {
         if (typeof filter.PoliceStationID === 'number' && Number(c.PoliceStationID) !== filter.PoliceStationID) return false;
         if (filter.PoliceStationID.$in && !filter.PoliceStationID.$in.includes(Number(c.PoliceStationID))) return false;

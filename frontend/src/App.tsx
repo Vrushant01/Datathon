@@ -46,33 +46,20 @@ import { CriminalNetwork } from './pages/CriminalNetwork';
 import './App.css';
 
 const App: React.FC = () => {
-  const [syncKey, setSyncKey] = React.useState(0);
-  const [dataLoaded, setDataLoaded] = useState(false);
-
   useEffect(() => {
     // Initial data sync (only if authenticated)
     const token = localStorage.getItem('token');
     if (token) {
-      // Race syncData against a 5-second timeout so the app never stays
-      // stuck on "Loading..." forever if the backend is unreachable
-      const syncTimeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
-      Promise.race([syncData(), syncTimeout]).then(() => {
-        setDataLoaded(true);
-        setSyncKey(k => k + 1);
-        
-        // Connect to Realtime Events once data is loaded
-        sseClient.connect();
-        
-      }).catch(() => {
-        setDataLoaded(true); // still show the app even if sync fails
-      });
-    } else {
+      // Opportunistically load static tables in background. Does not block rendering.
+      syncData().catch(e => console.warn('Background syncData failed', e));
+      // Connect to Realtime Events immediately
+      sseClient.connect();
     }
   }, []);
 
   return (
     <LanguageProvider>
-      <AuthProvider key={syncKey}>
+      <AuthProvider>
       <Router>
         <div className="app-shell bg-slate-50">
           <Routes>
