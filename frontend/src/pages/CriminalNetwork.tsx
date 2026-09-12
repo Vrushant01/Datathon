@@ -167,9 +167,14 @@ export const CriminalNetwork: React.FC = () => {
 
   // Real-time synchronization for nodes and edges
   useEffect(() => {
-    const unsubEntity = sseClient.subscribe('CASE_ENTITY_CREATED', (e: any) => {
-      const newEntity = e.detail;
-      if (selectedFirId !== null && Number(newEntity.CaseMasterID) === selectedFirId) {
+    const unsubEntity = sseClient.subscribe('CASE_ENTITY_CREATED', (payload: any) => {
+      try {
+        const newEntity = payload?.caseEntity ?? payload?.CaseEntity ?? payload?.entity ?? payload?.data?.caseEntity ?? payload?.data?.CaseEntity ?? payload?.data ?? payload;
+        const caseMasterId = newEntity?.CaseMasterID ?? newEntity?.caseMasterId ?? newEntity?.id ?? payload?.CaseMasterID ?? payload?.caseMasterId;
+        
+        if (!caseMasterId || !newEntity?.EntityID) return;
+
+        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
         const entityNodeId = `entity-${newEntity.EntityID}`;
         setNodes(prev => {
           if (prev.find(n => n.id === entityNodeId)) return prev;
@@ -223,11 +228,19 @@ export const CriminalNetwork: React.FC = () => {
           return [...prev, newEdge];
         });
       }
+      } catch (err) {
+        console.error("[SSE] Invalid CASE_ENTITY_CREATED payload", payload, err);
+      }
     });
 
-    const unsubEdge = sseClient.subscribe('CASE_EDGE_CREATED', (e: any) => {
-      const newEdgeData = e.detail;
-      if (selectedFirId !== null && Number(newEdgeData.CaseMasterID) === selectedFirId) {
+    const unsubEdge = sseClient.subscribe('CASE_EDGE_CREATED', (payload: any) => {
+      try {
+        const newEdgeData = payload?.edge ?? payload?.Edge ?? payload?.data?.edge ?? payload?.data?.Edge ?? payload?.data ?? payload;
+        const caseMasterId = newEdgeData?.CaseMasterID ?? newEdgeData?.caseMasterId ?? payload?.CaseMasterID ?? payload?.caseMasterId;
+
+        if (!caseMasterId || !newEdgeData?.EdgeID) return;
+
+        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
         setEdges(prev => {
           if (prev.find(edge => edge.id === newEdgeData.EdgeID)) return prev;
           
@@ -247,6 +260,9 @@ export const CriminalNetwork: React.FC = () => {
           }
           return [...prev, newEdge];
         });
+      }
+      } catch (err) {
+        console.error("[SSE] Invalid CASE_EDGE_CREATED payload", payload, err);
       }
     });
 
