@@ -31,7 +31,7 @@ const CACHE_TTL = 60 * 1000; // 60 seconds (interim scalability mitigation)
 let _catalystApp: any = null;
 export function getCatalystApp(req?: any): any {
   if (_catalystApp) return _catalystApp;
-  
+
   // Try initializeApp() — reads CATALYST_CONFIG env var set by AppSail
   if (process.env.CATALYST_CONFIG) {
     try {
@@ -42,7 +42,7 @@ export function getCatalystApp(req?: any): any {
       console.warn('[DB] initializeApp() failed:', e.message);
     }
   }
-  
+
   // Fallback: use request headers (works locally via catalyst serve proxy)
   if (req && req.headers && (req.headers['x-zc-projectid'] || req.headers['x-zc-project-key'])) {
     try {
@@ -53,7 +53,7 @@ export function getCatalystApp(req?: any): any {
       console.warn('[DB] catalyst.initialize(req) failed:', e.message);
     }
   }
-  
+
   // Last resort: try initialize with req (may work in catalyst serve local mode)
   if (req) {
     try {
@@ -65,7 +65,7 @@ export function getCatalystApp(req?: any): any {
       throw new Error(`Catalyst SDK init failed: ${e.message}`);
     }
   }
-  
+
   throw new Error('Cannot initialize Catalyst SDK: no CATALYST_CONFIG env var and no valid request');
 }
 
@@ -75,10 +75,10 @@ export class CloudScaleRepository implements IDataRepository {
 
   constructor(req: any) {
     this.app = getCatalystApp(req);
-    
+
     if (req) {
       if (!(req as any).metrics) {
-          (req as any).metrics = { nosqlCalls: 0, cacheHits: 0, cacheMisses: 0, startTime: Date.now() };
+        (req as any).metrics = { nosqlCalls: 0, cacheHits: 0, cacheMisses: 0, startTime: Date.now() };
       }
       this.metrics = (req as any).metrics;
     } else {
@@ -94,7 +94,8 @@ export class CloudScaleRepository implements IDataRepository {
     if (tableName === 'CaseMaster') actualTableName = 'casemasters';
     if (tableName === 'Accused') actualTableName = 'accuseds';
     if (tableName === 'Victim') actualTableName = 'victims';
-    
+    if (tableName === 'CaseEntity') actualTableName = 'caseentities';
+
     const cacheEntry = GLOBAL_CACHE[actualTableName];
     if (!cacheEntry) throw new Error(`scanAll not supported for table: ${tableName}`);
 
@@ -105,111 +106,111 @@ export class CloudScaleRepository implements IDataRepository {
     // To ensure AI queries return within timeout windows, a 5-minute memory cache is mandatory.
     const now = Date.now();
     if (cacheEntry.data && (now - cacheEntry.timestamp < CACHE_TTL)) {
-        this.metrics.cacheHits++;
-        return cacheEntry.data;
+      this.metrics.cacheHits++;
+      return cacheEntry.data;
     }
 
     if (cacheEntry.promise) {
-        this.metrics.cacheHits++;
-        return cacheEntry.promise;
+      this.metrics.cacheHits++;
+      return cacheEntry.promise;
     }
 
     this.metrics.cacheMisses++;
-    
+
     cacheEntry.promise = (async () => {
-        const nosql = this.app.nosql();
-        const table = nosql.table(actualTableName);
-        
-        let ids: number[] = [];
-        let pkField = '';
-        switch (actualTableName) {
-            case 'districts': pkField = 'DistrictID'; for (let i = 1001; i <= 1031; i++) ids.push(i); break;
-            case 'units': pkField = 'UnitID'; for (let i = 2000; i <= 2960; i++) ids.push(i); break;
-            case 'employees': pkField = 'EmployeeID'; for (let i = 10001; i <= 11900; i++) ids.push(i); for (let i = 30001; i <= 30960; i++) ids.push(i); break;
-            case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
-            case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
-            case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
-        }
+      const nosql = this.app.nosql();
+      const table = nosql.table(actualTableName);
 
-        const allItems: any[] = [];
-        let batchErrors = 0;
-        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        
-        // Fetch in batches of 25 (max supported by fetchItem)
-        // Fetch in batches of 25 (max supported by fetchItem)
-        const fetchPromises: (() => Promise<void>)[] = [];
-        for (let i = 0; i < ids.length; i += 25) {
-            const batch = ids.slice(i, i + 25);
-            const keys = batch.map(v => new NoSQLItem().addNumber(pkField, v));
-            
-            fetchPromises.push(async () => {
-                try {
-                    this.metrics.nosqlCalls++;
-                    const resp = await table.fetchItem({ keys });
-                    const raw = resp as any;
-                    const items = (raw.get || []).map((d: any) => {
-                        const item = d.item;
-                        if (!item) return null;
-                        return typeof item.toJSON === 'function' ? item.toJSON() : item;
-                    }).filter(Boolean);
-                    allItems.push(...items);
-                } catch (e: any) {
-                    batchErrors++;
-                    console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
-                }
-            });
-        }
+      let ids: number[] = [];
+      let pkField = '';
+      switch (actualTableName) {
+        case 'districts': pkField = 'DistrictID'; for (let i = 1001; i <= 1031; i++) ids.push(i); break;
+        case 'units': pkField = 'UnitID'; for (let i = 2000; i <= 2960; i++) ids.push(i); break;
+        case 'employees': pkField = 'EmployeeID'; for (let i = 10001; i <= 11900; i++) ids.push(i); for (let i = 30001; i <= 30960; i++) ids.push(i); break;
+        case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
+        case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
+        case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
+      }
 
-        // Run fetchPromises in controlled concurrency batches.
-        // CONCURRENCY=4: safe against CloudScale rate limits while still being ~4x faster than sequential.
-        // 400 batches / 4 concurrent = 100 rounds * ~150ms avg = ~15 seconds for casemasters (cold start).
-        // After first load, 5-minute cache makes all subsequent calls instant.
+      const allItems: any[] = [];
+      let batchErrors = 0;
+      const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
-        const CONCURRENCY = 4;
-        for (let i = 0; i < fetchPromises.length; i += CONCURRENCY) {
-            const chunk = fetchPromises.slice(i, i + CONCURRENCY);
-            await Promise.all(chunk.map(fn => fn()));
-            // Small delay between rounds to stay well within CloudScale rate limits
-            if (i + CONCURRENCY < fetchPromises.length) {
-                await new Promise(r => setTimeout(r, 50));
-            }
-        }
-        if (batchErrors > 0) {
-            console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
-        }
-        
-        const cleaned = allItems.map(item => {
-            const clean: any = {};
-            for (const [k, v] of Object.entries(item)) {
-                if (v && typeof v === 'object') {
-                    if ('S' in (v as any)) clean[k] = (v as any).S;
-                    else if ('N' in (v as any)) clean[k] = Number((v as any).N);
-                    else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
-                    else if ('NULL' in (v as any)) clean[k] = null;
-                    else clean[k] = v;
-                } else {
-                    clean[k] = v;
-                }
-            }
-            return clean;
+      // Fetch in batches of 25 (max supported by fetchItem)
+      // Fetch in batches of 25 (max supported by fetchItem)
+      const fetchPromises: (() => Promise<void>)[] = [];
+      for (let i = 0; i < ids.length; i += 25) {
+        const batch = ids.slice(i, i + 25);
+        const keys = batch.map(v => new NoSQLItem().addNumber(pkField, v));
+
+        fetchPromises.push(async () => {
+          try {
+            this.metrics.nosqlCalls++;
+            const resp = await table.fetchItem({ keys });
+            const raw = resp as any;
+            const items = (raw.get || []).map((d: any) => {
+              const item = d.item;
+              if (!item) return null;
+              return typeof item.toJSON === 'function' ? item.toJSON() : item;
+            }).filter(Boolean);
+            allItems.push(...items);
+          } catch (e: any) {
+            batchErrors++;
+            console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
+          }
         });
+      }
 
-        cacheEntry.data = cleaned;
-        cacheEntry.timestamp = Date.now();
-        cacheEntry.promise = null;
-        return cleaned;
+      // Run fetchPromises in controlled concurrency batches.
+      // CONCURRENCY=4: safe against CloudScale rate limits while still being ~4x faster than sequential.
+      // 400 batches / 4 concurrent = 100 rounds * ~150ms avg = ~15 seconds for casemasters (cold start).
+      // After first load, 5-minute cache makes all subsequent calls instant.
+
+      const CONCURRENCY = 4;
+      for (let i = 0; i < fetchPromises.length; i += CONCURRENCY) {
+        const chunk = fetchPromises.slice(i, i + CONCURRENCY);
+        await Promise.all(chunk.map(fn => fn()));
+        // Small delay between rounds to stay well within CloudScale rate limits
+        if (i + CONCURRENCY < fetchPromises.length) {
+          await new Promise(r => setTimeout(r, 50));
+        }
+      }
+      if (batchErrors > 0) {
+        console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
+      }
+
+      const cleaned = allItems.map(item => {
+        const clean: any = {};
+        for (const [k, v] of Object.entries(item)) {
+          if (v && typeof v === 'object') {
+            if ('S' in (v as any)) clean[k] = (v as any).S;
+            else if ('N' in (v as any)) clean[k] = Number((v as any).N);
+            else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+            else if ('NULL' in (v as any)) clean[k] = null;
+            else clean[k] = v;
+          } else {
+            clean[k] = v;
+          }
+        }
+        return clean;
+      });
+
+      cacheEntry.data = cleaned;
+      cacheEntry.timestamp = Date.now();
+      cacheEntry.promise = null;
+      return cleaned;
     })();
 
     try {
-        return await cacheEntry.promise;
+      return await cacheEntry.promise;
     } catch (e) {
-        cacheEntry.promise = null;
-        throw e;
+      cacheEntry.promise = null;
+      throw e;
     }
   }
 
   // --- Implementation ---
-  
+
   async getDistricts(): Promise<any[]> {
     return await this.scanAll('District');
   }
@@ -230,15 +231,15 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const table = nosql.table('employees');
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-    
+
     const employees = await this.getEmployees();
     const maxId = employees.length > 0 ? Math.max(...employees.map((e: any) => e.EmployeeID || 0)) : 9000;
     employeeData.EmployeeID = maxId + 1;
-    
+
     const item = NoSQLItem.from(employeeData);
     await table.insertItems({ item });
     GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
-    
+
     await this.createAuditLog({
       Action: 'CREATE_EMPLOYEE',
       EntityType: 'EMPLOYEE',
@@ -272,7 +273,7 @@ export class CloudScaleRepository implements IDataRepository {
         update_attributes: updateAttributes
       });
       GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
-      
+
       await this.createAuditLog({
         Action: 'UPDATE_EMPLOYEE',
         EntityType: 'EMPLOYEE',
@@ -280,7 +281,7 @@ export class CloudScaleRepository implements IDataRepository {
         Description: `Updated employee`,
         ActorID: actorId
       }).catch(e => console.error(e));
-      
+
       return { EmployeeID: employeeId, ...updateData };
     } catch (e: any) {
       console.error('updateEmployee error', e);
@@ -314,15 +315,15 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const table = nosql.table('units');
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-    
+
     const units = await this.getUnits();
     const maxId = units.length > 0 ? Math.max(...units.map((u: any) => u.UnitID || 0)) : 2000;
     unitData.UnitID = maxId + 1;
-    
+
     const item = NoSQLItem.from(unitData);
     await table.insertItems({ item });
     GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
-    
+
     await this.createAuditLog({
       Action: 'CREATE_UNIT',
       EntityType: 'UNIT',
@@ -356,7 +357,7 @@ export class CloudScaleRepository implements IDataRepository {
         update_attributes: updateAttributes
       });
       GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
-      
+
       await this.createAuditLog({
         Action: 'UPDATE_UNIT',
         EntityType: 'UNIT',
@@ -364,7 +365,7 @@ export class CloudScaleRepository implements IDataRepository {
         Description: `Updated unit`,
         ActorID: actorId
       }).catch(e => console.error(e));
-      
+
       return { UnitID: unitId, ...updateData };
     } catch (e: any) {
       console.error('updateUnit error', e);
@@ -399,13 +400,13 @@ export class CloudScaleRepository implements IDataRepository {
     const table = nosql.table('casemasters');
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
     const item = NoSQLItem.from(caseData);
-    
+
     // Explicitly using the already-proven insertItems
     await table.insertItems({ item });
-    
+
     // Invalidate caches explicitly
     GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
-    
+
     // Audit log
     await this.createAuditLog({
       Action: 'CREATE_CASE',
@@ -473,7 +474,7 @@ export class CloudScaleRepository implements IDataRepository {
       const zcql = this.app.zcql();
       const res = await zcql.executeZCQLQuery("SELECT * FROM customedges LIMIT 200");
       return res.map((r: any) => r.customedges);
-    } catch(e: any) {
+    } catch (e: any) {
       console.error('getAllCustomEdges ZCQL error:', e.message);
       return [];
     }
@@ -484,7 +485,7 @@ export class CloudScaleRepository implements IDataRepository {
       const zcql = this.app.zcql();
       const res = await zcql.executeZCQLQuery("SELECT * FROM complainants LIMIT 200");
       return res.map((r: any) => r.complainants);
-    } catch(e: any) {
+    } catch (e: any) {
       console.error('getComplainants ZCQL error:', e.message);
       return [];
     }
@@ -495,7 +496,7 @@ export class CloudScaleRepository implements IDataRepository {
       const zcql = this.app.zcql();
       const res = await zcql.executeZCQLQuery("SELECT * FROM actsections LIMIT 200");
       return res.map((r: any) => r.actsections);
-    } catch(e: any) {
+    } catch (e: any) {
       console.error('getActSections ZCQL error:', e.message);
       return [];
     }
@@ -504,7 +505,7 @@ export class CloudScaleRepository implements IDataRepository {
   async getRepeatOffenders(): Promise<any[]> {
     const allAccused = await this.scanAll('Accused');
     const personMap = new Map<string, any>();
-    
+
     allAccused.forEach(acc => {
       if (!acc.PersonID || acc.PersonID === "") return;
       if (!personMap.has(acc.PersonID)) {
@@ -519,7 +520,7 @@ export class CloudScaleRepository implements IDataRepository {
       record.offenceCount += 1;
       record.caseIds.push(acc.CaseMasterID);
     });
-    
+
     return Array.from(personMap.values())
       .filter(p => p.offenceCount > 1)
       .sort((a, b) => (b.offenceCount - a.offenceCount) || a._id.localeCompare(b._id))
@@ -546,7 +547,7 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
 
-  
+
   async getCasesByOfficer(officerId: number): Promise<any[]> {
     const cases = await this.scanAll('CaseMaster');
     return cases.filter(c => Number(c.PolicePersonID) === officerId);
@@ -575,7 +576,7 @@ export class CloudScaleRepository implements IDataRepository {
       });
       // Invalidate cache
       GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
-      
+
       // Audit log
       await this.createAuditLog({
         Action: 'UPDATE_CASE_STATUS',
@@ -585,9 +586,9 @@ export class CloudScaleRepository implements IDataRepository {
         ActorID: userEmail || 'system',
         NewValue: String(statusId)
       });
-      
+
       return true;
-    } catch(e) {
+    } catch (e) {
       console.error('updateCaseStatus error', e);
       return false;
     }
@@ -599,13 +600,13 @@ export class CloudScaleRepository implements IDataRepository {
     const table = nosql.table('casemasters');
 
     const allowedKeys = new Set([
-      'PoliceStationID', 'CaseCategoryID', 'GravityOffenceID', 
-      'CrimeMajorHeadID', 'CrimeMinorHeadID', 'CaseStatusID', 
-      'CourtID', 'IncidentFromDate', 'IncidentToDate', 
-      'InfoReceivedPSDate', 'latitude', 'longitude', 
-      'BriefFacts', 'GDEntryNumber', 'GDEntryTimestamp', 
-      'DelayInReporting', 'DelayReason', 'BNSApplicable', 
-      'CrimeSceneLocation', 'DistanceDirection', 
+      'PoliceStationID', 'CaseCategoryID', 'GravityOffenceID',
+      'CrimeMajorHeadID', 'CrimeMinorHeadID', 'CaseStatusID',
+      'CourtID', 'IncidentFromDate', 'IncidentToDate',
+      'InfoReceivedPSDate', 'latitude', 'longitude',
+      'BriefFacts', 'GDEntryNumber', 'GDEntryTimestamp',
+      'DelayInReporting', 'DelayReason', 'BNSApplicable',
+      'CrimeSceneLocation', 'DistanceDirection',
       'JurisdictionFlag', 'StolenProperty'
     ]);
 
@@ -614,7 +615,7 @@ export class CloudScaleRepository implements IDataRepository {
       if (!allowedKeys.has(key)) {
         throw new Error(`Field '${key}' is unsupported or immutable.`);
       }
-      
+
       let marshalledValue;
       if (typeof value === 'number') {
         marshalledValue = NoSQLMarshall.makeNumber(value);
@@ -623,7 +624,7 @@ export class CloudScaleRepository implements IDataRepository {
       } else {
         marshalledValue = NoSQLMarshall.make(value);
       }
-      
+
       updateAttributes.push({
         operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
         update_value: marshalledValue,
@@ -640,10 +641,10 @@ export class CloudScaleRepository implements IDataRepository {
         keys: new NoSQLItem().addNumber('CaseMasterID', caseId),
         update_attributes: updateAttributes
       });
-      
+
       // Invalidate cache
       GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
-      
+
       // Audit log
       await this.createAuditLog({
         Action: 'UPDATE_CASE',
@@ -653,9 +654,9 @@ export class CloudScaleRepository implements IDataRepository {
         ActorID: actorId,
         NewValue: JSON.stringify(updateData)
       });
-      
+
       return await this.getCaseById(caseId);
-    } catch(e) {
+    } catch (e) {
       console.error('updateCase error', e);
       throw e;
     }
@@ -684,7 +685,7 @@ export class CloudScaleRepository implements IDataRepository {
       });
       // Invalidate cache
       GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
-      
+
       // Audit log
       await this.createAuditLog({
         Action: 'REASSIGN_CASE',
@@ -694,9 +695,9 @@ export class CloudScaleRepository implements IDataRepository {
         ActorID: actorId,
         NewValue: String(targetOfficerId)
       });
-      
+
       return true;
-    } catch(e) {
+    } catch (e) {
       console.error('reassignCase error', e);
       throw e;
     }
@@ -710,7 +711,7 @@ export class CloudScaleRepository implements IDataRepository {
     if (!note.NoteID) note.NoteID = Date.now();
     const item = NoSQLItem.from(note);
     await nosql.table('timelinenotes').insertItems({ item });
-    
+
     // Audit log
     await this.createAuditLog({
       Action: 'ADD_TIMELINE_NOTE',
@@ -719,7 +720,7 @@ export class CloudScaleRepository implements IDataRepository {
       Description: `Timeline note added to Case ${note.CaseMasterID}`,
       ActorID: actorId || note.user_email || 'system'
     });
-    
+
     return note;
   }
 
@@ -727,19 +728,19 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
     try {
-        const resp = await nosql.table('timelinenotes').queryTable({
-            key_condition: {
-                attribute: ['CaseMasterID'],
-                operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                value: NoSQLMarshall.makeNumber(caseId)
-            }
-        });
-        const raw = resp as any;
-        return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
-    } catch(e: any) {
-        if(e.message?.includes('Table Not Found')) return [];
-        console.error('getTimelineNotesByCase error:', e);
-        return [];
+      const resp = await nosql.table('timelinenotes').queryTable({
+        key_condition: {
+          attribute: ['CaseMasterID'],
+          operator: NoSQLEnum.NoSQLOperator.EQUALS,
+          value: NoSQLMarshall.makeNumber(caseId)
+        }
+      });
+      const raw = resp as any;
+      return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+    } catch (e: any) {
+      if (e.message?.includes('Table Not Found')) return [];
+      console.error('getTimelineNotesByCase error:', e);
+      return [];
     }
   }
 
@@ -749,7 +750,7 @@ export class CloudScaleRepository implements IDataRepository {
     if (!evidence.EvidenceID) evidence.EvidenceID = Date.now();
     const item = NoSQLItem.from(evidence);
     await nosql.table('evidencefiles').insertItems({ item });
-    
+
     // Audit log
     await this.createAuditLog({
       Action: 'UPLOAD_EVIDENCE',
@@ -758,7 +759,7 @@ export class CloudScaleRepository implements IDataRepository {
       Description: `Evidence uploaded for Case ${evidence.CaseMasterID}`,
       ActorID: actorId || evidence.userEmail || 'system'
     });
-    
+
     return evidence;
   }
 
@@ -766,17 +767,17 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
     try {
-        const resp = await nosql.table('evidencefiles').queryTable({
-            key_condition: {
-                attribute: ['CaseMasterID'],
-                operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                value: NoSQLMarshall.makeNumber(caseId)
-            }
-        });
-        const raw = resp as any;
-        return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
-    } catch(e) {
-        return [];
+      const resp = await nosql.table('evidencefiles').queryTable({
+        key_condition: {
+          attribute: ['CaseMasterID'],
+          operator: NoSQLEnum.NoSQLOperator.EQUALS,
+          value: NoSQLMarshall.makeNumber(caseId)
+        }
+      });
+      const raw = resp as any;
+      return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+    } catch (e) {
+      return [];
     }
   }
 
@@ -786,7 +787,7 @@ export class CloudScaleRepository implements IDataRepository {
     if (!cs.CSID) cs.CSID = Date.now();
     const item = NoSQLItem.from(cs);
     await nosql.table('chargesheets').insertItems({ item });
-    
+
     // Audit log
     await this.createAuditLog({
       Action: 'SUBMIT_CHARGESHEET',
@@ -795,7 +796,7 @@ export class CloudScaleRepository implements IDataRepository {
       Description: `Chargesheet submitted for Case ${cs.CaseMasterID}`,
       ActorID: actorId || cs.user_email || 'system'
     });
-    
+
     return cs;
   }
 
@@ -803,17 +804,17 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
     try {
-        const resp = await nosql.table('chargesheets').queryTable({
-            key_condition: {
-                attribute: ['CaseMasterID'],
-                operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                value: NoSQLMarshall.makeNumber(caseId)
-            }
-        });
-        const raw = resp as any;
-        return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
-    } catch(e) {
-        return [];
+      const resp = await nosql.table('chargesheets').queryTable({
+        key_condition: {
+          attribute: ['CaseMasterID'],
+          operator: NoSQLEnum.NoSQLOperator.EQUALS,
+          value: NoSQLMarshall.makeNumber(caseId)
+        }
+      });
+      const raw = resp as any;
+      return (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+    } catch (e) {
+      return [];
     }
   }
 
@@ -839,23 +840,36 @@ export class CloudScaleRepository implements IDataRepository {
   async addCaseEntity(entityType: string, entity: any, actorId: string = 'system'): Promise<any> {
     const nosql = this.app.nosql();
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-    
+
     // We create a new table 'caseentities' in Catalyst if it exists, otherwise it will just error.
     // If it errors, we will fallback to accuseds like before for legacy support.
     try {
       const item = NoSQLItem.from(entity);
       await nosql.table('caseentities').insertItems({ item });
       GLOBAL_CACHE['caseentities'] = { data: null, promise: null, timestamp: 0 };
-    } catch(e) {
+    } catch (e) {
       console.warn("Table caseentities might not exist, falling back to accuseds");
       let table = 'accuseds';
       if (entityType === 'Victim') table = 'victims';
       if (entityType === 'Complainant') table = 'complainants';
-      const item = NoSQLItem.from(entity);
+      
+      let fallbackEntity: any = { CaseMasterID: entity.CaseMasterID };
+      if (table === 'accuseds') {
+          fallbackEntity.AccusedMasterID = entity.EntityID;
+          fallbackEntity.AccusedName = `[${entity.type}] ${entity.value}`;
+      } else if (table === 'victims') {
+          fallbackEntity.VictimMasterID = entity.EntityID;
+          fallbackEntity.VictimName = `[${entity.type}] ${entity.value}`;
+      } else if (table === 'complainants') {
+          fallbackEntity.ComplainantID = entity.EntityID;
+          fallbackEntity.ComplainantName = `[${entity.type}] ${entity.value}`;
+      }
+      
+      const item = NoSQLItem.from(fallbackEntity);
       await nosql.table(table).insertItems({ item });
       GLOBAL_CACHE[table] = { data: null, promise: null, timestamp: 0 };
     }
-    
+
     // Audit log
     const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || Date.now();
     await this.createAuditLog({
@@ -865,13 +879,13 @@ export class CloudScaleRepository implements IDataRepository {
       Description: `${entityType} added to Case ${entity.CaseMasterID}`,
       ActorID: actorId || entity.userEmail || 'system'
     }).catch(e => console.error(e));
-    
+
     return entity;
   }
 
   async getCaseStatistics(metric: string, filters: { district?: number, station?: number, crime_category?: number }): Promise<any> {
     const cases = await this.scanAll('CaseMaster');
-    
+
     // Apply filters
     const filteredCases = cases.filter(c => {
       if (c.latitude == null || c.latitude === 0 || c.longitude == null || c.longitude === 0) return false;
@@ -886,7 +900,7 @@ export class CloudScaleRepository implements IDataRepository {
     switch (metric) {
       case 'total_cases':
         return { metric: 'total_cases', value: filteredCases.length, source: 'CloudScale' };
-      
+
       case 'pending_cases': {
         // MATCHING DASHBOARD LOGIC: Solved/Closed are StatusID 2, 3, or 4.
         // Therefore Pending is total minus solved.
@@ -894,13 +908,13 @@ export class CloudScaleRepository implements IDataRepository {
         const pending = filteredCases.length - solved;
         return { metric: 'pending_cases', value: pending, source: 'CloudScale' };
       }
-      
+
       case 'solved_cases': {
         // MATCHING DASHBOARD LOGIC: Solved/Closed are StatusID 2, 3, or 4.
         const solved = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
         return { metric: 'solved_cases', value: solved, source: 'CloudScale' };
       }
-      
+
       case 'crime_category_breakdown': {
         const counts: Record<number, number> = {};
         filteredCases.forEach(c => {
@@ -909,7 +923,7 @@ export class CloudScaleRepository implements IDataRepository {
         });
         return { metric, breakdown: Object.entries(counts).map(([k, v]) => ({ crime_category: Number(k), count: v })), source: 'CloudScale' };
       }
-      
+
       case 'station_breakdown': {
         const counts: Record<number, number> = {};
         filteredCases.forEach(c => {
@@ -948,10 +962,10 @@ export class CloudScaleRepository implements IDataRepository {
       const nosql = this.app.nosql();
       const table = nosql.table('auditlogs');
       const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-      
+
       const logId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
       const timestamp = new Date().toISOString();
-      
+
       const item = NoSQLItem.from({
         AuditLogID: logId,
         LogGroup: 'ALL',
@@ -1001,9 +1015,9 @@ export class CloudScaleRepository implements IDataRepository {
 
       const tableDetails = await nosql.getTable('auditlogs');
       const detailsJson = (tableDetails as any).toJSON ? (tableDetails as any).toJSON() : tableDetails;
-      const index = detailsJson.global_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex') 
-                  || detailsJson.local_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex');
-      
+      const index = detailsJson.global_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex')
+        || detailsJson.local_index?.find((idx: any) => idx.name === 'LogGroupIndex' || idx.id === 'LogGroupIndex');
+
       const realTable = nosql.table(detailsJson);
       const indexIdToUse = index ? index.id : 'LogGroupIndex';
 
@@ -1012,20 +1026,20 @@ export class CloudScaleRepository implements IDataRepository {
       const data = (raw.get || []).map((d: any) => {
         const item = d.item;
         if (!item) return null;
-        
+
         // Unwrap the {"S": "..."} NoSQL raw types returned by queryIndex
         const rawJson = typeof item.toJSON === 'function' ? item.toJSON() : item;
         const clean: any = {};
         for (const [k, v] of Object.entries(rawJson)) {
-            if (v && typeof v === 'object') {
-                if ('S' in (v as any)) clean[k] = (v as any).S;
-                else if ('N' in (v as any)) clean[k] = Number((v as any).N);
-                else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
-                else if ('NULL' in (v as any)) clean[k] = null;
-                else clean[k] = v;
-            } else {
-                clean[k] = v;
-            }
+          if (v && typeof v === 'object') {
+            if ('S' in (v as any)) clean[k] = (v as any).S;
+            else if ('N' in (v as any)) clean[k] = Number((v as any).N);
+            else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+            else if ('NULL' in (v as any)) clean[k] = null;
+            else clean[k] = v;
+          } else {
+            clean[k] = v;
+          }
         }
         return clean;
       }).filter(Boolean);
@@ -1041,7 +1055,7 @@ export class CloudScaleRepository implements IDataRepository {
           nextCursor = skItem.toJSON().Timestamp;
         }
       }
-      
+
       return {
         data,
         total: 0, // Fallback, NoSQL does not support cheap counts

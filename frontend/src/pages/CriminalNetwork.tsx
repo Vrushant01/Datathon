@@ -263,17 +263,19 @@ export const CriminalNetwork: React.FC = () => {
     }
 
     try {
+      let payload = { type: newEntityType, value: newEntityValue, description: newEntityDesc };
       if (newEntityType === 'accused') {
-        mockDb.addCaseAccused(selectedFirId, newEntityValue, newSuspectAge, newSuspectGender, user?.email || 'officer@ksp.gov.in');
-        showNotification('success', `Added suspect node: "${newEntityValue}"`);
-      } else {
-        await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: newEntityType, value: newEntityValue, description: newEntityDesc })
-        });
-        showNotification('success', `Added association node: "${newEntityValue}"`);
+          // Send age and gender in description for backend persistence if needed
+          payload.description = `Age: ${newSuspectAge}, Gender: ${newSuspectGender === 1 ? 'Male' : (newSuspectGender === 2 ? 'Female' : 'Other')}`;
       }
+      
+      await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      showNotification('success', `Added node: "${newEntityValue}"`);
+      
       setNewEntityValue('');
       setNewEntityDesc('');
       
