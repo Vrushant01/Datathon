@@ -19,6 +19,7 @@ export interface IDataRepository {
   getAccusedByCase(caseId: number): Promise<any[]>;
   getVictimsByCase(caseId: number): Promise<any[]>;
   getCustomEdgesByCase(caseId: number): Promise<any[]>;
+  getCaseEntities(caseId: number): Promise<any[]>;
   
   // Analytics
   getRepeatOffenders(): Promise<any[]>;
@@ -48,7 +49,7 @@ export interface IDataRepository {
   
   // Network Mutations
   addCustomEdge(edge: any): Promise<any>;
-  addCaseEntity(entityType: string, entity: any): Promise<any>;
+  addCaseEntity(entityType: string, entity: any, actorId?: string): Promise<any>;
   updateCaseEntity(entityType: string, entity: any): Promise<any>;
   deleteCaseEntity(entityType: string, entityId: number): Promise<boolean>;
   
