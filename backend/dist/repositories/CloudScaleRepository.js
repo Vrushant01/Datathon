@@ -484,13 +484,22 @@ class CloudScaleRepository {
         return all.filter(v => Number(v.CaseMasterID) === caseId);
     }
     async getCustomEdgesByCase(caseId) {
+        const nosql = this.app.nosql();
+        const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         try {
-            const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId} AND source != 'entity' LIMIT 200`);
-            return res.map((r) => r.customedges);
+            const resp = await nosql.table('customedges').queryTable({
+                key_condition: {
+                    attribute: ['CaseMasterID'],
+                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                    value: NoSQLMarshall.makeNumber(caseId)
+                }
+            });
+            const raw = resp;
+            const allEdges = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            return allEdges.filter((e) => e.source !== 'entity');
         }
         catch (e) {
-            console.error('getCustomEdgesByCase ZCQL error:', e.message);
+            console.error('getCustomEdgesByCase NoSQL error:', e.message);
             return [];
         }
     }
@@ -832,11 +841,19 @@ class CloudScaleRepository {
         return edge;
     }
     async getCaseEntities(caseId) {
+        const nosql = this.app.nosql();
+        const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         try {
-            const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId} AND source = 'entity' LIMIT 200`);
-            return res.map((r) => {
-                const edge = r.customedges;
+            const resp = await nosql.table('customedges').queryTable({
+                key_condition: {
+                    attribute: ['CaseMasterID'],
+                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                    value: NoSQLMarshall.makeNumber(caseId)
+                }
+            });
+            const raw = resp;
+            const allEdges = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            return allEdges.filter((e) => e.source === 'entity').map((edge) => {
                 try {
                     return {
                         EntityID: edge.target,
@@ -850,7 +867,7 @@ class CloudScaleRepository {
             }).filter(Boolean);
         }
         catch (e) {
-            console.error('getCaseEntities ZCQL error:', e.message);
+            console.error('getCaseEntities NoSQL error:', e.message);
             return [];
         }
     }
@@ -988,18 +1005,23 @@ class CloudScaleRepository {
     }
     async updateCaseEntity(entityId, entityType, value, description, actorId = 'system') {
         const nosql = this.app.nosql();
-        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         const edgeId = `entity-${entityId}`;
-        // Fetch the existing record to keep its CaseMasterID intact
-        const itemToUpdate = new NoSQLItem();
-        itemToUpdate.set('EdgeID', edgeId);
-        itemToUpdate.set('label', JSON.stringify({ type: entityType, value, description }));
-        await nosql.table('customedges').updateItems({ item: itemToUpdate });
+        await nosql.table('customedges').updateItems({
+            keys: new NoSQLItem().addString('EdgeID', edgeId),
+            update_attributes: [
+                {
+                    operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+                    update_value: NoSQLMarshall.make(JSON.stringify({ type: entityType, value, description })),
+                    attribute_path: ['label']
+                }
+            ]
+        });
         GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
         await this.createAuditLog({
             Action: 'UPDATE_CASE_ENTITY',
             EntityType: 'CUSTOM_ENTITY',
-            EntityID: entityId,
+            EntityID: String(entityId),
             Description: `Updated entity ${entityId} to type ${entityType}, value ${value}`,
             ActorID: actorId
         });

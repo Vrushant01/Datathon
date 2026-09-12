@@ -55,6 +55,9 @@ const App: React.FC = () => {
       // Connect to Realtime Events immediately
       sseClient.connect();
     }
+    return () => {
+      sseClient.disconnect();
+    };
   }, []);
 
   return (
