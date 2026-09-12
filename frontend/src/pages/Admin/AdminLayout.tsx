@@ -20,10 +20,10 @@ export const AdminLayout: React.FC = () => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     };
   }, [mobileMenuOpen]);
 
@@ -74,7 +74,7 @@ export const AdminLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || t('sidebar.console_title');
 
   return (
-    <div className="app-shell bg-slate-50 select-none">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50 select-none w-full">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center shadow flex-shrink-0 border-b border-ksp-gold/20">
@@ -102,7 +102,7 @@ export const AdminLayout: React.FC = () => {
           </div>
 
           {/* Sidebar Nav Links */}
-          <nav className="p-4 pb-8 flex-grow space-y-1.5 overflow-hidden">
+          <nav className="p-4 pb-8 flex-grow min-h-0 space-y-1.5 overflow-hidden">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (

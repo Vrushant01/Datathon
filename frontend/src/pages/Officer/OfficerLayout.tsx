@@ -46,7 +46,7 @@ export const OfficerLayout: React.FC = () => {
   const currentPageLabel = menuItems.find(i => location.pathname === i.path)?.label || 'Console';
 
   return (
-    <div className="app-shell bg-slate-50 select-none">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50 select-none w-full">
       
       {/* Tablet/Mobile Header - App Style */}
       <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow flex-shrink-0 border-b border-ksp-gold/20">
@@ -79,7 +79,7 @@ export const OfficerLayout: React.FC = () => {
           </div>
 
           {/* Sidebar Nav Links */}
-          <nav className="p-4 pb-8 flex-grow space-y-1.5 overflow-hidden">
+          <nav className="p-4 pb-8 flex-grow min-h-0 space-y-1.5 overflow-hidden">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
