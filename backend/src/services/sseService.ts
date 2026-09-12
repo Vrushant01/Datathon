@@ -40,10 +40,13 @@ class SSEService {
         // Send initial connection success
         this.sendEventToClient(client, 'CONNECTED', { message: 'SSE Connection Established', time: new Date().toISOString() });
 
-        // Keep-alive heartbeat (every 30s) to prevent idle timeouts
+        // Keep-alive heartbeat (every 15s) to prevent idle timeouts from load balancers
         const heartbeat = setInterval(() => {
-            this.sendEventToClient(client, 'PING', { time: new Date().toISOString() });
-        }, 30000);
+            client.res.write(': heartbeat\n\n');
+            if (typeof (client.res as any).flush === 'function') {
+                (client.res as any).flush();
+            }
+        }, 15000);
 
         // Handle client disconnect
         req.on('close', () => {

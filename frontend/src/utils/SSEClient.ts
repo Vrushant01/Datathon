@@ -33,7 +33,12 @@ class SSEClient {
     };
 
     this.eventSource.onerror = (err) => {
-      console.error('[SSE] Connection error:', err);
+      // Avoid spamming error if connection is intentionally closed or recovering
+      if (this.eventSource?.readyState === EventSource.CLOSED) {
+        console.log('[SSE] Connection closed.');
+      } else {
+        console.error('[SSE] Connection error/interruption.');
+      }
       this.isConnected = false;
       this.eventSource?.close();
       this.eventSource = null;
@@ -47,7 +52,7 @@ class SSEClient {
     };
 
     // Generic listener for all custom events (EventSource fires events by name)
-    const eventTypes = ['CONNECTED', 'FIR_CREATED', 'OFFICER_CREATED', 'STATION_CREATED', 'CASE_ENTITY_CREATED', 'CASE_EDGE_CREATED'];
+    const eventTypes = ['CONNECTED', 'FIR_CREATED', 'OFFICER_CREATED', 'STATION_CREATED', 'CASE_ENTITY_CREATED', 'CASE_ENTITY_DELETED', 'CASE_EDGE_CREATED'];
     
     eventTypes.forEach(eventType => {
         this.eventSource?.addEventListener(eventType, (e: any) => {

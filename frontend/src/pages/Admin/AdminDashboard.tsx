@@ -320,12 +320,12 @@ export const AdminDashboard: React.FC = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <span className="text-slate-400">{isConnecting ? t('common.loading') : t('charts.no_category_data')}</span>
+              <span className="text-slate-400">{isLoading ? t('common.loading') : t('charts.no_category_data')}</span>
             )}
             
             {/* Center Summary Label */}
             <div className="absolute text-center">
-              <div className="text-xl font-extrabold text-ksp-navy">{isConnecting ? '...' : totalFIR}</div>
+              <div className="text-xl font-extrabold text-ksp-navy">{isLoading ? '...' : totalFIR}</div>
               <div className="text-[9px] uppercase tracking-wider font-bold text-slate-400">{t('charts.cases')}</div>
             </div>
           </div>
