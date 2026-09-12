@@ -837,8 +837,42 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
   async getCaseEntities(caseId: number): Promise<any[]> {
-    const all = await this.scanAll('CaseEntity'); // actualTableName will be caseentitys => wait, let's just use caseentities
-    return all.filter(e => Number(e.CaseMasterID) === caseId);
+    // CaseEntity rows are stored with EntityID = Date.now() (not enumerable),
+    // so scanAll is impossible. Use queryTable keyed by CaseMasterID — the same
+    // supported pattern used by getChargesheetsByCase / getTimelineNotesByCase.
+    const nosql = this.app.nosql();
+    const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+    try {
+      const resp = await nosql.table('caseentities').queryTable({
+        key_condition: {
+          attribute: ['CaseMasterID'],
+          operator: NoSQLEnum.NoSQLOperator.EQUALS,
+          value: NoSQLMarshall.makeNumber(caseId)
+        }
+      });
+      const raw = resp as any;
+      return (raw.get || []).map((d: any) => {
+        const item = typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item;
+        if (!item) return null;
+        // Unwrap Catalyst SDK type wrappers ({S:..., N:..., BOOL:...}) without coercing value to a number.
+        const clean: any = {};
+        for (const [k, v] of Object.entries(item)) {
+          if (v && typeof v === 'object') {
+            if ('S' in (v as any)) clean[k] = (v as any).S;          // string — preserves "4", "44", "444" exactly
+            else if ('N' in (v as any)) clean[k] = Number((v as any).N);
+            else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+            else if ('NULL' in (v as any)) clean[k] = null;
+            else clean[k] = v;
+          } else {
+            clean[k] = v;
+          }
+        }
+        return clean;
+      }).filter(Boolean);
+    } catch (e: any) {
+      console.warn('[DB] getCaseEntities queryTable failed:', e?.message);
+      return [];
+    }
   }
 
   async addCaseEntity(entityType: string, entity: any, actorId: string = 'system'): Promise<any> {
