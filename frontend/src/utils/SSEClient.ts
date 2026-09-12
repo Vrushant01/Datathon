@@ -6,6 +6,7 @@ class SSEClient {
   private eventSource: EventSource | null = null;
   private listeners: Map<string, Set<Listener>> = new Map();
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  private reconnectAttempts = 0;
   private isConnected = false;
 
   public connect() {
@@ -26,6 +27,7 @@ class SSEClient {
     this.eventSource.onopen = () => {
       console.log('[SSE] Connected to event stream');
       this.isConnected = true;
+      this.reconnectAttempts = 0;
       if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = null;
@@ -33,26 +35,28 @@ class SSEClient {
     };
 
     this.eventSource.onerror = (err) => {
-      // Avoid spamming error if connection is intentionally closed or recovering
       if (this.eventSource?.readyState === EventSource.CLOSED) {
         console.log('[SSE] Connection closed.');
       } else {
-        console.error('[SSE] Connection error/interruption.');
+        console.log('[SSE] Connection interrupted. Reconnecting...');
       }
       this.isConnected = false;
       this.eventSource?.close();
       this.eventSource = null;
       
-      // Auto-reconnect after 5 seconds
+      // Auto-reconnect with exponential backoff (max 30s)
       if (!this.reconnectTimeout) {
+        const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+        this.reconnectAttempts++;
         this.reconnectTimeout = setTimeout(() => {
+          this.reconnectTimeout = null;
           this.connect();
-        }, 5000);
+        }, backoff);
       }
     };
 
     // Generic listener for all custom events (EventSource fires events by name)
-    const eventTypes = ['CONNECTED', 'FIR_CREATED', 'OFFICER_CREATED', 'STATION_CREATED', 'CASE_ENTITY_CREATED', 'CASE_ENTITY_DELETED', 'CASE_EDGE_CREATED'];
+    const eventTypes = ['CONNECTED', 'FIR_CREATED', 'OFFICER_CREATED', 'STATION_CREATED', 'CASE_ENTITY_CREATED', 'CASE_ENTITY_UPDATED', 'CASE_ENTITY_DELETED', 'CASE_EDGE_CREATED'];
     
     eventTypes.forEach(eventType => {
         this.eventSource?.addEventListener(eventType, (e: any) => {

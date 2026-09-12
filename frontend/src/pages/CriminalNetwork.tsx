@@ -266,6 +266,43 @@ export const CriminalNetwork: React.FC = () => {
       }
     });
 
+    const unsubEntityUpdated = sseClient.subscribe('CASE_ENTITY_UPDATED', (payload: any) => {
+      try {
+        const updateData = payload?.data ?? payload;
+        const caseMasterId = updateData?.CaseMasterID ?? updateData?.caseMasterId;
+        const entityId = updateData?.EntityID ?? updateData?.id;
+
+        if (!caseMasterId || !entityId) return;
+
+        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
+          const entityNodeId = `entity-${entityId}`;
+          setNodes(prev => prev.map(n => {
+            if (n.id === entityNodeId) {
+              const updatedNode = {
+                ...n,
+                data: {
+                  ...n.data,
+                  label: updateData.value,
+                  rawData: updateData
+                }
+              };
+              
+              if (graphCache.current.has(selectedFirId)) {
+                const cache = graphCache.current.get(selectedFirId)!;
+                const idx = cache.nodes.findIndex(cn => cn.id === entityNodeId);
+                if (idx !== -1) cache.nodes[idx] = updatedNode;
+              }
+              
+              return updatedNode;
+            }
+            return n;
+          }));
+        }
+      } catch (err) {
+        console.error("[SSE] Invalid CASE_ENTITY_UPDATED payload", payload, err);
+      }
+    });
+
     const unsubEntityDeleted = sseClient.subscribe('CASE_ENTITY_DELETED', (payload: any) => {
       try {
         const delData = payload?.data ?? payload;
@@ -293,6 +330,7 @@ export const CriminalNetwork: React.FC = () => {
     return () => {
       unsubEntity();
       unsubEdge();
+      unsubEntityUpdated();
       unsubEntityDeleted();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
