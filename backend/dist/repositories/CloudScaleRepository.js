@@ -882,23 +882,41 @@ class CloudScaleRepository {
     }
     async deleteCaseEntity(caseId, entityId, actorId = 'system') {
         const nosql = this.app.nosql();
-        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        const zcql = this.app.zcql();
-        // First, delete the entity node itself
-        const res = await zcql.executeZCQLQuery(`SELECT EdgeID FROM customedges WHERE CaseMasterID = ${caseId} AND target = '${entityId}' AND source = 'entity'`);
-        if (res.length > 0) {
-            const edgeIdStr = res[0].customedges.EdgeID;
-            const keys = new NoSQLItem().addString('EdgeID', edgeIdStr);
-            await nosql.table('customedges').deleteItems({ keys: [keys] });
-            GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
-        }
-        // Also delete any edges attached to this node
-        const edgesRes = await zcql.executeZCQLQuery(`SELECT EdgeID FROM customedges WHERE CaseMasterID = ${caseId} AND (source = 'entity-${entityId}' OR target = 'entity-${entityId}')`);
-        for (const edge of edgesRes) {
-            const edgeIdStr = edge.customedges.EdgeID;
-            const keys = new NoSQLItem().addString('EdgeID', edgeIdStr);
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        // The Add node stores the entity edge exactly as 'entity-' + entityId
+        const entityEdgeId = `entity-${entityId}`;
+        // 1. Delete the primary node edge
+        try {
+            const keys = new NoSQLItem().addString('EdgeID', entityEdgeId);
             await nosql.table('customedges').deleteItems({ keys: [keys] });
         }
+        catch (e) {
+            console.error('Failed to delete primary entity node:', e);
+        }
+        // 2. Fetch and delete any connected relationship edges using queryTable instead of ZCQL
+        try {
+            const resp = await nosql.table('customedges').queryTable({
+                key_condition: {
+                    attribute: ['CaseMasterID'],
+                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
+                    value: NoSQLMarshall.makeNumber(caseId)
+                }
+            });
+            const raw = resp;
+            const allEdges = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            for (const edge of allEdges) {
+                if (edge.source === entityEdgeId || edge.target === entityEdgeId) {
+                    if (edge.EdgeID) {
+                        const edgeKeys = new NoSQLItem().addString('EdgeID', edge.EdgeID);
+                        await nosql.table('customedges').deleteItems({ keys: [edgeKeys] }).catch((err) => console.error(err));
+                    }
+                }
+            }
+        }
+        catch (e) {
+            console.error('Failed to query/delete connected edges:', e);
+        }
+        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
         // Audit log
         await this.createAuditLog({
             Action: 'DELETE_CASE_ENTITY',
