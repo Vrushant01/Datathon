@@ -94,6 +94,8 @@ class CloudScaleRepository {
             actualTableName = 'accuseds';
         if (tableName === 'Victim')
             actualTableName = 'victims';
+        if (tableName === 'CaseEntity')
+            actualTableName = 'caseentities';
         const cacheEntry = GLOBAL_CACHE[actualTableName];
         if (!cacheEntry)
             throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -804,28 +806,56 @@ class CloudScaleRepository {
         }
         const item = NoSQLItem.from(edge);
         await nosql.table('customedges').insertItems({ item });
+        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
         return edge;
+    }
+    async getCaseEntities(caseId) {
+        const all = await this.scanAll('CaseEntity'); // actualTableName will be caseentitys => wait, let's just use caseentities
+        return all.filter(e => Number(e.CaseMasterID) === caseId);
     }
     async addCaseEntity(entityType, entity, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        let table = 'accuseds';
-        if (entityType === 'Victim')
-            table = 'victims';
-        if (entityType === 'Complainant')
-            table = 'complainants';
-        const item = NoSQLItem.from(entity);
-        await nosql.table(table).insertItems({ item });
-        GLOBAL_CACHE[table] = { data: null, promise: null, timestamp: 0 };
+        // We create a new table 'caseentities' in Catalyst if it exists, otherwise it will just error.
+        // If it errors, we will fallback to accuseds like before for legacy support.
+        try {
+            const item = NoSQLItem.from(entity);
+            await nosql.table('caseentities').insertItems({ item });
+            GLOBAL_CACHE['caseentities'] = { data: null, promise: null, timestamp: 0 };
+        }
+        catch (e) {
+            console.warn("Table caseentities might not exist, falling back to accuseds");
+            let table = 'accuseds';
+            if (entityType === 'Victim')
+                table = 'victims';
+            if (entityType === 'Complainant')
+                table = 'complainants';
+            let fallbackEntity = { CaseMasterID: entity.CaseMasterID };
+            if (table === 'accuseds') {
+                fallbackEntity.AccusedMasterID = entity.EntityID;
+                fallbackEntity.AccusedName = `[${entity.type}] ${entity.value}`;
+            }
+            else if (table === 'victims') {
+                fallbackEntity.VictimMasterID = entity.EntityID;
+                fallbackEntity.VictimName = `[${entity.type}] ${entity.value}`;
+            }
+            else if (table === 'complainants') {
+                fallbackEntity.ComplainantID = entity.EntityID;
+                fallbackEntity.ComplainantName = `[${entity.type}] ${entity.value}`;
+            }
+            const item = NoSQLItem.from(fallbackEntity);
+            await nosql.table(table).insertItems({ item });
+            GLOBAL_CACHE[table] = { data: null, promise: null, timestamp: 0 };
+        }
         // Audit log
-        const entityId = entity.PersonID || entity.VictimID || entity.ComplainantID || Date.now();
+        const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || Date.now();
         await this.createAuditLog({
             Action: 'CREATE_CASE_ENTITY',
             EntityType: entityType.toUpperCase(),
             EntityID: String(entityId),
             Description: `${entityType} added to Case ${entity.CaseMasterID}`,
             ActorID: actorId || entity.userEmail || 'system'
-        });
+        }).catch(e => console.error(e));
         return entity;
     }
     async getCaseStatistics(metric, filters) {

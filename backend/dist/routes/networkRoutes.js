@@ -54,6 +54,7 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
         const accusedList = await db.getAccusedByCase(caseId);
         const victimsList = await db.getVictimsByCase(caseId);
         const customEdges = await db.getCustomEdgesByCase(caseId);
+        const caseEntities = await db.getCaseEntities(caseId);
         // Let's resolve the unit and officer
         const employees = await db.getEmployees();
         const units = await db.getUnits();
@@ -223,6 +224,72 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
                 labelBgStyle: { fill: '#0f172a' }
             });
         });
+        // 7. Case Entities
+        caseEntities.forEach((ent) => {
+            const entityNodeId = `entity-${ent.EntityID}`;
+            const getNodeColor = (type) => {
+                if (type === 'Vehicle')
+                    return '#F97316';
+                if (type === 'Phone')
+                    return '#06B6D4';
+                if (type === 'Bank')
+                    return '#EAB308';
+                if (type === 'Location')
+                    return '#84CC16';
+                if (type === 'Weapon')
+                    return '#EF4444';
+                return '#10B981';
+            };
+            const getNodeSymbol = (type) => {
+                if (type === 'Vehicle')
+                    return 'VEH';
+                if (type === 'Phone')
+                    return 'TEL';
+                if (type === 'Bank')
+                    return 'BNK';
+                if (type === 'Location')
+                    return 'LOC';
+                if (type === 'Weapon')
+                    return 'WEP';
+                return 'EVI';
+            };
+            nodes.push({
+                id: entityNodeId,
+                type: 'custom',
+                position: getPos(),
+                data: {
+                    label: ent.value,
+                    color: getNodeColor(ent.type),
+                    symbol: getNodeSymbol(ent.type),
+                    type: ent.type,
+                    rawData: ent
+                }
+            });
+            let relationLabel = 'Associated';
+            if (ent.type === 'Vehicle')
+                relationLabel = 'Transported In';
+            if (ent.type === 'Phone')
+                relationLabel = 'Calls From';
+            if (ent.type === 'Bank')
+                relationLabel = 'Wire Transfer';
+            if (ent.type === 'Location')
+                relationLabel = 'Frequents';
+            if (ent.type === 'Weapon')
+                relationLabel = 'Used In Crime';
+            if (ent.type === 'Evidence')
+                relationLabel = 'Seized';
+            edges.push({
+                id: `e-case-${mainCase.CaseMasterID}-${entityNodeId}`,
+                source: `fir:${mainCase.CaseMasterID}`,
+                target: entityNodeId,
+                type: 'straight',
+                label: relationLabel,
+                animated: true,
+                style: { stroke: getNodeColor(ent.type), strokeWidth: 1.5, opacity: 0.6 },
+                labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        });
         res.json({
             case: mainCase,
             nodes,
@@ -235,3 +302,50 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
     }
 });
 exports.default = router;
+// ADD POST ROUTES FOR ENTITIES AND EDGES
+router.post('/cases/:caseId/entities', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const caseId = Number(req.params.caseId);
+        const { type, value, description } = req.body;
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const userEmail = req.user?.email || 'system';
+        const newEntity = await db.addCaseEntity(type, {
+            EntityID: Date.now(),
+            CaseMasterID: caseId,
+            type,
+            value,
+            description
+        }, userEmail);
+        res.json(newEntity);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.post('/cases/:caseId/edges', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const caseId = Number(req.params.caseId);
+        const { source, target, label } = req.body;
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const newEdge = await db.addCustomEdge({
+            CaseMasterID: caseId,
+            source,
+            target,
+            label
+        });
+        res.json(newEdge);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+router.get('/debug', async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const data = await db.scanAll('CaseEntity');
+        res.json(data);
+    }
+    catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});

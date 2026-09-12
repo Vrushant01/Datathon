@@ -188,8 +188,8 @@ export const StationManagement: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border shadow-sm flex-1 flex flex-col min-h-0">
-        <div className="overflow-auto flex-1 custom-scrollbar">
+      <div className="bg-white rounded-xl border shadow-sm">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap relative">
             <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
               <tr className="border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
