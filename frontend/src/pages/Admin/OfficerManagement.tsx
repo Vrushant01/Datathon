@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { mockDb, EmployeeRow } from '../../../data/mockDb';
+import { mockDb, EmployeeRow, UnitRow, DistrictRow } from '../../../data/mockDb';
+import { authFetch } from '../../utils/authFetch';
+import { API_BASE_URL } from '../../config/api';
 import { useLanguage } from '../../context/LanguageContext';
 import { 
   Users, UserPlus, Search, Edit2, ShieldAlert, Trash2, 
@@ -11,7 +13,7 @@ import {
 export const OfficerManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
-  const [employees, setEmployees] = useState<EmployeeRow[]>(mockDb.getEmployees());
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
   const [filterStation, setFilterStation] = useState<number | 'ALL'>('ALL');
@@ -83,6 +85,24 @@ export const OfficerManagement: React.FC = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/employees`);
+      if (res.ok) {
+        const data = await res.json();
+        setEmployees(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch employees', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+    const interval = setInterval(fetchEmployees, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignOfficerId || !assignStationId) {
@@ -146,73 +166,88 @@ export const OfficerManagement: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName || !kgid || !email) {
       showNotification('error', 'Please fill in Name, KGID and Email.');
       return;
     }
 
-    if (editingEmployee) {
-      // Edit
-      const success = mockDb.updateEmployee(editingEmployee.EmployeeID, {
-        FirstName: firstName,
-        KGID: kgid,
-        RankID: rankId,
-        DesignationID: designationId,
-        UnitID: unitId,
-        DistrictID: districtId,
-        EmployeeDOB: dob,
-        AppointmentDate: appointmentDate,
-        email,
-        contact,
-        GenderID: genderId,
-        BloodGroupID: bloodGroupId,
-        PhysicallyChallenged: physicallyChallenged
-      });
-      if (success) {
-        showNotification('success', `Officer ${firstName} details updated.`);
+    const payload = {
+      FirstName: firstName,
+      KGID: kgid,
+      RankID: rankId,
+      DesignationID: designationId,
+      UnitID: unitId,
+      DistrictID: districtId,
+      EmployeeDOB: dob,
+      AppointmentDate: appointmentDate,
+      email,
+      contact,
+      GenderID: genderId,
+      BloodGroupID: bloodGroupId,
+      PhysicallyChallenged: physicallyChallenged,
+      status: 'Active'
+    };
+
+    try {
+      if (editingEmployee) {
+        // Edit
+        const res = await authFetch(`${API_BASE_URL}/api/employees/${editingEmployee.EmployeeID}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showNotification('success', `Officer ${firstName} details updated.`);
+        }
+      } else {
+        // Add new
+        const res = await authFetch(`${API_BASE_URL}/api/employees`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showNotification('success', `Officer ${firstName} registered successfully.`);
+        }
       }
-    } else {
-      // Add new
-      mockDb.createEmployee({
-        FirstName: firstName,
-        KGID: kgid,
-        RankID: rankId,
-        DesignationID: designationId,
-        UnitID: unitId,
-        DistrictID: districtId,
-        EmployeeDOB: dob,
-        AppointmentDate: appointmentDate,
-        email,
-        contact,
-        GenderID: genderId,
-        BloodGroupID: bloodGroupId,
-        PhysicallyChallenged: physicallyChallenged
+      setModalOpen(false);
+      await fetchEmployees();
+    } catch (e: any) {
+      showNotification('error', `Error saving officer: ${e.message}`);
+    }
+  };
+
+  const handleSuspend = async (id: number) => {
+    const emp = employees.find(e => e.EmployeeID === id);
+    if (!emp) return;
+    try {
+      const newStatus = emp.status === 'Active' ? 'Suspended' : 'Active';
+      const res = await authFetch(`${API_BASE_URL}/api/employees/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
       });
-      showNotification('success', `Officer ${firstName} registered successfully.`);
-    }
-
-    setModalOpen(false);
-    setEmployees(mockDb.getEmployees());
-  };
-
-  const handleSuspend = (id: number) => {
-    const success = mockDb.suspendEmployee(id);
-    if (success) {
-      const updated = mockDb.getEmployees();
-      setEmployees(updated);
-      const officer = updated.find(e => e.EmployeeID === id);
-      showNotification('success', `Officer ${officer?.FirstName} status toggled.`);
+      if (res.ok) {
+        await fetchEmployees();
+        showNotification('success', `Officer ${emp.FirstName} status toggled.`);
+      }
+    } catch (e: any) {
+      showNotification('error', `Failed to toggle status: ${e.message}`);
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this officer profile? This action is irreversible.")) {
-      const success = mockDb.deleteEmployee(id);
-      if (success) {
-        setEmployees(mockDb.getEmployees());
-        showNotification('success', 'Officer profile deleted from database.');
+      try {
+        const res = await authFetch(`${API_BASE_URL}/api/employees/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          await fetchEmployees();
+          showNotification('success', 'Officer profile deleted from database.');
+        }
+      } catch (e: any) {
+        showNotification('error', `Failed to delete officer: ${e.message}`);
       }
     }
   };
@@ -239,10 +274,10 @@ export const OfficerManagement: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-4 select-none h-full flex flex-col min-h-0">
       
       {/* Header section */}
-      <div className="flex justify-between items-center border-b pb-4">
+      <div className="flex justify-between items-center border-b pb-4 shrink-0">
         <div>
           <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('officers.title')}</h2>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('officers.subtitle')}</p>
@@ -266,7 +301,7 @@ export const OfficerManagement: React.FC = () => {
       )}
 
       {/* Roster Controls */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center">
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center shrink-0">
         <div className="flex-1 w-full relative">
           <span className="absolute left-3 top-3 text-slate-400">
             <Search size={16} />
@@ -314,10 +349,11 @@ export const OfficerManagement: React.FC = () => {
       </div>
 
       {/* Roster Table Grid */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-          <thead>
-            <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+      <div className="bg-white rounded-xl border shadow-sm flex-1 flex flex-col min-h-0">
+        <div className="overflow-auto flex-1 custom-scrollbar">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap relative">
+            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+              <tr className="border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <th className="p-4">Emp ID</th>
               <th className="p-4">KGID</th>
               <th className="p-4">Officer Name</th>
@@ -397,6 +433,7 @@ export const OfficerManagement: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Edit / Create Form Modal dialog */}

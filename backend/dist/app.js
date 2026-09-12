@@ -40,6 +40,7 @@ const testIndexRoute_1 = __importDefault(require("./routes/testIndexRoute"));
 const fixDataBugsRoute_1 = __importDefault(require("./routes/fixDataBugsRoute"));
 const verifySeedRoute_1 = __importDefault(require("./routes/verifySeedRoute"));
 const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
+const networkRoutes_1 = __importDefault(require("./routes/networkRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const corsOptions = {
@@ -68,6 +69,7 @@ app.use('/api/test-index', testIndexRoute_1.default);
 app.use('/api/fix-data-bugs', fixDataBugsRoute_1.default);
 app.use('/api/verify-seed', verifySeedRoute_1.default);
 app.use('/api/analytics', analyticsRoutes_1.default);
+app.use('/api/network', networkRoutes_1.default);
 app.get("/", (req, res) => {
     res.status(200).send("Backend is Connected with pipeline 🚀");
 });
@@ -213,6 +215,78 @@ app.get('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to fetch employees' });
+    }
+});
+app.post('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const newEmployee = await db.createEmployee(req.body, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.status(201).json(newEmployee);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to create employee' });
+    }
+});
+app.put('/api/employees/:id', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const updated = await db.updateEmployee(Number(req.params.id), req.body, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json(updated);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to update employee' });
+    }
+});
+app.delete('/api/employees/:id', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        await db.deleteEmployee(Number(req.params.id), actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to delete employee' });
+    }
+});
+app.post('/api/units', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const newUnit = await db.createUnit(req.body, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.status(201).json(newUnit);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to create unit' });
+    }
+});
+app.put('/api/units/:id', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        const updated = await db.updateUnit(Number(req.params.id), req.body, actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json(updated);
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to update unit' });
+    }
+});
+app.delete('/api/units/:id', authMiddleware_1.requireAuth, async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+        await db.deleteUnit(Number(req.params.id), actorId);
+        (0, hotspotController_1.invalidateHotspotCache)();
+        res.json({ success: true });
+    }
+    catch (error) {
+        res.status(500).json({ error: 'Failed to delete unit' });
     }
 });
 app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
@@ -538,19 +612,6 @@ app.get('/api/cases/station/:stationId', authMiddleware_1.requireAuth, async (re
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to fetch station cases' });
-    }
-});
-app.get('/api/network/:caseId', authMiddleware_1.requireAuth, async (req, res) => {
-    try {
-        const caseId = Number(req.params.caseId);
-        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const accused = await db.getAccusedByCase(caseId);
-        const victims = await db.getVictimsByCase(caseId);
-        const edges = await db.getCustomEdgesByCase(caseId);
-        res.json({ accused, victims, edges });
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Failed to fetch network' });
     }
 });
 app.use('/api/ai', aiRoutes_1.default);

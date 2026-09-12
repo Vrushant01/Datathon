@@ -86,94 +86,42 @@ export const AdminAnalytics: React.FC = () => {
     };
   }, [selectedDistrict, selectedStation]);
 
-  const cases = mockDb.getCases();
   const districts = mockDb.getDistricts();
   const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
-  const crimeHeads = mockDb.getCrimeHeads();
-  const complainants = mockDb.getComplainants();
-  const victims = mockDb.getVictims();
-  const accused = mockDb.getAccused();
-  const officers = mockDb.getEmployees();
 
   const displayStations = React.useMemo(() => {
     if (selectedDistrict === 'ALL') return [];
     return stations.filter(s => s.DistrictID === selectedDistrict);
   }, [selectedDistrict, stations]);
 
-  const filteredCases = React.useMemo(() => {
-    return cases.filter(c => {
-      if (selectedDistrict !== 'ALL') {
-        const station = stations.find(s => s.UnitID === c.PoliceStationID);
-        if (station?.DistrictID !== selectedDistrict) return false;
-      }
-      if (selectedStation !== 'ALL' && c.PoliceStationID !== selectedStation) {
-        return false;
-      }
-      return true;
-    });
-  }, [cases, selectedDistrict, selectedStation, stations]);
+  const [dashboardData, setDashboardData] = React.useState<any>({
+    totalCases: 0, solvedCases: 0, activeCases: 0, solvedRate: '0.0',
+    chart1Data: [], categoryData: [], victimAgeData: [], accusedAgeData: [], officerData: []
+  });
+  const [loadingDashboard, setLoadingDashboard] = React.useState<boolean>(false);
 
-  // Summary Stats
-  const totalCases = filteredCases.length;
-  const solvedCases = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
-  const activeCases = totalCases - solvedCases;
-  const solvedRate = totalCases > 0 ? ((solvedCases / totalCases) * 100).toFixed(1) : '0.0';
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    
+    setLoadingDashboard(true);
+    authFetch(`${API_BASE_URL}/api/analytics/dashboard?district=${selectedDistrict}&station=${selectedStation}`, { signal })
+      .then(res => res.json())
+      .then(data => {
+         if (signal.aborted) return;
+         if (!data.error) setDashboardData(data);
+         setLoadingDashboard(false);
+      })
+      .catch(e => {
+         if (signal.aborted) return;
+         console.error(e);
+         setLoadingDashboard(false);
+      });
+      
+    return () => controller.abort();
+  }, [selectedDistrict, selectedStation]);
 
-  // 1. Crime by District (Filtered)
-  const chart1Data = React.useMemo(() => {
-    if (selectedDistrict === 'ALL') {
-      return districts.map(d => {
-        const districtStations = stations.filter(s => s.DistrictID === d.DistrictID);
-        const caseCount = filteredCases.filter(c => districtStations.some(s => s.UnitID === c.PoliceStationID)).length;
-        return { name: String(d.DistrictName || '').replace(' City', '').replace(' Rural', ''), Cases: caseCount };
-      }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
-    } else if (selectedStation === 'ALL') {
-      const districtStations = stations.filter(s => s.DistrictID === selectedDistrict);
-      return districtStations.map(s => {
-        const caseCount = filteredCases.filter(c => c.PoliceStationID === s.UnitID).length;
-        return { name: String(s.UnitName || '').replace(' PS', ''), Cases: caseCount };
-      }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
-    } else {
-      const s = stations.find(s => s.UnitID === selectedStation);
-      return s ? [{ name: String(s.UnitName || '').replace(' PS', ''), Cases: totalCases }] : [];
-    }
-  }, [selectedDistrict, selectedStation, districts, stations, filteredCases, totalCases]);
-
-  // 2. Crime Categories
-  const categoryData = crimeHeads.map(ch => {
-    const caseCount = filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length;
-    return { name: String(ch.CrimeGroupName || '').split(' ').slice(-2).join(' '), Cases: caseCount };
-  }).filter(c => c.Cases > 0).sort((a,b) => b.Cases - a.Cases).slice(0, 8); // Top 8
-
-  // 3. Victim Age Demographics
-  const victimAgeData = [
-    { name: 'Under 18', Count: victims.filter(v => v.AgeYear < 18 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
-    { name: '18 - 30', Count: victims.filter(v => v.AgeYear >= 18 && v.AgeYear <= 30 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
-    { name: '31 - 50', Count: victims.filter(v => v.AgeYear > 30 && v.AgeYear <= 50 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
-    { name: 'Over 50', Count: victims.filter(v => v.AgeYear > 50 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length }
-  ].filter(v => v.Count > 0);
-
-  // 4. Accused Age Demographics
-  const accusedAgeData = [
-    { name: 'Under 18', Count: accused.filter(a => a.AgeYear < 18 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
-    { name: '18 - 30', Count: accused.filter(a => a.AgeYear >= 18 && a.AgeYear <= 30 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
-    { name: '31 - 50', Count: accused.filter(a => a.AgeYear > 30 && a.AgeYear <= 50 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
-    { name: 'Over 50', Count: accused.filter(a => a.AgeYear > 50 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length }
-  ].filter(a => a.Count > 0);
-
-  // 5. Officer Case Load
-  const officerData = officers.map(o => {
-    const assignedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID).length;
-    const solvedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID && (c.CaseStatusID === 2 || c.CaseStatusID === 3)).length;
-    return { 
-      uid: o.KGID || String(o.EmployeeID),
-      kgid: o.KGID || 'N/A',
-      fullName: String(o.FirstName || ''),
-      name: String(o.FirstName || '').split(' ')[0], 
-      Assigned: assignedCount, 
-      Solved: solvedCount 
-    };
-  }).filter(o => o.Assigned > 0).sort((a,b) => b.Assigned - a.Assigned).slice(0, 10);
+  const { totalCases, solvedCases, activeCases, solvedRate, chart1Data, categoryData, victimAgeData, accusedAgeData, officerData } = dashboardData;
 
   // 6. Socio-Economic Correlation Data (Now fetched from backend API)
 

@@ -249,6 +249,156 @@ class CloudScaleRepository {
     async getEmployees() {
         return await this.scanAll('Employee');
     }
+    async createEmployee(employeeData, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const table = nosql.table('employees');
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const employees = await this.getEmployees();
+        const maxId = employees.length > 0 ? Math.max(...employees.map((e) => e.EmployeeID || 0)) : 9000;
+        employeeData.EmployeeID = maxId + 1;
+        const item = NoSQLItem.from(employeeData);
+        await table.insertItems({ item });
+        GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
+        await this.createAuditLog({
+            Action: 'CREATE_EMPLOYEE',
+            EntityType: 'EMPLOYEE',
+            EntityID: String(employeeData.EmployeeID),
+            Description: `Employee ${employeeData.FirstName} registered`,
+            ActorID: actorId
+        }).catch(e => console.error(e));
+        return employeeData;
+    }
+    async updateEmployee(employeeId, updateData, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const table = nosql.table('employees');
+        const updateAttributes = [];
+        for (const [key, value] of Object.entries(updateData)) {
+            if (key !== 'EmployeeID') {
+                updateAttributes.push({
+                    operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+                    update_value: NoSQLMarshall.make(value),
+                    attribute_path: [key]
+                });
+            }
+        }
+        try {
+            await table.updateItems({
+                keys: new NoSQLItem().addNumber('EmployeeID', employeeId),
+                update_attributes: updateAttributes
+            });
+            GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
+            await this.createAuditLog({
+                Action: 'UPDATE_EMPLOYEE',
+                EntityType: 'EMPLOYEE',
+                EntityID: String(employeeId),
+                Description: `Updated employee`,
+                ActorID: actorId
+            }).catch(e => console.error(e));
+            return { EmployeeID: employeeId, ...updateData };
+        }
+        catch (e) {
+            console.error('updateEmployee error', e);
+            throw e;
+        }
+    }
+    async deleteEmployee(employeeId, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const table = nosql.table('employees');
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        try {
+            const keys = new NoSQLItem().addNumber('EmployeeID', employeeId);
+            await table.deleteItems({ keys: [keys] });
+            GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
+            await this.createAuditLog({
+                Action: 'DELETE_EMPLOYEE',
+                EntityType: 'EMPLOYEE',
+                EntityID: String(employeeId),
+                Description: `Deleted employee`,
+                ActorID: actorId
+            }).catch(e => console.error(e));
+            return true;
+        }
+        catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }
+    async createUnit(unitData, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const table = nosql.table('units');
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const units = await this.getUnits();
+        const maxId = units.length > 0 ? Math.max(...units.map((u) => u.UnitID || 0)) : 2000;
+        unitData.UnitID = maxId + 1;
+        const item = NoSQLItem.from(unitData);
+        await table.insertItems({ item });
+        GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
+        await this.createAuditLog({
+            Action: 'CREATE_UNIT',
+            EntityType: 'UNIT',
+            EntityID: String(unitData.UnitID),
+            Description: `Unit ${unitData.UnitName} created`,
+            ActorID: actorId
+        }).catch(e => console.error(e));
+        return unitData;
+    }
+    async updateUnit(unitId, updateData, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+        const table = nosql.table('units');
+        const updateAttributes = [];
+        for (const [key, value] of Object.entries(updateData)) {
+            if (key !== 'UnitID') {
+                updateAttributes.push({
+                    operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+                    update_value: NoSQLMarshall.make(value),
+                    attribute_path: [key]
+                });
+            }
+        }
+        try {
+            await table.updateItems({
+                keys: new NoSQLItem().addNumber('UnitID', unitId),
+                update_attributes: updateAttributes
+            });
+            GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
+            await this.createAuditLog({
+                Action: 'UPDATE_UNIT',
+                EntityType: 'UNIT',
+                EntityID: String(unitId),
+                Description: `Updated unit`,
+                ActorID: actorId
+            }).catch(e => console.error(e));
+            return { UnitID: unitId, ...updateData };
+        }
+        catch (e) {
+            console.error('updateUnit error', e);
+            throw e;
+        }
+    }
+    async deleteUnit(unitId, actorId = 'system') {
+        const nosql = this.app.nosql();
+        const table = nosql.table('units');
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        try {
+            const keys = new NoSQLItem().addNumber('UnitID', unitId);
+            await table.deleteItems({ keys: [keys] });
+            GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
+            await this.createAuditLog({
+                Action: 'DELETE_UNIT',
+                EntityType: 'UNIT',
+                EntityID: String(unitId),
+                Description: `Deleted unit`,
+                ActorID: actorId
+            }).catch(e => console.error(e));
+            return true;
+        }
+        catch (e) {
+            console.error(e);
+            throw e;
+        }
+    }
     async createCase(caseData, actorId = 'system') {
         const nosql = this.app.nosql();
         const table = nosql.table('casemasters');

@@ -208,4 +208,135 @@ router.get('/top-crime-areas', requireAuth, async (req, res) => {
   }
 });
 
+// Static Crime Heads for Dashboard Aggregation
+const CRIME_HEADS = [
+  { CrimeHeadID: 100, CrimeGroupName: 'Crimes Against Body' },
+  { CrimeHeadID: 200, CrimeGroupName: 'Crimes Against Property' },
+  { CrimeHeadID: 300, CrimeGroupName: 'Crimes Against Women' },
+  { CrimeHeadID: 400, CrimeGroupName: 'Economic Offences' },
+  { CrimeHeadID: 500, CrimeGroupName: 'Cyber Crimes' },
+  { CrimeHeadID: 600, CrimeGroupName: 'Special and Local Laws (SLL)' }
+];
+
+let globalDashboardCache: Record<string, { data: any, timestamp: number }> = {};
+const DASHBOARD_CACHE_TTL = 60 * 1000; // 1 minute
+
+router.get('/dashboard', requireAuth, async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const selectedDistrict = req.query.district ? req.query.district : 'ALL';
+    const selectedStation = req.query.station ? req.query.station : 'ALL';
+
+    let targetDistrictId: number | 'ALL' = 'ALL';
+    let targetStationId: number | 'ALL' = 'ALL';
+
+    const units = await db.getUnits();
+    const districts = await db.getDistricts();
+
+    if (selectedStation !== 'ALL') {
+       const u = units.find(unit => unit.UnitID === Number(selectedStation));
+       if (u) {
+         targetDistrictId = u.DistrictID;
+         targetStationId = u.UnitID;
+       }
+    } else if (selectedDistrict !== 'ALL') {
+       targetDistrictId = Number(selectedDistrict);
+    }
+
+    const cacheKey = `${targetDistrictId}-${targetStationId}`;
+    if (globalDashboardCache[cacheKey] && (t0 - globalDashboardCache[cacheKey].timestamp < DASHBOARD_CACHE_TTL)) {
+      return res.json(globalDashboardCache[cacheKey].data);
+    }
+
+    // Get all data
+    const [cases, victims, accused, officers] = await Promise.all([
+      db.getAllCasesForAnalytics(),
+      db.getAllVictims(),
+      db.getAllAccused(),
+      db.getEmployees()
+    ]);
+
+    // Apply filters
+    const filteredCases = cases.filter(c => {
+      if (targetDistrictId !== 'ALL') {
+        const station = units.find(s => s.UnitID === c.PoliceStationID);
+        if (station?.DistrictID !== targetDistrictId) return false;
+      }
+      if (targetStationId !== 'ALL' && c.PoliceStationID !== targetStationId) {
+        return false;
+      }
+      return true;
+    });
+
+    const totalCases = filteredCases.length;
+    const solvedCases = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+
+    // 1. Crime by District / Station (Graph 1)
+    let chart1Data: any[] = [];
+    if (targetDistrictId === 'ALL') {
+      chart1Data = districts.map(d => {
+        const districtStations = units.filter(s => s.DistrictID === d.DistrictID);
+        const caseCount = filteredCases.filter(c => districtStations.some(s => s.UnitID === c.PoliceStationID)).length;
+        return { name: String(d.DistrictName || '').replace(' City', '').replace(' Rural', ''), Cases: caseCount };
+      }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
+    } else if (targetStationId === 'ALL') {
+      const districtStations = units.filter(s => s.DistrictID === targetDistrictId);
+      chart1Data = districtStations.map(s => {
+        const caseCount = filteredCases.filter(c => c.PoliceStationID === s.UnitID).length;
+        return { name: String(s.UnitName || '').replace(' PS', ''), Cases: caseCount };
+      }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
+    } else {
+      const s = units.find(s => s.UnitID === targetStationId);
+      chart1Data = s ? [{ name: String(s.UnitName || '').replace(' PS', ''), Cases: totalCases }] : [];
+    }
+
+    // 2. Crime Categories
+    const categoryData = CRIME_HEADS.map(ch => {
+      const caseCount = filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length;
+      return { name: String(ch.CrimeGroupName || '').split(' ').slice(-2).join(' '), Cases: caseCount };
+    }).filter(c => c.Cases > 0).sort((a,b) => b.Cases - a.Cases).slice(0, 8);
+
+    // 3. Victim Age Demographics
+    const victimAgeData = [
+      { name: 'Under 18', Count: victims.filter(v => v.AgeYear < 18 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
+      { name: '18 - 30', Count: victims.filter(v => v.AgeYear >= 18 && v.AgeYear <= 30 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
+      { name: '31 - 50', Count: victims.filter(v => v.AgeYear > 30 && v.AgeYear <= 50 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
+      { name: 'Over 50', Count: victims.filter(v => v.AgeYear > 50 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length }
+    ].filter(v => v.Count > 0);
+
+    // 4. Accused Age Demographics
+    const accusedAgeData = [
+      { name: 'Under 18', Count: accused.filter(a => a.AgeYear < 18 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
+      { name: '18 - 30', Count: accused.filter(a => a.AgeYear >= 18 && a.AgeYear <= 30 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
+      { name: '31 - 50', Count: accused.filter(a => a.AgeYear > 30 && a.AgeYear <= 50 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
+      { name: 'Over 50', Count: accused.filter(a => a.AgeYear > 50 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length }
+    ].filter(a => a.Count > 0);
+
+    // 5. Officer Case Load
+    const officerData = officers.map(o => {
+      const assignedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID).length;
+      const solvedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID && (c.CaseStatusID === 2 || c.CaseStatusID === 3)).length;
+      return { 
+        uid: o.KGID || String(o.EmployeeID), kgid: o.KGID || 'N/A', fullName: String(o.FirstName || ''),
+        name: String(o.FirstName || '').split(' ')[0], Assigned: assignedCount, Solved: solvedCount 
+      };
+    }).filter(o => o.Assigned > 0).sort((a,b) => b.Assigned - a.Assigned).slice(0, 10);
+
+    const t1 = Date.now();
+    console.log(`[API] /api/analytics/dashboard took ${t1 - t0}ms`);
+
+    const result = {
+      totalCases, solvedCases, activeCases: totalCases - solvedCases,
+      solvedRate: totalCases > 0 ? ((solvedCases / totalCases) * 100).toFixed(1) : '0.0',
+      chart1Data, categoryData, victimAgeData, accusedAgeData, officerData
+    };
+
+    globalDashboardCache[cacheKey] = { data: result, timestamp: t0 };
+    res.json(result);
+  } catch(e: any) {
+     res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

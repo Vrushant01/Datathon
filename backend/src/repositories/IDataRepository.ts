@@ -1,7 +1,13 @@
 export interface IDataRepository {
   getDistricts(): Promise<any[]>;
   getUnits(districtId?: number): Promise<any[]>;
+  createUnit(unitData: any, actorId?: string): Promise<any>;
+  updateUnit(unitId: number, updateData: any, actorId?: string): Promise<any>;
+  deleteUnit(unitId: number, actorId?: string): Promise<boolean>;
   getEmployees(): Promise<any[]>;
+  createEmployee(employeeData: any, actorId?: string): Promise<any>;
+  updateEmployee(employeeId: number, updateData: any, actorId?: string): Promise<any>;
+  deleteEmployee(employeeId: number, actorId?: string): Promise<boolean>;
   
   // Cases & Filtering
   getCases(filter: any): Promise<any[]>;

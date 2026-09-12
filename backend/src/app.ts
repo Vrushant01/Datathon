@@ -233,15 +233,87 @@ app.get('/api/units', async (req, res) => {
   }
 });
 
-app.get('/api/employees', requireAuth, async (req, res) => {
-  try {
-    const db = RepositoryFactory.getRepository(req);
-    const data = await db.getEmployees();
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch employees' });
-  }
-});
+  app.get('/api/employees', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const data = await db.getEmployees();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch employees' });
+    }
+  });
+
+  app.post('/api/employees', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+      const newEmployee = await (db as any).createEmployee(req.body, actorId);
+      invalidateHotspotCache();
+      res.status(201).json(newEmployee);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create employee' });
+    }
+  });
+
+  app.put('/api/employees/:id', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+      const updated = await (db as any).updateEmployee(Number(req.params.id), req.body, actorId);
+      invalidateHotspotCache();
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update employee' });
+    }
+  });
+
+  app.delete('/api/employees/:id', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+      await (db as any).deleteEmployee(Number(req.params.id), actorId);
+      invalidateHotspotCache();
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete employee' });
+    }
+  });
+
+  app.post('/api/units', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+      const newUnit = await (db as any).createUnit(req.body, actorId);
+      invalidateHotspotCache();
+      res.status(201).json(newUnit);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create unit' });
+    }
+  });
+
+  app.put('/api/units/:id', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+      const updated = await (db as any).updateUnit(Number(req.params.id), req.body, actorId);
+      invalidateHotspotCache();
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update unit' });
+    }
+  });
+
+  app.delete('/api/units/:id', requireAuth, async (req, res) => {
+    try {
+      const db = RepositoryFactory.getRepository(req);
+      const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
+      await (db as any).deleteUnit(Number(req.params.id), actorId);
+      invalidateHotspotCache();
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete unit' });
+    }
+  });
 
 app.get('/api/cases', requireAuth, async (req, res) => {
   try {

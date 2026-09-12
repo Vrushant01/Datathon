@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, UnitRow } from '../../../data/mockDb';
+import { authFetch } from '../../utils/authFetch';
+import { API_BASE_URL } from '../../config/api';
 import { useLanguage } from '../../context/LanguageContext';
 import { 
   Building, Plus, Search, MapPin, X
@@ -10,19 +12,27 @@ import {
 export const StationManagement: React.FC = () => {
   const { t } = useLanguage();
   const location = useLocation();
-  const [stations, setStations] = useState<UnitRow[]>(mockDb.getUnits().filter(u => u.TypeID === 1));
+  const [stations, setStations] = useState<UnitRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
   
   const districts = mockDb.getDistricts();
 
+  const fetchStations = async () => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/units`);
+      if (res.ok) {
+        const data = await res.json();
+        setStations(data.filter((u: any) => u.TypeID === 1));
+      }
+    } catch (e) {
+      console.error('Failed to fetch stations', e);
+    }
+  };
+
   useEffect(() => {
-    const update = () => {
-      const u = mockDb.getUnits().filter(x => x.TypeID === 1);
-      if (u.length > 0) setStations(u);
-    };
-    update();
-    const interval = setInterval(update, 1000);
+    fetchStations();
+    const interval = setInterval(fetchStations, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -84,25 +94,34 @@ export const StationManagement: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stationName) {
       showNotification('error', 'Station Name is required.');
       return;
     }
 
-    const newUnit = mockDb.createUnit({
-      UnitName: stationName,
-      DistrictID: districtId,
-      latitude: latitude === '' ? undefined : Number(latitude),
-      longitude: longitude === '' ? undefined : Number(longitude),
-      TypeID: 1 // Police Station
-    });
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/units`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          UnitName: stationName,
+          DistrictID: districtId,
+          latitude: latitude === '' ? undefined : Number(latitude),
+          longitude: longitude === '' ? undefined : Number(longitude),
+          TypeID: 1, // Police Station
+          Active: true
+        })
+      });
 
-    if (newUnit) {
-      showNotification('success', 'Police Station created successfully.');
-      setStations(mockDb.getUnits().filter(u => u.TypeID === 1));
-      setModalOpen(false);
+      if (res.ok) {
+        showNotification('success', 'Police Station created successfully.');
+        await fetchStations();
+        setModalOpen(false);
+      }
+    } catch (e: any) {
+      showNotification('error', `Failed to create station: ${e.message}`);
     }
   };
 
@@ -118,10 +137,10 @@ export const StationManagement: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-4 select-none h-full flex flex-col min-h-0">
       
       {/* Header section */}
-      <div className="flex justify-between items-center border-b pb-4">
+      <div className="flex justify-between items-center border-b pb-4 shrink-0">
         <div>
           <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('stations.title')}</h2>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('stations.subtitle')}</p>
@@ -144,7 +163,7 @@ export const StationManagement: React.FC = () => {
       )}
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center">
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center shrink-0">
         <div className="flex-1 w-full relative">
           <span className="absolute left-3 top-3 text-slate-400">
             <Search size={16} />
@@ -169,10 +188,11 @@ export const StationManagement: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-          <thead>
-            <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+      <div className="bg-white rounded-xl border shadow-sm flex-1 flex flex-col min-h-0">
+        <div className="overflow-auto flex-1 custom-scrollbar">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap relative">
+            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+              <tr className="border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <th className="p-4">Station ID</th>
               <th className="p-4">Station Name</th>
               <th className="p-4">District</th>
@@ -231,6 +251,7 @@ export const StationManagement: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal */}

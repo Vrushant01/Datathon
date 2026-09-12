@@ -14,7 +14,7 @@ export const FIRManagement: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   
-  const [cases, setCases] = useState<CaseMasterRow[]>(mockDb.getCases());
+  const [cases, setCases] = useState<CaseMasterRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
   const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>(() => {
@@ -147,6 +147,24 @@ export const FIRManagement: React.FC = () => {
     setNotification({ type, text });
     setTimeout(() => setNotification(null), 3000);
   };
+
+  const fetchCases = async () => {
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/cases`);
+      if (res.ok) {
+        const data = await res.json();
+        setCases(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch cases', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchCases();
+    const interval = setInterval(fetchCases, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const stationOfficers = employees.filter(e => e.UnitID === stationId);
@@ -313,20 +331,25 @@ export const FIRManagement: React.FC = () => {
       setModalOpen(false);
       
       // Refresh only the cases to update the UI
-      await mockDb.refreshCases();
-      setCases(mockDb.getCases());
+      await fetchCases();
     } catch (e: any) {
       console.error("Error creating case:", e);
       showNotification('error', `Failed to save case record. Error: ${e.message}`);
     }
   };
 
-  const handleDeleteCase = (id: number) => {
+  const handleDeleteCase = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this case? This will wipe the timeline and evidence locker.")) {
-      const success = mockDb.deleteCase(id);
-      if (success) {
-        setCases(mockDb.getCases());
-        showNotification('success', 'Case record deleted.');
+      try {
+        const res = await authFetch(`${API_BASE_URL}/api/cases/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          await fetchCases();
+          showNotification('success', 'Case record deleted.');
+        } else {
+          showNotification('error', 'Failed to delete case.');
+        }
+      } catch (err: any) {
+        showNotification('error', `Error deleting case: ${err.message}`);
       }
     }
   };
@@ -343,11 +366,15 @@ export const FIRManagement: React.FC = () => {
     if (!selectedCase) return;
 
     try {
-      const success = await mockDb.transferCase(selectedCase.CaseMasterID, transferOfficerId);
-      if (success) {
+      const res = await authFetch(`${API_BASE_URL}/api/cases/${selectedCase.CaseMasterID}/reassign`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ officerId: transferOfficerId })
+      });
+      if (res.ok) {
         showNotification('success', `Case assigned successfully to new IO.`);
         setTransferModalOpen(false);
-        setCases(mockDb.getCases());
+        await fetchCases();
       } else {
         showNotification('error', 'Transfer failed.');
       }
@@ -389,10 +416,10 @@ export const FIRManagement: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-4 select-none h-full flex flex-col min-h-0">
       
       {/* Header section */}
-      <div className="flex justify-between items-center border-b pb-4">
+      <div className="flex justify-between items-center border-b pb-4 shrink-0">
         <div>
           <h2 className="text-xl font-extrabold text-ksp-navy m-0 uppercase tracking-tight">{t('firs.title')}</h2>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">{t('firs.subtitle')}</p>
@@ -416,7 +443,7 @@ export const FIRManagement: React.FC = () => {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center">
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center shrink-0">
         <div className="flex-1 w-full relative">
           <span className="absolute left-3 top-3 text-slate-400">
             <Search size={16} />
@@ -503,10 +530,11 @@ export const FIRManagement: React.FC = () => {
       </div>
 
       {/* Roster Table Grid */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
-          <thead>
-            <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+      <div className="bg-white rounded-xl border shadow-sm flex-1 flex flex-col min-h-0">
+        <div className="overflow-auto flex-1 custom-scrollbar">
+          <table className="w-full text-left border-collapse text-xs whitespace-nowrap relative">
+            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm">
+              <tr className="border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
               <th className="p-4">Case / FIR No.</th>
               <th className="p-4">Registered Date</th>
               <th className="p-4">Police Station</th>
@@ -600,6 +628,7 @@ export const FIRManagement: React.FC = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Transfer Officer Modal */}

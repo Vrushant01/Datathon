@@ -200,68 +200,7 @@ export const CriminalNetwork: React.FC = () => {
         const centerX = 400;
         const centerY = 300;
 
-        // Overlay any newly injected client-side mockDb custom entities
-        const entities = mockDb.getCaseEntities(selectedFirId);
-        entities.forEach((ent, eIdx) => {
-          const entityNodeId = `entity-${ent.EntityID}`;
-          const angle = (eIdx * 2 * Math.PI) / Math.max(entities.length, 1) + Math.PI / 4;
-          const entX = centerX + Math.cos(angle) * 350;
-          const entY = centerY + Math.sin(angle) * 350;
-
-          if (!initialNodes.some(n => n.id === entityNodeId)) {
-            initialNodes.push({
-              id: entityNodeId,
-              type: 'custom',
-              position: { x: entX, y: entY },
-              data: {
-                label: ent.value,
-                color: getNodeColor(ent.type, false),
-                symbol: getNodeSymbol(ent.type),
-                type: ent.type,
-                rawData: ent
-              }
-            });
-
-            let relationLabel = 'Associated';
-            if (ent.type === 'Vehicle') relationLabel = 'Transported In';
-            if (ent.type === 'Phone') relationLabel = 'Calls From';
-            if (ent.type === 'Bank') relationLabel = 'Wire Transfer';
-            if (ent.type === 'Location') relationLabel = 'Frequents';
-            if (ent.type === 'Weapon') relationLabel = 'Used In Crime';
-            if (ent.type === 'Evidence') relationLabel = 'Seized';
-
-            initialEdges.push({
-              id: `e-case-${selectedFirId}-${entityNodeId}`,
-              source: `fir:${selectedFirId}`,
-              target: entityNodeId,
-              type: 'straight',
-              label: relationLabel,
-              animated: true,
-              style: { stroke: getNodeColor(ent.type, false), strokeWidth: 1.5, opacity: 0.6 },
-              labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-              labelBgStyle: { fill: '#0f172a' }
-            });
-          }
-        });
-
-        // Overlay manual custom edges
-        const customEdgesData = mockDb.getCustomEdges(selectedFirId);
-        customEdgesData.forEach(ce => {
-          if (!initialEdges.some(e => e.id === ce.EdgeID)) {
-            initialEdges.push({
-              id: ce.EdgeID,
-              source: ce.source,
-              target: ce.target,
-              type: 'straight',
-              label: ce.label,
-              animated: true,
-              style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
-              labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
-              labelBgStyle: { fill: '#0f172a' }
-            });
-          }
-        });
-
+        // Entities and custom edges are now returned directly from the backend!
         setNodes(initialNodes);
         setEdges(initialEdges);
         setCurrentCaseData(graphData.caseData);
@@ -281,10 +220,22 @@ export const CriminalNetwork: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFirId]);
 
-  const onConnect = useCallback((params: Connection) => {
+  const onConnect = useCallback(async (params: Connection) => {
     if (!isCaseEditable(selectedFirId!)) return;
-    mockDb.addCustomEdge(selectedFirId!, params.source, params.target, 'Linked');
-    setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' } }, eds));
+    try {
+      await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/edges`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: params.source, target: params.target, label: 'Linked' })
+      });
+      // Invalidate cache and reload
+      graphCache.current.delete(selectedFirId!);
+      const current = selectedFirId;
+      setSelectedFirId(null);
+      setTimeout(() => setSelectedFirId(current), 10);
+    } catch (e) {
+      showNotification('error', 'Failed to link nodes');
+    }
   }, [selectedFirId, setEdges, isCaseEditable]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
@@ -302,7 +253,7 @@ export const CriminalNetwork: React.FC = () => {
     })));
   }, [setEdges]);
 
-  const handleAddEntityNode = (e: React.FormEvent) => {
+  const handleAddEntityNode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFirId === null || !newEntityValue) return;
 
@@ -311,22 +262,29 @@ export const CriminalNetwork: React.FC = () => {
       return;
     }
 
-    if (newEntityType === 'accused') {
-      mockDb.addCaseAccused(selectedFirId, newEntityValue, newSuspectAge, newSuspectGender, user?.email || 'officer@ksp.gov.in');
-      showNotification('success', `Added suspect node: "${newEntityValue}"`);
-    } else {
-      mockDb.addCaseEntity(selectedFirId, newEntityType, newEntityValue, newEntityDesc, user?.email || 'officer@ksp.gov.in');
-      showNotification('success', `Added association node: "${newEntityValue}"`);
+    try {
+      if (newEntityType === 'accused') {
+        mockDb.addCaseAccused(selectedFirId, newEntityValue, newSuspectAge, newSuspectGender, user?.email || 'officer@ksp.gov.in');
+        showNotification('success', `Added suspect node: "${newEntityValue}"`);
+      } else {
+        await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: newEntityType, value: newEntityValue, description: newEntityDesc })
+        });
+        showNotification('success', `Added association node: "${newEntityValue}"`);
+      }
+      setNewEntityValue('');
+      setNewEntityDesc('');
+      
+      // Invalidate cache
+      graphCache.current.delete(selectedFirId);
+      const current = selectedFirId;
+      setSelectedFirId(null);
+      setTimeout(() => setSelectedFirId(current), 10);
+    } catch (e) {
+      showNotification('error', 'Failed to add entity');
     }
-    setNewEntityValue('');
-    setNewEntityDesc('');
-    
-    // We do NOT invalidate graphCache here because the newly injected entity is added via mockDb 
-    // and overlaid at rendering time.
-    // Trigger a re-render of nodes by updating selectedFirId (hacky but works)
-    const current = selectedFirId;
-    setSelectedFirId(null);
-    setTimeout(() => setSelectedFirId(current), 10);
   };
 
   const handleUpdateNode = (e: React.FormEvent) => {
