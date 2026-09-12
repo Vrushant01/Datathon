@@ -142,8 +142,38 @@ router.get('/socio-economic', requireAuth, async (req, res) => {
         responseCorrelation = { urbanization: null, literacy: null };
     }
 
-    // TOP CRIME AREAS LOGIC
-    // We fetch cases for the specific target context and aggregate by CrimeSceneLocation
+    // Top Crime Areas is removed from here to prevent blocking.
+    // It will be fetched via a separate endpoint /top-crime-areas.
+
+    const t1 = Date.now();
+    console.log(`[API] /api/analytics/socio-economic took ${t1 - t0}ms, response points: ${responseDataPoints.length}`);
+
+    res.json({
+        data: responseDataPoints,
+        usesDemoData: cache.usesDemoData,
+        correlation: responseCorrelation
+    });
+  } catch(e: any) {
+     res.status(500).json({ error: e.message });
+  }
+});
+
+router.get('/top-crime-areas', requireAuth, async (req, res) => {
+  const t0 = Date.now();
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const selectedDistrict = req.query.district ? req.query.district : 'ALL';
+    const selectedStation = req.query.station ? req.query.station : 'ALL';
+
+    let targetDistrictId: number | 'ALL' = 'ALL';
+    if (selectedStation !== 'ALL') {
+       const units = await db.getUnits();
+       const u = units.find(unit => unit.UnitID === Number(selectedStation));
+       if (u) targetDistrictId = u.DistrictID;
+    } else if (selectedDistrict !== 'ALL') {
+       targetDistrictId = Number(selectedDistrict);
+    }
+
     let topCrimeAreas: { location: string, count: number }[] = [];
     if (targetDistrictId !== 'ALL' || selectedStation !== 'ALL') {
         const units = await db.getUnits();
@@ -155,8 +185,6 @@ router.get('/socio-economic', requireAuth, async (req, res) => {
             filter.PoliceStationID = { $in: districtStations };
         }
         
-        // This is still a db.getCases call, but it's heavily filtered down to a single district/station.
-        // We do not do this when targetDistrictId === 'ALL'.
         const casesForAreas = await db.getCases(filter);
         const areaCounts = new Map<string, number>();
         casesForAreas.forEach(c => {
@@ -172,14 +200,9 @@ router.get('/socio-economic', requireAuth, async (req, res) => {
     }
 
     const t1 = Date.now();
-    console.log(`[API] /api/analytics/socio-economic took ${t1 - t0}ms, response points: ${responseDataPoints.length}`);
+    console.log(`[API] /api/analytics/top-crime-areas took ${t1 - t0}ms, areas: ${topCrimeAreas.length}`);
 
-    res.json({
-        data: responseDataPoints,
-        usesDemoData: cache.usesDemoData,
-        correlation: responseCorrelation,
-        topCrimeAreas
-    });
+    res.json({ data: topCrimeAreas });
   } catch(e: any) {
      res.status(500).json({ error: e.message });
   }

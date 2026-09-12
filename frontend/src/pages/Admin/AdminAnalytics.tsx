@@ -24,9 +24,20 @@ export const AdminAnalytics: React.FC = () => {
   const [usesDemoData, setUsesDemoData] = React.useState<boolean>(false);
   const [loadingGraph1, setLoadingGraph1] = React.useState<boolean>(false);
 
+  const graph1Cache = React.useRef<Record<string, any>>({});
+
   React.useEffect(() => {
     const controller = new AbortController();
     const signal = controller.signal;
+    const cacheKey = `${selectedDistrict}-${selectedStation}`;
+
+    if (graph1Cache.current[cacheKey]) {
+        const cached = graph1Cache.current[cacheKey];
+        setSocioEconomicData(cached.data || []);
+        setCorrelation(cached.correlation || { urbanization: null, literacy: null });
+        setUsesDemoData(cached.usesDemoData || false);
+        return;
+    }
 
     setLoadingGraph1(true);
     authFetch(`${API_BASE_URL}/api/analytics/socio-economic?district=${selectedDistrict}&station=${selectedStation}`, { signal })
@@ -35,14 +46,39 @@ export const AdminAnalytics: React.FC = () => {
          if (signal.aborted) return;
          setSocioEconomicData(data.data || []);
          setCorrelation(data.correlation || { urbanization: null, literacy: null });
-         setTopCrimeAreas(data.topCrimeAreas || []);
          setUsesDemoData(data.usesDemoData || false);
+         graph1Cache.current[cacheKey] = data;
          setLoadingGraph1(false);
       })
       .catch(e => {
          if (signal.aborted) return;
          console.error(e);
          setLoadingGraph1(false);
+      });
+      
+    return () => {
+      controller.abort();
+    };
+  }, [selectedDistrict, selectedStation]);
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    if (selectedDistrict === 'ALL' && selectedStation === 'ALL') {
+       setTopCrimeAreas([]);
+       return;
+    }
+
+    authFetch(`${API_BASE_URL}/api/analytics/top-crime-areas?district=${selectedDistrict}&station=${selectedStation}`, { signal })
+      .then(res => res.json())
+      .then(data => {
+         if (signal.aborted) return;
+         setTopCrimeAreas(data.data || []);
+      })
+      .catch(e => {
+         if (signal.aborted) return;
+         console.error(e);
       });
       
     return () => {
@@ -327,7 +363,7 @@ export const AdminAnalytics: React.FC = () => {
           </div>
           <div className="h-64 w-full text-xs">
             {loadingGraph1 ? (
-              <div className="flex items-center justify-center h-full text-slate-400">Loading correlation data...</div>
+              <div className="flex items-center justify-center h-full text-slate-400 font-bold tracking-widest text-xs uppercase animate-pulse">Loading analytics...</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={[...socioEconomicData].sort((a, b) => b.CrimeRate - a.CrimeRate).slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -336,13 +372,12 @@ export const AdminAnalytics: React.FC = () => {
                   <YAxis yAxisId="left" label={{ value: 'Crime Rate (per 100k)', angle: -90, position: 'insideLeft', offset: 10 }} />
                   <YAxis yAxisId="right" orientation="right" label={{ value: 'Percentage (%)', angle: 90, position: 'insideRight', offset: 10 }} />
                   <Tooltip 
-                    content={({ active, payload, label }) => {
+                    content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
                           <div className="bg-white p-3 border shadow-md rounded text-xs leading-5">
-                            <div className="font-bold border-b pb-1 mb-1">{data.name} {selectedStation !== 'ALL' ? '(District Level)' : ''}</div>
-                            <div>Population: {data.Population?.toLocaleString()}</div>
+                            <div className="font-bold border-b pb-1 mb-1">{data.name}</div>
                             <div>FIR Count: {data.FIRCount}</div>
                             <div className="font-semibold mt-1" style={{ color: '#00529B' }}>Crime Rate: {data.CrimeRate} / 100k</div>
                             <div className="font-semibold" style={{ color: '#F97316' }}>Urbanization: {data.Urbanization}%</div>
@@ -354,9 +389,9 @@ export const AdminAnalytics: React.FC = () => {
                     }}
                   />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="CrimeRate" name="Crime Rate (per 100k)" fill="#00529B" radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="Urbanization" name="Urbanization %" stroke="#F97316" strokeWidth={2} />
-                  <Line yAxisId="right" type="monotone" dataKey="LiteracyRate" name="Literacy %" stroke="#10B981" strokeWidth={2} />
+                  <Bar isAnimationActive={false} yAxisId="left" dataKey="CrimeRate" name="Crime Rate (per 100k)" fill="#00529B" radius={[4, 4, 0, 0]} />
+                  <Line isAnimationActive={false} yAxisId="right" type="monotone" dataKey="Urbanization" name="Urbanization %" stroke="#F97316" strokeWidth={2} />
+                  <Line isAnimationActive={false} yAxisId="right" type="monotone" dataKey="LiteracyRate" name="Literacy %" stroke="#10B981" strokeWidth={2} />
                 </ComposedChart>
               </ResponsiveContainer>
             )}
