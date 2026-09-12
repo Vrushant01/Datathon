@@ -12,7 +12,7 @@ const PLANNER_TOOLS = [
         type: 'function',
         function: {
             name: 'executeDatabaseQuery',
-            description: 'The master query tool. Execute a dynamic MongoDB-style query against the CloudScale database. Handles counts, finds, aggregations, trends, and rankings.',
+            description: 'The master query tool. Execute a dynamic MongoDB-style query against the CloudScale database. Use this for ALL general queries, counting (e.g. "How many..."), and ranking entities (e.g. "Most active station", "Top officers"), UNLESS the user explicitly asks for "Top crime districts" or "Recent alerts".',
             parameters: {
                 type: 'object',
                 properties: {
@@ -118,6 +118,39 @@ New Message: ${question}
 Decide which tool (if any) answers this message, and call it with the appropriate, precisely-resolved context. If no database lookup is needed, do not call any tool.`,
             },
         ];
+        const q = question.trim().toLowerCase();
+        // Deterministic keyword-match shortcut for the 7 known suggestion-button strings
+        if (!chatHistory.length) {
+            const todayISO = new Date().toISOString().slice(0, 10);
+            const d = new Date();
+            const firstDay = new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+            const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
+            if (q === "how many firs were registered today?") {
+                return { tool: 'executeDatabaseQuery', isFollowUp: false, intent: 'count FIRs registered today', collection: 'casemasters', filters: { CrimeRegisteredDate: todayISO }, reasoning: 'Deterministic shortcut' };
+            }
+            if (q === "show today's crime statistics." || q === "show today's crime statistics") {
+                return { tool: 'executeDatabaseQuery', isFollowUp: false, intent: 'today\'s crime statistics', collection: 'casemasters', filters: { CrimeRegisteredDate: todayISO }, groupBy: 'CrimeMajorHeadID', sort: { value: -1 }, reasoning: 'Deterministic shortcut' };
+            }
+            if (q === "top crime districts." || q === "top crime districts") {
+                return { tool: 'getTopCrimeDistricts', limit: 5, reasoning: 'Deterministic shortcut' };
+            }
+            if (q === "most active police station." || q === "most active police station") {
+                return { tool: 'executeDatabaseQuery', isFollowUp: false, intent: 'rank police stations', collection: 'casemasters', filters: {}, groupBy: 'PoliceStationName', sort: { value: -1 }, limit: 10, reasoning: 'Deterministic shortcut' };
+            }
+            if (q === "vehicle thefts this month." || q === "vehicle thefts this month") {
+                return {
+                    tool: 'executeDatabaseQuery', isFollowUp: false, intent: 'count vehicle thefts this month', collection: 'casemasters',
+                    filters: { CrimeMajorHeadID: 200, StolenProperty: { '$regex': 'vehicle', '$options': 'i' }, CrimeRegisteredDate: { '$gte': firstDay, '$lte': lastDay } },
+                    reasoning: 'Deterministic shortcut'
+                };
+            }
+            if (q === "officer performance." || q === "officer performance") {
+                return { tool: 'executeDatabaseQuery', isFollowUp: false, intent: 'rank officers by case count', collection: 'casemasters', filters: {}, groupBy: 'OfficerName', sort: { value: -1 }, limit: 10, reasoning: 'Deterministic shortcut' };
+            }
+            if (q === "recent alerts." || q === "recent alerts") {
+                return { tool: 'getRecentAlerts', limit: 10, reasoning: 'Deterministic shortcut' };
+            }
+        }
         const result = await (0, catalystLLM_1.chatComplete)(messages, { temperature: 0.1, tools: PLANNER_TOOLS, toolChoice: 'auto' });
         const call = result.toolCalls?.[0];
         if (!call) {

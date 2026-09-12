@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { mockDb } from '../../data/mockDb';
+import { authFetch } from '../utils/authFetch';
+import { API_BASE_URL } from '../config/api';
 import { 
   Share2, FileText, Search, Activity, ShieldAlert, ArrowLeft, Network,
   Plus, Trash2, ArrowUpRight
@@ -51,24 +53,48 @@ export const CriminalNetwork: React.FC = () => {
   const [searchParams] = useSearchParams();
   const personIdParam = searchParams.get('personId');
 
-  const cases = useMemo(() => mockDb.getCases(), []);
-  const accusedList = useMemo(() => mockDb.getAccused(), []);
-  const victimsList = useMemo(() => mockDb.getVictims(), []);
-
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isTracing, setIsTracing] = useState(false);
+  
+  // Local cache for graph trace
+  const graphCache = useRef<Map<number, { nodes: Node[], edges: Edge[], caseData: any }>>(new Map());
 
+  // Initialize search query if coming from another page
   useEffect(() => {
     if (personIdParam) {
-      const accused = accusedList.find(a => String(a.PersonID) === personIdParam);
-      if (accused && accused.AccusedName) {
-        setSearchQuery(accused.AccusedName);
-      } else {
-        setSearchQuery(personIdParam);
-      }
+      setSearchQuery(personIdParam);
     }
-  }, [personIdParam, accusedList]);
+  }, [personIdParam]);
+
+  // Debounced Search
+  useEffect(() => {
+    const fetchSearch = async () => {
+      setIsSearching(true);
+      try {
+        const res = await authFetch(`${API_BASE_URL}/api/network/search?query=${searchQuery}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data);
+        }
+      } catch (err) {
+        console.error('Search failed', err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    
+    const timer = setTimeout(() => {
+      fetchSearch();
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const [selectedFirId, setSelectedFirId] = useState<number | null>(null);
   const [selectedNodeData, setSelectedNodeData] = useState<any | null>(null);
+  const [currentCaseData, setCurrentCaseData] = useState<any | null>(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -93,23 +119,24 @@ export const CriminalNetwork: React.FC = () => {
 
   const isOfficer = user?.role === 'Officer';
   const isAnalytics = user?.role === 'Analytics';
-  const filterFirCases = useMemo(() => {
-    return cases.filter(c => {
-      if (isOfficer) {
-        return c.PolicePersonID === user?.employeeId;
-      }
-      if (isAnalytics) {
-        return c.PoliceStationID === user?.unitId;
-      }
-      return true;
-    });
-  }, [cases, isOfficer, isAnalytics, user?.employeeId, user?.unitId]);
+  
+  const filteredFIRs = searchResults.filter((c: any) => {
+    if (isOfficer) {
+      return c.PolicePersonID === user?.employeeId;
+    }
+    if (isAnalytics) {
+      return c.PoliceStationID === user?.unitId;
+    }
+    return true;
+  });
 
   const isCaseEditable = (caseId: number) => {
-    const caseRecord = cases.find(c => c.CaseMasterID === caseId);
-    if (!caseRecord) return false;
-    if (user?.role === 'Admin') return true;
-    return caseRecord.PolicePersonID === user?.employeeId;
+    // Only verify if we have the current case loaded
+    if (currentCaseData?.CaseMasterID === caseId) {
+       if (user?.role === 'Admin') return true;
+       return currentCaseData.PolicePersonID === user?.employeeId;
+    }
+    return false;
   };
 
   const getNodeColor = (type: string, isMain: boolean) => {
@@ -143,179 +170,114 @@ export const CriminalNetwork: React.FC = () => {
       setNodes([]);
       setEdges([]);
       setSelectedNodeData(null);
+      setCurrentCaseData(null);
       return;
     }
 
-    const mainCase = cases.find(c => c.CaseMasterID === selectedFirId);
-    if (!mainCase) return;
+    const loadGraph = async () => {
+      setIsTracing(true);
+      try {
+        let graphData: { nodes: Node[], edges: Edge[], caseData: any };
 
-    const initialNodes: Node[] = [];
-    const initialEdges: Edge[] = [];
-    const centerX = 400;
-    const centerY = 300;
-
-    // Center Node
-    initialNodes.push({
-      id: `case-${mainCase.CaseMasterID}`,
-      type: 'custom',
-      position: { x: centerX, y: centerY },
-      data: {
-        label: `FIR #${mainCase.CaseNo}`,
-        color: getNodeColor('case', true),
-        symbol: getNodeSymbol('case'),
-        type: 'case',
-        rawData: mainCase
-      }
-    });
-
-    const mainAccused = accusedList.filter(a => a.CaseMasterID === selectedFirId);
-    const entities = mockDb.getCaseEntities(selectedFirId);
-
-    // Add Accused
-    mainAccused.forEach((acc, aIdx) => {
-      const accusedNodeId = `offender-${acc.AccusedName}`;
-      const angle = (aIdx * 2 * Math.PI) / Math.max(mainAccused.length, 1) - Math.PI / 2;
-      const accX = centerX + Math.cos(angle) * 250;
-      const accY = centerY + Math.sin(angle) * 250;
-
-      if (!initialNodes.some(n => n.id === accusedNodeId)) {
-        const offenderCases = accusedList.filter(a => a.AccusedName === acc.AccusedName);
-        initialNodes.push({
-          id: accusedNodeId,
-          type: 'custom',
-          position: { x: accX, y: accY },
-          data: {
-            label: `${acc.AccusedName} (Age: ${acc.AgeYear || '?'})`,
-            color: getNodeColor('accused', false),
-            symbol: getNodeSymbol('accused'),
-            type: 'accused',
-            rawData: {
-              name: acc.AccusedName,
-              AccusedMasterID: acc.AccusedMasterID,
-              casesCount: offenderCases.length,
-              age: acc.AgeYear || 'Unknown',
-              gender: acc.GenderID === 1 ? 'Male' : 'Female',
-              arrests: offenderCases.map(oc => {
-                const caseRecord = cases.find(c => c.CaseMasterID === oc.CaseMasterID);
-                return caseRecord ? `FIR #${caseRecord.CaseNo}` : null;
-              }).filter(Boolean)
-            }
+        if (graphCache.current.has(selectedFirId)) {
+          graphData = graphCache.current.get(selectedFirId)!;
+        } else {
+          const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/graph`);
+          if (res.ok) {
+            const data = await res.json();
+            graphData = {
+              nodes: data.nodes,
+              edges: data.edges,
+              caseData: data.case
+            };
+          } else {
+            throw new Error('Failed to fetch graph data');
           }
-        });
-      }
-
-      initialEdges.push({
-        id: `e-case-${mainCase.CaseMasterID}-${accusedNodeId}`,
-        source: `case-${mainCase.CaseMasterID}`,
-        target: accusedNodeId,
-        type: 'straight',
-        label: 'Offender',
-        animated: true,
-        style: { stroke: '#94A3B8', strokeWidth: 1.5 },
-        labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-      });
-    });
-
-    const mainVictims = victimsList.filter(v => v.CaseMasterID === selectedFirId);
-    // Add Victims
-    mainVictims.forEach((vic, vIdx) => {
-      const victimNodeId = `victim-${vic.VictimName}`;
-      const angle = (vIdx * 2 * Math.PI) / Math.max(mainVictims.length, 1) + Math.PI;
-      const vicX = centerX + Math.cos(angle) * 250;
-      const vicY = centerY + Math.sin(angle) * 250;
-
-      if (!initialNodes.some(n => n.id === victimNodeId)) {
-        initialNodes.push({
-          id: victimNodeId,
-          type: 'custom',
-          position: { x: vicX, y: vicY },
-          data: {
-            label: `${vic.VictimName} (Age: ${vic.AgeYear || '?'})`,
-            color: getNodeColor('victim', false),
-            symbol: getNodeSymbol('victim'),
-            type: 'victim',
-            rawData: {
-              name: vic.VictimName,
-              age: vic.AgeYear || 'Unknown',
-              gender: vic.GenderID === 1 ? 'Male' : 'Female'
-            }
-          }
-        });
-      }
-
-      initialEdges.push({
-        id: `e-case-${mainCase.CaseMasterID}-${victimNodeId}`,
-        source: victimNodeId,
-        target: `case-${mainCase.CaseMasterID}`,
-        type: 'straight',
-        label: 'Victim',
-        animated: true,
-        style: { stroke: '#EC4899', strokeWidth: 1.5 },
-        labelStyle: { fill: '#EC4899', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-      });
-    });
-
-    // Add Entities
-    entities.forEach((ent, eIdx) => {
-      const entityNodeId = `entity-${ent.EntityID}`;
-      const angle = (eIdx * 2 * Math.PI) / Math.max(entities.length, 1) + Math.PI / 4;
-      const entX = centerX + Math.cos(angle) * 350;
-      const entY = centerY + Math.sin(angle) * 350;
-
-      initialNodes.push({
-        id: entityNodeId,
-        type: 'custom',
-        position: { x: entX, y: entY },
-        data: {
-          label: ent.value,
-          color: getNodeColor(ent.type, false),
-          symbol: getNodeSymbol(ent.type),
-          type: ent.type,
-          rawData: ent
         }
-      });
+        
+        const initialNodes: Node[] = [...graphData.nodes];
+        const initialEdges: Edge[] = [...graphData.edges];
+        const centerX = 400;
+        const centerY = 300;
 
-      let relationLabel = 'Associated';
-      if (ent.type === 'Vehicle') relationLabel = 'Transported In';
-      if (ent.type === 'Phone') relationLabel = 'Calls From';
-      if (ent.type === 'Bank') relationLabel = 'Wire Transfer';
-      if (ent.type === 'Location') relationLabel = 'Frequents';
-      if (ent.type === 'Weapon') relationLabel = 'Used In Crime';
-      if (ent.type === 'Evidence') relationLabel = 'Seized';
+        // Overlay any newly injected client-side mockDb custom entities
+        const entities = mockDb.getCaseEntities(selectedFirId);
+        entities.forEach((ent, eIdx) => {
+          const entityNodeId = `entity-${ent.EntityID}`;
+          const angle = (eIdx * 2 * Math.PI) / Math.max(entities.length, 1) + Math.PI / 4;
+          const entX = centerX + Math.cos(angle) * 350;
+          const entY = centerY + Math.sin(angle) * 350;
 
-      initialEdges.push({
-        id: `e-case-${mainCase.CaseMasterID}-${entityNodeId}`,
-        source: `case-${mainCase.CaseMasterID}`,
-        target: entityNodeId,
-        type: 'straight',
-        label: relationLabel,
-        animated: true,
-        style: { stroke: getNodeColor(ent.type, false), strokeWidth: 1.5, opacity: 0.6 },
-        labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-      });
-    });
+          if (!initialNodes.some(n => n.id === entityNodeId)) {
+            initialNodes.push({
+              id: entityNodeId,
+              type: 'custom',
+              position: { x: entX, y: entY },
+              data: {
+                label: ent.value,
+                color: getNodeColor(ent.type, false),
+                symbol: getNodeSymbol(ent.type),
+                type: ent.type,
+                rawData: ent
+              }
+            });
 
+            let relationLabel = 'Associated';
+            if (ent.type === 'Vehicle') relationLabel = 'Transported In';
+            if (ent.type === 'Phone') relationLabel = 'Calls From';
+            if (ent.type === 'Bank') relationLabel = 'Wire Transfer';
+            if (ent.type === 'Location') relationLabel = 'Frequents';
+            if (ent.type === 'Weapon') relationLabel = 'Used In Crime';
+            if (ent.type === 'Evidence') relationLabel = 'Seized';
 
-    const customEdgesData = mockDb.getCustomEdges(selectedFirId);
-    customEdgesData.forEach(ce => {
-      initialEdges.push({
-        id: ce.EdgeID,
-        source: ce.source,
-        target: ce.target,
-        type: 'straight',
-        label: ce.label,
-        animated: true,
-        style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
-        labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-      });
-    });
+            initialEdges.push({
+              id: `e-case-${selectedFirId}-${entityNodeId}`,
+              source: `fir:${selectedFirId}`,
+              target: entityNodeId,
+              type: 'straight',
+              label: relationLabel,
+              animated: true,
+              style: { stroke: getNodeColor(ent.type, false), strokeWidth: 1.5, opacity: 0.6 },
+              labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+              labelBgStyle: { fill: '#0f172a' }
+            });
+          }
+        });
 
-    setNodes(initialNodes);
-    setEdges(initialEdges);
+        // Overlay manual custom edges
+        const customEdgesData = mockDb.getCustomEdges(selectedFirId);
+        customEdgesData.forEach(ce => {
+          if (!initialEdges.some(e => e.id === ce.EdgeID)) {
+            initialEdges.push({
+              id: ce.EdgeID,
+              source: ce.source,
+              target: ce.target,
+              type: 'straight',
+              label: ce.label,
+              animated: true,
+              style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
+              labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
+              labelBgStyle: { fill: '#0f172a' }
+            });
+          }
+        });
+
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+        setCurrentCaseData(graphData.caseData);
+        
+        // Cache the *base* graph data (without mockDb overlays)
+        graphCache.current.set(selectedFirId, graphData);
+
+      } catch (err) {
+        console.error('Failed to load trace', err);
+        showNotification('error', 'Failed to trace FIR');
+      } finally {
+        setIsTracing(false);
+      }
+    };
+    
+    loadGraph();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFirId]);
 
@@ -323,7 +285,7 @@ export const CriminalNetwork: React.FC = () => {
     if (!isCaseEditable(selectedFirId!)) return;
     mockDb.addCustomEdge(selectedFirId!, params.source, params.target, 'Linked');
     setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' } }, eds));
-  }, [selectedFirId, setEdges]);
+  }, [selectedFirId, setEdges, isCaseEditable]);
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNodeData(node.data);
@@ -358,12 +320,14 @@ export const CriminalNetwork: React.FC = () => {
     }
     setNewEntityValue('');
     setNewEntityDesc('');
-    // Trigger a re-render of nodes by updating selectedFirId (hacky but works since cases array is mutated)
+    
+    // We do NOT invalidate graphCache here because the newly injected entity is added via mockDb 
+    // and overlaid at rendering time.
+    // Trigger a re-render of nodes by updating selectedFirId (hacky but works)
     const current = selectedFirId;
     setSelectedFirId(null);
     setTimeout(() => setSelectedFirId(current), 10);
   };
-
 
   const handleUpdateNode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -407,39 +371,6 @@ export const CriminalNetwork: React.FC = () => {
     }
   };
 
-  const accusedByCase = useMemo(() => {
-    const map = new Map<number, any[]>();
-    for (const a of accusedList) {
-        const arr = map.get(a.CaseMasterID);
-        if (arr) {
-            arr.push(a);
-        } else {
-            map.set(a.CaseMasterID, [a]);
-        }
-    }
-    return map;
-  }, [accusedList]);
-
-  const filteredFIRs = useMemo(() => {
-    if (!searchQuery) return filterFirCases;
-    const searchLower = String(searchQuery).toLowerCase();
-    
-    return filterFirCases.filter(c => {
-      if (String(c.CaseNo || '').toLowerCase().includes(searchLower) ||
-          String(c.CrimeNo || '').toLowerCase().includes(searchLower) ||
-          String(c.BriefFacts || '').toLowerCase().includes(searchLower)) {
-        return true;
-      }
-
-      const caseAccused = accusedByCase.get(c.CaseMasterID) || [];
-      if (caseAccused.some(a => String(a.AccusedName || '').toLowerCase().includes(searchLower))) {
-        return true;
-      }
-      
-      return false;
-    });
-  }, [filterFirCases, searchQuery, accusedByCase]);
-
   return (
     <div className="dark flex-1 h-full min-h-[calc(100vh-64px)] w-full bg-[#020617] text-[#e4e2e4] flex flex-col font-sans overflow-hidden select-none pb-24 xl:pb-0">
       
@@ -475,7 +406,11 @@ export const CriminalNetwork: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest m-0">
                 {isOfficer ? 'Assigned Target Intel' : 'Active Investigation Cases'}
               </h3>
-              <span className="text-xs text-slate-500 font-mono">Records: {filteredFIRs.length > 30 ? `Top 30 of ${filteredFIRs.length}` : filteredFIRs.length}</span>
+              {isSearching ? (
+                  <span className="text-xs text-blue-400 font-mono animate-pulse">Searching...</span>
+              ) : (
+                  <span className="text-xs text-slate-500 font-mono">Records: {filteredFIRs.length > 30 ? `Top 30 of ${filteredFIRs.length}` : filteredFIRs.length}</span>
+              )}
             </div>
 
             <div className="relative mb-6">
@@ -492,7 +427,7 @@ export const CriminalNetwork: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {filteredFIRs.slice(0, 30).map((c) => (
+              {filteredFIRs.map((c: any) => (
                 <div 
                   key={c.CaseMasterID}
                   onClick={() => setSelectedFirId(c.CaseMasterID)}
@@ -515,6 +450,12 @@ export const CriminalNetwork: React.FC = () => {
                   </div>
                 </div>
               ))}
+              
+              {!isSearching && filteredFIRs.length === 0 && (
+                <div className="col-span-1 lg:col-span-2 text-center py-10 text-slate-500">
+                  No records found matching "{searchQuery}".
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -536,10 +477,18 @@ export const CriminalNetwork: React.FC = () => {
 
             <div className="absolute top-4 right-4 z-20 p-4 border-r border-t border-[#bec6e0]/20 flex flex-col items-end pointer-events-none">
               <span className="font-mono text-[10px] text-[#bec6e0]/40">SYS: ACTIVE_POLLING</span>
-              <span className="font-mono text-[10px] text-[#bec6e0]/40">TARGET: FIR-{cases.find(c => c.CaseMasterID === selectedFirId)?.CaseNo}</span>
+              <span className="font-mono text-[10px] text-[#bec6e0]/40">TARGET: FIR-{currentCaseData?.CaseNo || selectedFirId}</span>
             </div>
 
-            <div className="flex-1 grid-pattern">
+            <div className="flex-1 grid-pattern relative">
+              {isTracing && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#020617]/50 backdrop-blur-sm">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-blue-400 font-mono text-sm tracking-widest uppercase">Tracing Network...</p>
+                  </div>
+                </div>
+              )}
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -664,7 +613,7 @@ export const CriminalNetwork: React.FC = () => {
                           <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">Data Value</p>
                           <p className="text-slate-200 font-mono">{selectedNodeData.label}</p>
                         </div>
-                        {selectedNodeData.rawData.description && (
+                        {selectedNodeData.rawData?.description && (
                           <div>
                             <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">Description</p>
                             <p className="text-slate-400 italic text-xs">{selectedNodeData.rawData.description}</p>

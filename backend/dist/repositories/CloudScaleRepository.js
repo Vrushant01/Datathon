@@ -18,7 +18,7 @@ const GLOBAL_CACHE = {
     actsections: { data: null, promise: null, timestamp: 0 },
     auditlogs: { data: null, promise: null, timestamp: 0 }
 };
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 60 * 1000; // 60 seconds (interim scalability mitigation)
 // Singleton Catalyst app instance.
 // In AppSail, CATALYST_CONFIG env var is always set by the platform and contains
 // the project credentials. initializeApp() reads it without needing request headers.

@@ -45,6 +45,7 @@ import testIndexRoute from './routes/testIndexRoute';
 import fixDataBugsRoute from './routes/fixDataBugsRoute';
 import verifySeedRoute from './routes/verifySeedRoute';
 import analyticsRoutes from './routes/analyticsRoutes';
+import networkRoutes from './routes/networkRoutes';
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use('/api/test-index', testIndexRoute);
 app.use('/api/fix-data-bugs', fixDataBugsRoute);
 app.use('/api/verify-seed', verifySeedRoute);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/network', networkRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).send("Backend is Connected with pipeline 🚀");
@@ -583,18 +585,7 @@ app.get('/api/cases/station/:stationId', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/network/:caseId', requireAuth, async (req, res) => {
-  try {
-    const caseId = Number(req.params.caseId);
-    const db = RepositoryFactory.getRepository(req);
-    const accused = await db.getAccusedByCase(caseId);
-    const victims = await db.getVictimsByCase(caseId);
-    const edges = await db.getCustomEdgesByCase(caseId);
-    res.json({ accused, victims, edges });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch network' });
-  }
-});
+
 
 app.use('/api/ai', aiRoutes);
 app.use('/api/chatbot', chatbotRoutes);
