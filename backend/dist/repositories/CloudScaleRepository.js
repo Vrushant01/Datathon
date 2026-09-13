@@ -505,7 +505,7 @@ class CloudScaleRepository {
                     const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', `case-idx-${caseId}`)] });
                     const raw = resp;
                     if (raw.get && raw.get.length > 0) {
-                        const itemObj = typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item;
+                        const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : raw.get[0].item;
                         indexIds = JSON.parse(itemObj?.label || '[]');
                     }
                 }
@@ -519,7 +519,7 @@ class CloudScaleRepository {
                         try {
                             const resp = await nosql.table('customedges').fetchItem({ keys });
                             const raw = resp;
-                            stronglyConsistentEdges.push(...(raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item));
+                            stronglyConsistentEdges.push(...(raw.get || []).map((d) => typeof d.item?.to === 'function' ? d.item.to() : d.item));
                         }
                         catch (e) { }
                     }
@@ -897,7 +897,7 @@ class CloudScaleRepository {
             let exists = false;
             if (raw.get && raw.get.length > 0) {
                 exists = true;
-                const itemObj = typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item;
+                const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : raw.get[0].item;
                 ids = JSON.parse(itemObj?.label || '[]');
             }
             let changed = false;
