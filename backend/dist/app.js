@@ -662,7 +662,8 @@ app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(201).json(newCase);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to create case' });
+        console.error('Failed to create case', error);
+        res.status(500).json({ error: 'Failed to create case', message: error.message });
     }
 });
 app.put('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {

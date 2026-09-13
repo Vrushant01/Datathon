@@ -723,8 +723,9 @@ app.post('/api/cases', requireAuth, async (req, res) => {
     sseService.broadcast('FIR_CREATED', newCase, { stationId: caseData.PoliceStationID, officerId: caseData.PolicePersonID });
     
     res.status(201).json(newCase);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create case' });
+  } catch (error: any) {
+    console.error('Failed to create case', error);
+    res.status(500).json({ error: 'Failed to create case', message: error.message });
   }
 });
 

@@ -192,7 +192,7 @@ export class CloudScaleRepository implements IDataRepository {
         if (maxHardcodedId > 0) {
           const res = await zcql.executeZCQLQuery(`SELECT * FROM ${actualTableName} WHERE ${pkField} > ${maxHardcodedId} LIMIT 200`);
           if (res && res.length > 0) {
-            const newItems = res.map((r: any) => r[actualTableName]);
+            const newItems = res.map((r: any) => r[actualTableName] || r[tableName] || r).filter(Boolean);
             allItems.push(...newItems);
             console.log(`[DB] Fetched ${newItems.length} new dynamic records for ${actualTableName} via ZCQL`);
           }
@@ -202,10 +202,13 @@ export class CloudScaleRepository implements IDataRepository {
       }
 
       const cleaned = allItems.map(item => {
+        if (!item) return null;
         let unwrapped = item;
-        if (item && typeof item === 'object' && item[actualTableName]) {
-          unwrapped = item[actualTableName];
+        if (typeof item === 'object') {
+          if (item[actualTableName]) unwrapped = item[actualTableName];
+          else if (item[tableName]) unwrapped = item[tableName];
         }
+        if (!unwrapped) return null;
         const clean: any = {};
         for (const [k, v] of Object.entries(unwrapped)) {
           if (v && typeof v === 'object') {
@@ -219,7 +222,7 @@ export class CloudScaleRepository implements IDataRepository {
           }
         }
         return clean;
-      });
+      }).filter(Boolean);
 
       cacheEntry.data = cleaned;
       cacheEntry.timestamp = Date.now();
