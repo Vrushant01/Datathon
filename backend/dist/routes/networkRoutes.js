@@ -87,6 +87,211 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
             currentAngle += angleStep;
             return { x, y };
         };
+        // 2. Accused Nodes
+        accusedList.forEach((acc) => {
+            const nodeId = `accused:${acc.AccusedMasterID || acc.AccusedName}`;
+            nodes.push({
+                id: nodeId,
+                type: 'custom',
+                position: getPos(),
+                data: {
+                    label: `${acc.AccusedName} (Age: ${acc.AgeYear || '?'})`,
+                    color: '#6366F1',
+                    symbol: 'A',
+                    type: 'accused',
+                    rawData: {
+                        name: acc.AccusedName,
+                        AccusedMasterID: acc.AccusedMasterID,
+                        age: acc.AgeYear || 'Unknown',
+                        gender: acc.GenderID === 1 ? 'Male' : (acc.GenderID === 2 ? 'Female' : 'Other')
+                    }
+                }
+            });
+            edges.push({
+                id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
+                source: `fir:${mainCase.CaseMasterID}`,
+                target: nodeId,
+                type: 'straight',
+                label: 'Offender',
+                animated: true,
+                style: { stroke: '#94A3B8', strokeWidth: 1.5 },
+                labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        });
+        // 3. Victim Nodes
+        victimsList.forEach((vic) => {
+            const nodeId = `victim:${vic.VictimMasterID || vic.VictimName}`;
+            nodes.push({
+                id: nodeId,
+                type: 'custom',
+                position: getPos(),
+                data: {
+                    label: `${vic.VictimName} (Age: ${vic.AgeYear || '?'})`,
+                    color: '#EC4899',
+                    symbol: 'V',
+                    type: 'victim',
+                    rawData: {
+                        name: vic.VictimName,
+                        VictimMasterID: vic.VictimMasterID,
+                        age: vic.AgeYear || 'Unknown',
+                        gender: vic.GenderID === 1 ? 'Male' : (vic.GenderID === 2 ? 'Female' : 'Other')
+                    }
+                }
+            });
+            edges.push({
+                id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
+                source: nodeId,
+                target: `fir:${mainCase.CaseMasterID}`,
+                type: 'straight',
+                label: 'Victim',
+                animated: true,
+                style: { stroke: '#EC4899', strokeWidth: 1.5 },
+                labelStyle: { fill: '#EC4899', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        });
+        // 4. Station Node
+        if (station) {
+            const nodeId = `station:${station.UnitID}`;
+            nodes.push({
+                id: nodeId,
+                type: 'custom',
+                position: getPos(),
+                data: {
+                    label: station.UnitName,
+                    color: '#EAB308', // Gold
+                    symbol: 'PS',
+                    type: 'Location',
+                    rawData: {
+                        description: `Police Station Jurisdiction: ${station.UnitName}`,
+                        UnitID: station.UnitID
+                    }
+                }
+            });
+            edges.push({
+                id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
+                source: `fir:${mainCase.CaseMasterID}`,
+                target: nodeId,
+                type: 'straight',
+                label: 'Registered At',
+                animated: true,
+                style: { stroke: '#EAB308', strokeWidth: 1.5, opacity: 0.6 },
+                labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        }
+        // 5. Officer Node
+        if (officer) {
+            const nodeId = `officer:${officer.EmployeeID}`;
+            nodes.push({
+                id: nodeId,
+                type: 'custom',
+                position: getPos(),
+                data: {
+                    label: officer.FirstName,
+                    color: '#06B6D4', // Cyan
+                    symbol: 'IO',
+                    type: 'officer',
+                    rawData: {
+                        description: `Investigating Officer: ${officer.FirstName} (${officer.KGID})`,
+                        EmployeeID: officer.EmployeeID
+                    }
+                }
+            });
+            edges.push({
+                id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
+                source: `fir:${mainCase.CaseMasterID}`,
+                target: nodeId,
+                type: 'straight',
+                label: 'Investigated By',
+                animated: true,
+                style: { stroke: '#06B6D4', strokeWidth: 1.5, opacity: 0.6 },
+                labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        }
+        // 6. Custom Edges
+        customEdges.forEach((ce) => {
+            edges.push({
+                id: ce.EdgeID,
+                source: ce.source,
+                target: ce.target,
+                type: 'straight',
+                label: ce.label || 'Linked',
+                animated: true,
+                style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
+                labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        });
+        // 7. Case Entities
+        caseEntities.forEach((ent) => {
+            const entityNodeId = `entity-${ent.EntityID}`;
+            const getNodeColor = (type) => {
+                if (type === 'Vehicle')
+                    return '#F97316';
+                if (type === 'Phone')
+                    return '#06B6D4';
+                if (type === 'Bank')
+                    return '#EAB308';
+                if (type === 'Location')
+                    return '#84CC16';
+                if (type === 'Weapon')
+                    return '#EF4444';
+                return '#10B981';
+            };
+            const getNodeSymbol = (type) => {
+                if (type === 'Vehicle')
+                    return 'VEH';
+                if (type === 'Phone')
+                    return 'TEL';
+                if (type === 'Bank')
+                    return 'BNK';
+                if (type === 'Location')
+                    return 'LOC';
+                if (type === 'Weapon')
+                    return 'WEP';
+                return 'EVI';
+            };
+            nodes.push({
+                id: entityNodeId,
+                type: 'custom',
+                position: ent.position || getPos(),
+                data: {
+                    label: ent.value,
+                    color: getNodeColor(ent.type),
+                    symbol: getNodeSymbol(ent.type),
+                    type: ent.type,
+                    databaseEntityId: ent.EntityID,
+                    rawData: ent
+                }
+            });
+            let relationLabel = 'Associated';
+            if (ent.type === 'Vehicle')
+                relationLabel = 'Transported In';
+            if (ent.type === 'Phone')
+                relationLabel = 'Calls From';
+            if (ent.type === 'Bank')
+                relationLabel = 'Wire Transfer';
+            if (ent.type === 'Location')
+                relationLabel = 'Frequents';
+            if (ent.type === 'Weapon')
+                relationLabel = 'Used In Crime';
+            if (ent.type === 'Evidence')
+                relationLabel = 'Seized';
+            edges.push({
+                id: `e-case-${mainCase.CaseMasterID}-${entityNodeId}`,
+                source: `fir:${mainCase.CaseMasterID}`,
+                target: entityNodeId,
+                type: 'straight',
+                label: relationLabel,
+                animated: true,
+                style: { stroke: getNodeColor(ent.type), strokeWidth: 1.5, opacity: 0.6 },
+                labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+                labelBgStyle: { fill: '#0f172a' }
+            });
+        });
         res.json({
             case: mainCase,
             nodes,
@@ -94,255 +299,10 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
         });
     }
     catch (error) {
-        console.error('Network graph error:', error);
-        res.status(500).json({ error: 'Failed to fetch graph', details: error.message });
+        console.error('Network trace error:', error);
+        res.status(500).json({ error: 'Failed to trace FIR', details: error.message });
     }
 });
-// DEBUG
-router.get('/cases/:caseId/debug_index', async (req, res) => {
-    try {
-        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        const nosql = db.app.nosql();
-        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        const caseId = Number(req.params.caseId);
-        const indexEdgeId = `case-idx-${caseId}`;
-        let zcqlRes;
-        try {
-            zcqlRes = await db.app.zcql().executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
-        }
-        catch (e) {
-            zcqlRes = e.message;
-        }
-        let manualIndex;
-        try {
-            const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', indexEdgeId)] });
-            manualIndex = resp.get;
-        }
-        catch (e) {
-            manualIndex = e.message;
-        }
-        res.json({ indexEdgeId, manualIndex, zcqlRes });
-    }
-    catch (e) {
-        res.json({ error: e.message });
-    }
-});
-// 2. Accused Nodes
-accusedList.forEach((acc) => {
-    const nodeId = `accused:${acc.AccusedMasterID || acc.AccusedName}`;
-    nodes.push({
-        id: nodeId,
-        type: 'custom',
-        position: getPos(),
-        data: {
-            label: `${acc.AccusedName} (Age: ${acc.AgeYear || '?'})`,
-            color: '#6366F1',
-            symbol: 'A',
-            type: 'accused',
-            rawData: {
-                name: acc.AccusedName,
-                AccusedMasterID: acc.AccusedMasterID,
-                age: acc.AgeYear || 'Unknown',
-                gender: acc.GenderID === 1 ? 'Male' : (acc.GenderID === 2 ? 'Female' : 'Other')
-            }
-        }
-    });
-    edges.push({
-        id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
-        source: `fir:${mainCase.CaseMasterID}`,
-        target: nodeId,
-        type: 'straight',
-        label: 'Offender',
-        animated: true,
-        style: { stroke: '#94A3B8', strokeWidth: 1.5 },
-        labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-    });
-});
-// 3. Victim Nodes
-victimsList.forEach((vic) => {
-    const nodeId = `victim:${vic.VictimMasterID || vic.VictimName}`;
-    nodes.push({
-        id: nodeId,
-        type: 'custom',
-        position: getPos(),
-        data: {
-            label: `${vic.VictimName} (Age: ${vic.AgeYear || '?'})`,
-            color: '#EC4899',
-            symbol: 'V',
-            type: 'victim',
-            rawData: {
-                name: vic.VictimName,
-                VictimMasterID: vic.VictimMasterID,
-                age: vic.AgeYear || 'Unknown',
-                gender: vic.GenderID === 1 ? 'Male' : (vic.GenderID === 2 ? 'Female' : 'Other')
-            }
-        }
-    });
-    edges.push({
-        id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
-        source: nodeId,
-        target: `fir:${mainCase.CaseMasterID}`,
-        type: 'straight',
-        label: 'Victim',
-        animated: true,
-        style: { stroke: '#EC4899', strokeWidth: 1.5 },
-        labelStyle: { fill: '#EC4899', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-    });
-});
-// 4. Station Node
-if (station) {
-    const nodeId = `station:${station.UnitID}`;
-    nodes.push({
-        id: nodeId,
-        type: 'custom',
-        position: getPos(),
-        data: {
-            label: station.UnitName,
-            color: '#EAB308', // Gold
-            symbol: 'PS',
-            type: 'Location',
-            rawData: {
-                description: `Police Station Jurisdiction: ${station.UnitName}`,
-                UnitID: station.UnitID
-            }
-        }
-    });
-    edges.push({
-        id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
-        source: `fir:${mainCase.CaseMasterID}`,
-        target: nodeId,
-        type: 'straight',
-        label: 'Registered At',
-        animated: true,
-        style: { stroke: '#EAB308', strokeWidth: 1.5, opacity: 0.6 },
-        labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-    });
-}
-// 5. Officer Node
-if (officer) {
-    const nodeId = `officer:${officer.EmployeeID}`;
-    nodes.push({
-        id: nodeId,
-        type: 'custom',
-        position: getPos(),
-        data: {
-            label: officer.FirstName,
-            color: '#06B6D4', // Cyan
-            symbol: 'IO',
-            type: 'officer',
-            rawData: {
-                description: `Investigating Officer: ${officer.FirstName} (${officer.KGID})`,
-                EmployeeID: officer.EmployeeID
-            }
-        }
-    });
-    edges.push({
-        id: `e-fir-${mainCase.CaseMasterID}-${nodeId}`,
-        source: `fir:${mainCase.CaseMasterID}`,
-        target: nodeId,
-        type: 'straight',
-        label: 'Investigated By',
-        animated: true,
-        style: { stroke: '#06B6D4', strokeWidth: 1.5, opacity: 0.6 },
-        labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-    });
-}
-// 6. Custom Edges
-customEdges.forEach((ce) => {
-    edges.push({
-        id: ce.EdgeID,
-        source: ce.source,
-        target: ce.target,
-        type: 'straight',
-        label: ce.label || 'Linked',
-        animated: true,
-        style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
-        labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-    });
-});
-// 7. Case Entities
-caseEntities.forEach((ent) => {
-    const entityNodeId = `entity-${ent.EntityID}`;
-    const getNodeColor = (type) => {
-        if (type === 'Vehicle')
-            return '#F97316';
-        if (type === 'Phone')
-            return '#06B6D4';
-        if (type === 'Bank')
-            return '#EAB308';
-        if (type === 'Location')
-            return '#84CC16';
-        if (type === 'Weapon')
-            return '#EF4444';
-        return '#10B981';
-    };
-    const getNodeSymbol = (type) => {
-        if (type === 'Vehicle')
-            return 'VEH';
-        if (type === 'Phone')
-            return 'TEL';
-        if (type === 'Bank')
-            return 'BNK';
-        if (type === 'Location')
-            return 'LOC';
-        if (type === 'Weapon')
-            return 'WEP';
-        return 'EVI';
-    };
-    nodes.push({
-        id: entityNodeId,
-        type: 'custom',
-        position: ent.position || getPos(),
-        data: {
-            label: ent.value,
-            color: getNodeColor(ent.type),
-            symbol: getNodeSymbol(ent.type),
-            type: ent.type,
-            databaseEntityId: ent.EntityID,
-            rawData: ent
-        }
-    });
-    let relationLabel = 'Associated';
-    if (ent.type === 'Vehicle')
-        relationLabel = 'Transported In';
-    if (ent.type === 'Phone')
-        relationLabel = 'Calls From';
-    if (ent.type === 'Bank')
-        relationLabel = 'Wire Transfer';
-    if (ent.type === 'Location')
-        relationLabel = 'Frequents';
-    if (ent.type === 'Weapon')
-        relationLabel = 'Used In Crime';
-    if (ent.type === 'Evidence')
-        relationLabel = 'Seized';
-    edges.push({
-        id: `e-case-${mainCase.CaseMasterID}-${entityNodeId}`,
-        source: `fir:${mainCase.CaseMasterID}`,
-        target: entityNodeId,
-        type: 'straight',
-        label: relationLabel,
-        animated: true,
-        style: { stroke: getNodeColor(ent.type), strokeWidth: 1.5, opacity: 0.6 },
-        labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-        labelBgStyle: { fill: '#0f172a' }
-    });
-});
-res.json({
-    case: mainCase,
-    nodes,
-    edges
-});
-try { }
-catch (error) {
-    console.error('Network trace error:', error);
-    res.status(500).json({ error: 'Failed to trace FIR', details: error.message });
-}
-;
 exports.default = router;
 // ADD POST ROUTES FOR ENTITIES AND EDGES
 router.post('/cases/:caseId/entities', authMiddleware_1.requireAuth, async (req, res) => {
