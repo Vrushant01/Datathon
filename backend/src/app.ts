@@ -727,33 +727,38 @@ app.post('/api/cases', requireAuth, async (req, res) => {
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
     const newCase = await (db as any).createCase(caseData, actorId);
 
+    // Save related entities concurrently
+    const entityPromises: Promise<any>[] = [];
+
     // Save Complainant if provided
     if (complainantData) {
       complainantData.CaseMasterID = newCaseId;
       complainantData.ComplainantID = newCaseId; // Mock ID
-      await (db as any).addCaseEntity('Complainant', complainantData, actorId);
+      entityPromises.push((db as any).addCaseEntity('Complainant', complainantData, actorId));
     }
 
-    // Save Victim if provided
     if (victimData) {
       victimData.CaseMasterID = newCaseId;
       victimData.VictimMasterID = newCaseId; // Mock ID
-      await (db as any).addCaseEntity('Victim', victimData, actorId);
+      entityPromises.push((db as any).addCaseEntity('Victim', victimData, actorId));
     }
 
-    // Save Accused if provided
     if (accusedData) {
       accusedData.CaseMasterID = newCaseId;
       accusedData.AccusedMasterID = newCaseId; // Mock ID
-      await (db as any).addCaseEntity('Accused', accusedData, actorId);
+      entityPromises.push((db as any).addCaseEntity('Accused', accusedData, actorId));
     }
 
     // Save Acts if provided
     if (actsData && Array.isArray(actsData)) {
       for (const act of actsData) {
         act.CaseMasterID = newCaseId;
-        // Not natively supported by addCaseEntity but we skip for now
+        entityPromises.push((db as any).addCaseEntity('ActSection', act, actorId));
       }
+    }
+
+    if (entityPromises.length > 0) {
+      await Promise.all(entityPromises);
     }
 
     invalidateHotspotCache();
