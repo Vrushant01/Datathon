@@ -139,6 +139,19 @@ app.get('/api/forensic', async (req, res) => {
 
     const results: any[] = [];
 
+    app.get('/api/debug-tables', async (req, res) => {
+      try {
+        const catalyst = require('zcatalyst-sdk-node');
+        const catalystApp = catalyst.initialize(req);
+        const zcql = catalystApp.zcql();
+        // ZCQL doesn't support SHOW TABLES, we must query the schema?
+        // Catalyst NoSQL doesn't have SHOW TABLES, but Datastore might?
+        res.json({ error: 'No SHOW TABLES in ZCQL' });
+      } catch (err: any) {
+        res.status(500).json({ error: err.message });
+      }
+    });
+
     async function checkRecord(tableName: string, keyName: string, keyValue: number) {
       try {
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
