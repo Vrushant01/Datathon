@@ -642,11 +642,35 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
   async getActs(): Promise<any[]> {
-    return this.scanAll('Act');
+    try {
+      const zcql = this.app.zcql();
+      const res = await zcql.executeZCQLQuery("SELECT * FROM acts LIMIT 2000");
+      return res.map((r: any) => ({
+        ActCode: r.acts.ActCode || r.acts.actcode || r.acts.ACTCODE || '',
+        ActDescription: r.acts.ActDescription || r.acts.actdescription || r.acts.ACTDESCRIPTION || '',
+        ShortName: r.acts.ShortName || r.acts.shortname || r.acts.SHORTNAME || '',
+        Active: true
+      }));
+    } catch (e: any) {
+      console.error('getActs ZCQL error:', e.message);
+      return [];
+    }
   }
 
   async getSections(): Promise<any[]> {
-    return this.scanAll('Section');
+    try {
+      const zcql = this.app.zcql();
+      const res = await zcql.executeZCQLQuery("SELECT * FROM sections LIMIT 2000");
+      return res.map((r: any) => ({
+        ActCode: r.sections.ActCode || r.sections.actcode || r.sections.ACTCODE || '',
+        SectionCode: r.sections.SectionCode || r.sections.sectioncode || r.sections.SECTIONCODE || '',
+        SectionDescription: r.sections.SectionDescription || r.sections.sectiondescription || r.sections.SECTIONDESCRIPTION || '',
+        Active: true
+      }));
+    } catch (e: any) {
+      console.error('getSections ZCQL error:', e.message);
+      return [];
+    }
   }
 
   async getRepeatOffenders(): Promise<any[]> {
