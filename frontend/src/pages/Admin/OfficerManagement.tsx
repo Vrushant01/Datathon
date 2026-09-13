@@ -444,11 +444,6 @@ export const OfficerManagement: React.FC = () => {
                 </tr>
               );
             })}
-            {filteredEmployees.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center p-8 text-slate-400 font-bold">No active officer records found matching filters.</td>
-              </tr>
-            )}
           </tbody>
         </table>
         </div>

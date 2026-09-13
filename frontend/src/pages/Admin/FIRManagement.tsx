@@ -626,15 +626,10 @@ export const FIRManagement: React.FC = () => {
                 </tr>
               );
             })}
-            {filteredCases.length === 0 && (
-              <tr>
-                <td colSpan={9} className="text-center p-8 text-slate-400 font-bold">No active FIR records found matching filters.</td>
-              </tr>
-            )}
-            {filteredCases.length > 50 && (
+            {totalCases > 30 && (
               <tr>
                 <td colSpan={9} className="text-center p-4 text-slate-500 font-semibold bg-slate-50 border-t">
-                  Showing top 50 results out of {filteredCases.length}. Please use the search bar to refine.
+                  Showing top 30 results out of {totalCases}. Please use filters to refine your search.
                 </td>
               </tr>
             )}
