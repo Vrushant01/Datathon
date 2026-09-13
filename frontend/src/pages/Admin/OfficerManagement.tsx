@@ -190,6 +190,8 @@ export const OfficerManagement: React.FC = () => {
         });
         if (res.ok) {
           showNotification('success', 'Officer details updated successfully.');
+          setModalOpen(false);
+          fetchEmployees();
         } else {
           showNotification('error', 'Failed to update officer.');
         }
@@ -202,18 +204,19 @@ export const OfficerManagement: React.FC = () => {
         });
         if (res.ok) {
           showNotification('success', `Officer ${firstName} registered successfully.`);
+          setModalOpen(false);
+          fetchEmployees();
         } else {
           showNotification('error', 'Failed to register officer.');
         }
       }
-      setModalOpen(false);
     } catch (e: any) {
       showNotification('error', `Error saving officer: ${e.message}`);
     }
   };
 
   const handleSuspend = async (id: number) => {
-    const emp = employees.find(e => e.EmployeeID === id);
+    const emp = serverEmployees.find((e: any) => e.EmployeeID === id);
     if (!emp) return;
     try {
       const newStatus = emp.status === 'Active' ? 'Suspended' : 'Active';
@@ -224,6 +227,7 @@ export const OfficerManagement: React.FC = () => {
       });
       if (res.ok) {
         showNotification('success', `Officer status updated to ${newStatus}`);
+        fetchEmployees();
       } else {
         showNotification('error', 'Failed to update status.');
       }
@@ -238,6 +242,7 @@ export const OfficerManagement: React.FC = () => {
         const res = await authFetch(`${API_BASE_URL}/api/employees/${id}`, { method: 'DELETE' });
         if (res.ok) {
           showNotification('success', 'Officer record deleted.');
+          fetchEmployees();
         } else {
           showNotification('error', 'Failed to delete officer.');
         }
@@ -276,18 +281,19 @@ export const OfficerManagement: React.FC = () => {
     fetchEmployees();
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
-  // SSE real-time subscriptions — trigger refetch when any client mutates officer data
+  // SSE real-time subscriptions — re-subscribe when filters change to avoid stale closure
   useEffect(() => {
+    const fetchRef = () => fetchEmployees();
     import('../../utils/SSEClient').then(({ sseClient }) => {
       const handlers = [
-        sseClient.subscribe('OFFICER_CREATED', () => fetchEmployees()),
-        sseClient.subscribe('OFFICER_UPDATED', () => fetchEmployees()),
-        sseClient.subscribe('OFFICER_DELETED', () => fetchEmployees()),
-        sseClient.onReconnect(() => fetchEmployees()),
+        sseClient.subscribe('OFFICER_CREATED', fetchRef),
+        sseClient.subscribe('OFFICER_UPDATED', fetchRef),
+        sseClient.subscribe('OFFICER_DELETED', fetchRef),
+        sseClient.onReconnect(fetchRef),
       ];
       return () => handlers.forEach(unsub => unsub());
     });
-  }, []);
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">

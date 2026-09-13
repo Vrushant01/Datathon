@@ -108,6 +108,7 @@ export const StationManagement: React.FC = () => {
       if (res.ok) {
         showNotification('success', 'Police Station created successfully.');
         setModalOpen(false);
+        fetchStations(); // Refresh list immediately
       }
     } catch (e: any) {
       showNotification('error', `Failed to create station: ${e.message}`);
@@ -142,18 +143,19 @@ export const StationManagement: React.FC = () => {
     fetchStations();
   }, [page, searchQuery, filterDistrict, dbVersion]);
 
-  // SSE real-time subscriptions — trigger refetch when any client mutates station data
+  // SSE real-time subscriptions — re-subscribe when filters change to avoid stale closure
   useEffect(() => {
+    const fetchRef = () => fetchStations();
     import('../../utils/SSEClient').then(({ sseClient }) => {
       const handlers = [
-        sseClient.subscribe('STATION_CREATED', () => fetchStations()),
-        sseClient.subscribe('STATION_UPDATED', () => fetchStations()),
-        sseClient.subscribe('STATION_DELETED', () => fetchStations()),
-        sseClient.onReconnect(() => fetchStations()),
+        sseClient.subscribe('STATION_CREATED', fetchRef),
+        sseClient.subscribe('STATION_UPDATED', fetchRef),
+        sseClient.subscribe('STATION_DELETED', fetchRef),
+        sseClient.onReconnect(fetchRef),
       ];
       return () => handlers.forEach(unsub => unsub());
     });
-  }, []);
+  }, [page, searchQuery, filterDistrict]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">

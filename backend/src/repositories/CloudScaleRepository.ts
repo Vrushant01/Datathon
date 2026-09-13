@@ -179,6 +179,28 @@ export class CloudScaleRepository implements IDataRepository {
         console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
       }
 
+      // Fetch dynamically created records (IDs > hardcoded bounds) using ZCQL
+      try {
+        const zcql = this.app.zcql();
+        let maxHardcodedId = 0;
+        if (actualTableName === 'casemasters') maxHardcodedId = 300150;
+        else if (actualTableName === 'employees') maxHardcodedId = 30960;
+        else if (actualTableName === 'units') maxHardcodedId = 2960;
+        else if (actualTableName === 'accuseds') maxHardcodedId = 300150;
+        else if (actualTableName === 'victims') maxHardcodedId = 300150;
+
+        if (maxHardcodedId > 0) {
+          const res = await zcql.executeZCQLQuery(`SELECT * FROM ${actualTableName} WHERE ${pkField} > ${maxHardcodedId} LIMIT 200`);
+          if (res && res.length > 0) {
+            const newItems = res.map((r: any) => r[actualTableName]);
+            allItems.push(...newItems);
+            console.log(`[DB] Fetched ${newItems.length} new dynamic records for ${actualTableName} via ZCQL`);
+          }
+        }
+      } catch (e: any) {
+        console.warn(`[DB] ZCQL dynamic fetch failed for ${actualTableName}:`, e?.message);
+      }
+
       const cleaned = allItems.map(item => {
         let unwrapped = item;
         if (item && typeof item === 'object' && item[actualTableName]) {

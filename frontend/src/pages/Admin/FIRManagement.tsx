@@ -318,8 +318,7 @@ export const FIRManagement: React.FC = () => {
 
       showNotification('success', 'FIR Case Registered officially and assigned.');
       setModalOpen(false);
-      
-      setModalOpen(false);
+      fetchCases(); // Refresh the list immediately in this browser
     } catch (e: any) {
       console.error("Error creating case:", e);
       showNotification('error', `Failed to save case record. Error: ${e.message}`);
@@ -332,6 +331,7 @@ export const FIRManagement: React.FC = () => {
         const res = await authFetch(`${API_BASE_URL}/api/cases/${id}`, { method: 'DELETE' });
         if (res.ok) {
           showNotification('success', 'Case record deleted.');
+          fetchCases();
         } else {
           showNotification('error', 'Failed to delete case.');
         }
@@ -399,17 +399,18 @@ export const FIRManagement: React.FC = () => {
     fetchCases();
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
-  // SSE real-time subscriptions — trigger refetch when any client mutates FIR data
+  // SSE real-time subscriptions — use a ref to avoid stale closure
   useEffect(() => {
+    const fetchRef = () => fetchCases();
     import('../../utils/SSEClient').then(({ sseClient }) => {
       const handlers = [
-        sseClient.subscribe('FIR_CREATED', () => fetchCases()),
-        sseClient.subscribe('FIR_UPDATED', () => fetchCases()),
-        sseClient.onReconnect(() => fetchCases()),
+        sseClient.subscribe('FIR_CREATED', fetchRef),
+        sseClient.subscribe('FIR_UPDATED', fetchRef),
+        sseClient.onReconnect(fetchRef),
       ];
       return () => handlers.forEach(unsub => unsub());
     });
-  }, []);
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
