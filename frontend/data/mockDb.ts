@@ -664,7 +664,9 @@ export const syncData = async (): Promise<void> => {
       accusedRes,
       customEdgesRes,
       complainantsRes,
-      actSectionsRes
+      actSectionsRes,
+      actsRes,
+      sectionsRes
     ] = await Promise.all([
       fetchTableSettled('districts'),
       fetchTableSettled('units'),
@@ -674,7 +676,9 @@ export const syncData = async (): Promise<void> => {
       fetchTableSettled('accused'),
       fetchTableSettled('customedges'),
       fetchTableSettled('complainants'),
-      fetchTableSettled('actsections')
+      fetchTableSettled('actsections'),
+      fetchTableSettled('acts'),
+      fetchTableSettled('sections')
     ]);
 
     const state = loadDbState();
@@ -698,11 +702,13 @@ export const syncData = async (): Promise<void> => {
     if (accusedRes && accusedRes.length > 0) state.accused = accusedRes;
     if (complainantsRes && complainantsRes.length > 0) state.complainants = complainantsRes;
     if (actSectionsRes && actSectionsRes.length > 0) state.actSections = actSectionsRes;
+    if (actsRes && actsRes.length > 0) state.acts = actsRes;
+    if (sectionsRes && sectionsRes.length > 0) state.sections = sectionsRes;
     if (customEdgesRes && customEdgesRes.length > 0) state.customEdges = customEdgesRes;
 
-    const totalLoaded = [districtsRes, unitsRes, employeesRes, casesRes, victimsRes, accusedRes, complainantsRes, actSectionsRes]
+    const totalLoaded = [districtsRes, unitsRes, employeesRes, casesRes, victimsRes, accusedRes, complainantsRes, actSectionsRes, actsRes, sectionsRes]
       .filter(r => r && r.length > 0).length;
-    const totalSkipped = 8 - totalLoaded;
+    const totalSkipped = 10 - totalLoaded;
 
     saveDbState(state);
 

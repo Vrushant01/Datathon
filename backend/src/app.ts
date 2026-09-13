@@ -622,6 +622,26 @@ app.get('/api/actsections', async (req, res) => {
   }
 });
 
+app.get('/api/acts', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getActs();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch acts' });
+  }
+});
+
+app.get('/api/sections', async (req, res) => {
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const data = await db.getSections();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch sections' });
+  }
+});
+
 app.put('/api/cases/:caseId/reassign', async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);

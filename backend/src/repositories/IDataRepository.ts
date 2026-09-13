@@ -31,6 +31,8 @@ export interface IDataRepository {
   getAllCustomEdges(): Promise<any[]>;
   getComplainants(): Promise<any[]>;
   getActSections(): Promise<any[]>;
+  getActs(): Promise<any[]>;
+  getSections(): Promise<any[]>;
   
   // Single Entity queries for cases
   getCasesByOfficer(officerId: number): Promise<any[]>;

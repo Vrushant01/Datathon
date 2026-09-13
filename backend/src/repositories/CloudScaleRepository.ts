@@ -17,6 +17,8 @@ const GLOBAL_CACHE: Record<string, AppCacheState> = {
   customedges: { data: null, promise: null, timestamp: 0 },
   complainants: { data: null, promise: null, timestamp: 0 },
   actsections: { data: null, promise: null, timestamp: 0 },
+  acts: { data: null, promise: null, timestamp: 0 },
+  sections: { data: null, promise: null, timestamp: 0 },
   auditlogs: { data: null, promise: null, timestamp: 0 }
 };
 
@@ -95,6 +97,8 @@ export class CloudScaleRepository implements IDataRepository {
     if (tableName === 'Accused') actualTableName = 'accuseds';
     if (tableName === 'Victim') actualTableName = 'victims';
     if (tableName === 'CaseEntity') actualTableName = 'case_entities';
+    if (tableName === 'Act') actualTableName = 'acts';
+    if (tableName === 'Section') actualTableName = 'sections';
 
     const cacheEntry = GLOBAL_CACHE[actualTableName];
     if (!cacheEntry) throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -428,10 +432,24 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const table = nosql.table('casemasters');
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-    const item = NoSQLItem.from(caseData);
+    const validKeys = ["CaseMasterID","CrimeNo","CaseNo","CrimeRegisteredDate","PolicePersonID","PoliceStationID","CaseCategoryID","GravityOffenceID","CrimeMajorHeadID","CrimeMinorHeadID","CaseStatusID","CourtID","IncidentFromDate","IncidentToDate","InfoReceivedPSDate","latitude","longitude","BriefFacts"];
+    const cleanCaseData: any = {};
+    for (const key of validKeys) {
+      if (caseData[key] !== undefined) {
+        cleanCaseData[key] = caseData[key];
+      }
+    }
+
+    const item = NoSQLItem.from(cleanCaseData);
 
     // Use the correctly supported insertRow method
-    await table.insertRow(item);
+    try {
+      await table.insertRow(item);
+    } catch (err: any) {
+      console.error('[DEBUG] insertRow failed for caseData:', JSON.stringify(cleanCaseData, null, 2));
+      console.error('[DEBUG] insertRow exact error:', err);
+      throw err;
+    }
 
     // Invalidate caches explicitly
     GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
@@ -617,6 +635,14 @@ export class CloudScaleRepository implements IDataRepository {
       console.error('getActSections ZCQL error:', e.message);
       return [];
     }
+  }
+
+  async getActs(): Promise<any[]> {
+    return this.scanAll('Act');
+  }
+
+  async getSections(): Promise<any[]> {
+    return this.scanAll('Section');
   }
 
   async getRepeatOffenders(): Promise<any[]> {
