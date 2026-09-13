@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { mockDb } from '../../../data/mockDb';
 import { Link } from 'react-router-dom';
+import { authFetch } from '../../utils/authFetch';
+import { API_BASE_URL } from '../../config/api';
 import { 
   FileText, Clock, CheckCircle2, ChevronRight, 
   MapPin, Shield, ShieldCheck, Activity 
@@ -9,25 +10,59 @@ import {
 
 export const OfficerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const cases = mockDb.getCases();
-  
-  // Filter cases assigned to THIS officer
-  const assignedCases = cases.filter(c => c.PolicePersonID === user?.employeeId);
+  const [assignedCases, setAssignedCases] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Statistics
+  const fetchCases = async () => {
+    if (!user?.employeeId) return;
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/cases?officer=${user.employeeId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const cases = Array.isArray(data) ? data : (data.data || []);
+        setAssignedCases(cases.filter((c: any) => Number(c.PolicePersonID) === Number(user.employeeId)));
+      }
+    } catch (e) {
+      console.error('Failed to fetch officer cases', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCases();
+  }, [user?.employeeId]);
+
+  // SSE real-time subscriptions — refresh when FIRs change
+  useEffect(() => {
+    import('../../utils/SSEClient').then(({ sseClient }) => {
+      const handlers = [
+        sseClient.subscribe('FIR_CREATED', () => fetchCases()),
+        sseClient.subscribe('FIR_UPDATED', () => fetchCases()),
+        sseClient.subscribe('ASSIGNMENT_UPDATED', () => fetchCases()),
+        sseClient.onReconnect(() => fetchCases()),
+      ];
+      return () => handlers.forEach(unsub => unsub());
+    });
+  }, []);
+  
+  // Statistics derived from server data
   const totalAssigned = assignedCases.length;
   const underInvestigation = assignedCases.filter(c => c.CaseStatusID === 1).length;
   const closedOrDisposed = assignedCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
 
   const getStatusName = (id: number) => {
-    return mockDb.getCaseStatuses().find(s => s.CaseStatusID === id)?.CaseStatusName || 'Active';
+    const statuses: Record<number, string> = { 1: 'Under Investigation', 2: 'Charge Sheet Filed', 3: 'Disposed', 4: 'Closed' };
+    return statuses[id] || 'Active';
   };
 
   const getCrimeCategory = (id: number) => {
-    return mockDb.getCrimeHeads().find(ch => ch.CrimeHeadID === id)?.CrimeGroupName || 'Penal Code';
+    const cats: Record<number, string> = { 100: 'Penal Code', 200: 'NDPS Act', 300: 'IT Act' };
+    return cats[id] || 'Penal Code';
   };
 
   return (
+
     <div className="space-y-6 select-none">
       
       {/* Welcome Banner */}

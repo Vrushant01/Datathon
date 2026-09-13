@@ -355,6 +355,7 @@ app.get('/api/units', async (req, res) => {
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       const updated = await (db as any).updateEmployee(Number(req.params.id), req.body, actorId);
       invalidateHotspotCache();
+      sseService.broadcast('OFFICER_UPDATED', updated);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: 'Failed to update employee' });
@@ -367,6 +368,7 @@ app.get('/api/units', async (req, res) => {
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       await (db as any).deleteEmployee(Number(req.params.id), actorId);
       invalidateHotspotCache();
+      sseService.broadcast('OFFICER_DELETED', { id: Number(req.params.id) });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete employee' });
@@ -392,6 +394,7 @@ app.get('/api/units', async (req, res) => {
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       const updated = await (db as any).updateUnit(Number(req.params.id), req.body, actorId);
       invalidateHotspotCache();
+      sseService.broadcast('STATION_UPDATED', updated);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: 'Failed to update unit' });
@@ -404,6 +407,7 @@ app.get('/api/units', async (req, res) => {
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       await (db as any).deleteUnit(Number(req.params.id), actorId);
       invalidateHotspotCache();
+      sseService.broadcast('STATION_DELETED', { id: Number(req.params.id) });
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete unit' });
@@ -731,6 +735,7 @@ app.put('/api/cases/:id', requireAuth, async (req, res) => {
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
     const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
     invalidateHotspotCache();
+    sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
     res.json(updatedCase);
   } catch (error: any) {
     if (error.message && error.message.includes('unsupported or immutable')) {
@@ -748,6 +753,7 @@ app.patch('/api/cases/:id', requireAuth, async (req, res) => {
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
     const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
     invalidateHotspotCache();
+    sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
     res.json(updatedCase);
   } catch (error: any) {
     if (error.message && error.message.includes('unsupported or immutable')) {

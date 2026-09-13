@@ -34,6 +34,28 @@ export const AdminGISMap: React.FC = () => {
       });
   }, []);
 
+  // SSE real-time: refetch cases/stations when data changes so GIS updates without reload
+  useEffect(() => {
+    const refetchCases = () => {
+      authFetch(`${API_BASE_URL}/api/cases?requireLocation=true`)
+        .then(res => res.json())
+        .then(data => setCases(Array.isArray(data) ? data : (data.data || [])))
+        .catch(() => {});
+    };
+    import('../../utils/SSEClient').then(({ sseClient }) => {
+      const handlers = [
+        sseClient.subscribe('FIR_CREATED', refetchCases),
+        sseClient.subscribe('FIR_UPDATED', refetchCases),
+        sseClient.subscribe('STATION_CREATED', refetchCases),
+        sseClient.subscribe('STATION_UPDATED', refetchCases),
+        sseClient.subscribe('STATION_DELETED', refetchCases),
+        sseClient.onReconnect(refetchCases),
+      ];
+      return () => handlers.forEach(unsub => unsub());
+    });
+  }, []);
+
+
   const districts = mockDb.getDistricts();
   const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
   const crimeHeads = mockDb.getCrimeHeads();

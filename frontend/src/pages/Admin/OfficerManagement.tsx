@@ -276,6 +276,19 @@ export const OfficerManagement: React.FC = () => {
     fetchEmployees();
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
+  // SSE real-time subscriptions — trigger refetch when any client mutates officer data
+  useEffect(() => {
+    import('../../utils/SSEClient').then(({ sseClient }) => {
+      const handlers = [
+        sseClient.subscribe('OFFICER_CREATED', () => fetchEmployees()),
+        sseClient.subscribe('OFFICER_UPDATED', () => fetchEmployees()),
+        sseClient.subscribe('OFFICER_DELETED', () => fetchEmployees()),
+        sseClient.onReconnect(() => fetchEmployees()),
+      ];
+      return () => handlers.forEach(unsub => unsub());
+    });
+  }, []);
+
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
       

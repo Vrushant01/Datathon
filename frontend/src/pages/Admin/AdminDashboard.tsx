@@ -49,31 +49,27 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     import('../../utils/SSEClient').then(({ sseClient }) => {
-      const unsubFIR = sseClient.subscribe('FIR_CREATED', (e) => {
-        const newCase = e.data;
-        setStats(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            totalFirs: prev.totalFirs + 1,
-            pendingCases: prev.pendingCases + 1,
-            casesLight: [...prev.casesLight, { d: newCase.CrimeRegisteredDate || new Date().getTime(), h: newCase.CrimeMajorHeadID || 1, s: newCase.CaseStatusID || 1 }]
-          };
-        });
-      });
-      const unsubOfficer = sseClient.subscribe('OFFICER_CREATED', () => {
-        setStats(prev => prev ? { ...prev, activeOfficers: prev.activeOfficers + 1 } : prev);
-      });
-      const unsubStation = sseClient.subscribe('STATION_CREATED', () => {
-        setStats(prev => prev ? { ...prev, policeStations: prev.policeStations + 1 } : prev);
-      });
-      return () => {
-        unsubFIR();
-        unsubOfficer();
-        unsubStation();
+      const refetch = () => {
+        authFetch(`${API_BASE_URL}/api/admin/dashboard-stats`)
+          .then(r => r.json())
+          .then(data => { if (data.success) setStats(data.data); })
+          .catch(() => {});
       };
+      const handlers = [
+        sseClient.subscribe('FIR_CREATED', refetch),
+        sseClient.subscribe('FIR_UPDATED', refetch),
+        sseClient.subscribe('OFFICER_CREATED', refetch),
+        sseClient.subscribe('OFFICER_UPDATED', refetch),
+        sseClient.subscribe('OFFICER_DELETED', refetch),
+        sseClient.subscribe('STATION_CREATED', refetch),
+        sseClient.subscribe('STATION_UPDATED', refetch),
+        sseClient.subscribe('STATION_DELETED', refetch),
+        sseClient.onReconnect(refetch),
+      ];
+      return () => handlers.forEach(unsub => unsub());
     });
   }, []);
+
 
   const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), []);
 

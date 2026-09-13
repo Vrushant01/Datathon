@@ -142,6 +142,19 @@ export const StationManagement: React.FC = () => {
     fetchStations();
   }, [page, searchQuery, filterDistrict, dbVersion]);
 
+  // SSE real-time subscriptions — trigger refetch when any client mutates station data
+  useEffect(() => {
+    import('../../utils/SSEClient').then(({ sseClient }) => {
+      const handlers = [
+        sseClient.subscribe('STATION_CREATED', () => fetchStations()),
+        sseClient.subscribe('STATION_UPDATED', () => fetchStations()),
+        sseClient.subscribe('STATION_DELETED', () => fetchStations()),
+        sseClient.onReconnect(() => fetchStations()),
+      ];
+      return () => handlers.forEach(unsub => unsub());
+    });
+  }, []);
+
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
       

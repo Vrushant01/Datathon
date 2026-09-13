@@ -399,6 +399,18 @@ export const FIRManagement: React.FC = () => {
     fetchCases();
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
+  // SSE real-time subscriptions — trigger refetch when any client mutates FIR data
+  useEffect(() => {
+    import('../../utils/SSEClient').then(({ sseClient }) => {
+      const handlers = [
+        sseClient.subscribe('FIR_CREATED', () => fetchCases()),
+        sseClient.subscribe('FIR_UPDATED', () => fetchCases()),
+        sseClient.onReconnect(() => fetchCases()),
+      ];
+      return () => handlers.forEach(unsub => unsub());
+    });
+  }, []);
+
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
       

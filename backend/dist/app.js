@@ -310,6 +310,7 @@ app.put('/api/employees/:id', authMiddleware_1.requireAuth, async (req, res) => 
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updated = await db.updateEmployee(Number(req.params.id), req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('OFFICER_UPDATED', updated);
         res.json(updated);
     }
     catch (error) {
@@ -322,6 +323,7 @@ app.delete('/api/employees/:id', authMiddleware_1.requireAuth, async (req, res) 
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         await db.deleteEmployee(Number(req.params.id), actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('OFFICER_DELETED', { id: Number(req.params.id) });
         res.json({ success: true });
     }
     catch (error) {
@@ -347,6 +349,7 @@ app.put('/api/units/:id', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updated = await db.updateUnit(Number(req.params.id), req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('STATION_UPDATED', updated);
         res.json(updated);
     }
     catch (error) {
@@ -359,6 +362,7 @@ app.delete('/api/units/:id', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         await db.deleteUnit(Number(req.params.id), actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('STATION_DELETED', { id: Number(req.params.id) });
         res.json({ success: true });
     }
     catch (error) {
@@ -668,6 +672,7 @@ app.put('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updatedCase = await db.updateCase(caseId, req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
         res.json(updatedCase);
     }
     catch (error) {
@@ -685,6 +690,7 @@ app.patch('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updatedCase = await db.updateCase(caseId, req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        sseService_1.sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
         res.json(updatedCase);
     }
     catch (error) {
