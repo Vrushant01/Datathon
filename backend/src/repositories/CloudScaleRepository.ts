@@ -492,10 +492,50 @@ export class CloudScaleRepository implements IDataRepository {
     if (cache.promise) return cache.promise;
 
     const promise = (async () => {
+      const nosql = this.app.nosql();
+      const zcql = this.app.zcql();
+      const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+      
       try {
-        const zcql = this.app.zcql();
-        const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
-        const allEdges = res.map((r: any) => r.customedges);
+        // 1. Fetch Strongly Consistent Manual Index
+        let indexIds: string[] = [];
+        try {
+          const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', `case-idx-${caseId}`)] });
+          const raw = resp as any;
+          if (raw.get && raw.get.length > 0) {
+            const itemObj = typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item;
+            indexIds = JSON.parse(itemObj?.label || '[]');
+          }
+        } catch (e) {}
+
+        // 2. Fetch Strongly Consistent Nodes
+        const stronglyConsistentEdges: any[] = [];
+        if (indexIds.length > 0) {
+          for (let i = 0; i < indexIds.length; i += 25) {
+            const batch = indexIds.slice(i, i + 25);
+            const keys = batch.map(id => new NoSQLItem().addString('EdgeID', id));
+            try {
+              const resp = await nosql.table('customedges').fetchItem({ keys });
+              const raw = resp as any;
+              stronglyConsistentEdges.push(...(raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item));
+            } catch (e) {}
+          }
+        }
+
+        // 3. Fetch ZCQL (Eventually Consistent fallback for older nodes)
+        let zcqlEdges: any[] = [];
+        try {
+          const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
+          zcqlEdges = res.map((r: any) => r.customedges);
+        } catch (e) {}
+
+        // 4. Merge and Deduplicate
+        const allEdgesMap = new Map();
+        zcqlEdges.forEach(e => allEdgesMap.set(e.EdgeID, e));
+        stronglyConsistentEdges.forEach(e => allEdgesMap.set(e.EdgeID, e));
+        
+        const allEdges = Array.from(allEdgesMap.values());
+        
         cache.data = allEdges;
         cache.timestamp = Date.now();
         return allEdges;
@@ -870,6 +910,73 @@ export class CloudScaleRepository implements IDataRepository {
     }
   }
 
+  // --- Manual Indexing for Strong Consistency ---
+  private async syncManualIndex(caseId: number, edgeId: string, action: 'add' | 'remove'): Promise<void> {
+    const nosql = this.app.nosql();
+    const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
+    const indexEdgeId = `case-idx-${caseId}`;
+    
+    try {
+      const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', indexEdgeId)] });
+      const raw = resp as any;
+      
+      let ids: string[] = [];
+      let exists = false;
+      if (raw.get && raw.get.length > 0) {
+        exists = true;
+        const itemObj = typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item;
+        ids = JSON.parse(itemObj?.label || '[]');
+      }
+      
+      let changed = false;
+      if (action === 'add' && !ids.includes(edgeId)) {
+        ids.push(edgeId);
+        changed = true;
+      } else if (action === 'remove' && ids.includes(edgeId)) {
+        ids = ids.filter(id => id !== edgeId);
+        changed = true;
+      }
+      
+      if (changed) {
+        if (exists) {
+          await nosql.table('customedges').updateItems({
+            keys: new NoSQLItem().addString('EdgeID', indexEdgeId),
+            update_attributes: [{
+              operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
+              update_value: NoSQLMarshall.make(JSON.stringify(ids)),
+              attribute_path: ['label']
+            }]
+          });
+        } else {
+          const item = NoSQLItem.from({
+            EdgeID: indexEdgeId,
+            CaseMasterID: caseId,
+            source: 'index',
+            target: 'index',
+            label: JSON.stringify(ids)
+          });
+          await nosql.table('customedges').insertItems({ item });
+        }
+      }
+    } catch (e: any) {
+      console.error('syncManualIndex error:', e.message);
+      if (action === 'add') {
+        try {
+          const item = NoSQLItem.from({
+            EdgeID: indexEdgeId,
+            CaseMasterID: caseId,
+            source: 'index',
+            target: 'index',
+            label: JSON.stringify([edgeId])
+          });
+          await nosql.table('customedges').insertItems({ item });
+        } catch (insertError: any) {
+          console.error('syncManualIndex fallback insert error:', insertError.message);
+        }
+      }
+    }
+  }
+
   // --- Network Mutations ---
   async addCustomEdge(edge: any): Promise<any> {
     const nosql = this.app.nosql();
@@ -880,6 +987,8 @@ export class CloudScaleRepository implements IDataRepository {
     }
     const item = NoSQLItem.from(edge);
     await nosql.table('customedges').insertItems({ item });
+    await this.syncManualIndex(edge.CaseMasterID, edge.EdgeID, 'add');
+    
     const cacheKey = `customedges_${edge.CaseMasterID}`;
     if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
       GLOBAL_CACHE[cacheKey].data.push(item);
@@ -926,6 +1035,8 @@ export class CloudScaleRepository implements IDataRepository {
     
     const item = NoSQLItem.from(edge);
     await nosql.table('customedges').insertItems({ item });
+    await this.syncManualIndex(entity.CaseMasterID, edge.EdgeID, 'add');
+    
     const cacheKey = `customedges_${entity.CaseMasterID}`;
     if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
       GLOBAL_CACHE[cacheKey].data.push(item);
@@ -954,6 +1065,7 @@ export class CloudScaleRepository implements IDataRepository {
     try {
       const keys = new NoSQLItem().addString('EdgeID', entityEdgeId);
       await nosql.table('customedges').deleteItems({ keys: [keys] });
+      await this.syncManualIndex(caseId, entityEdgeId, 'remove');
     } catch (e: any) {
       console.error('Failed to delete primary entity node:', e);
     }
@@ -967,6 +1079,7 @@ export class CloudScaleRepository implements IDataRepository {
           if (edge.EdgeID) {
             const edgeKeys = new NoSQLItem().addString('EdgeID', edge.EdgeID);
             await nosql.table('customedges').deleteItems({ keys: [edgeKeys] }).catch((err: any) => console.error(err));
+            await this.syncManualIndex(caseId, edge.EdgeID, 'remove');
           }
         }
       }
