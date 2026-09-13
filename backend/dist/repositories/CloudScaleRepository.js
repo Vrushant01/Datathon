@@ -302,7 +302,7 @@ class CloudScaleRepository {
         const maxId = employees.length > 0 ? Math.max(...employees.map((e) => e.EmployeeID || 0)) : 9000;
         employeeData.EmployeeID = maxId + 1;
         const item = NoSQLItem.from(employeeData);
-        await table.insertRow(item);
+        await table.insertItems({ item });
         GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
         await this.createAuditLog({
             Action: 'CREATE_EMPLOYEE',
@@ -377,7 +377,7 @@ class CloudScaleRepository {
         const maxId = units.length > 0 ? Math.max(...units.map((u) => u.UnitID || 0)) : 2000;
         unitData.UnitID = maxId + 1;
         const item = NoSQLItem.from(unitData);
-        await table.insertRow(item);
+        await table.insertItems({ item });
         GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
         await this.createAuditLog({
             Action: 'CREATE_UNIT',
@@ -458,7 +458,7 @@ class CloudScaleRepository {
         const item = NoSQLItem.from(cleanCaseData);
         // Use the correctly supported insertRow method
         try {
-            await table.insertRow(item);
+            await table.insertItems({ item });
         }
         catch (err) {
             console.error('[DEBUG] insertRow failed for caseData:', JSON.stringify(cleanCaseData, null, 2));
@@ -653,10 +653,36 @@ class CloudScaleRepository {
         }
     }
     async getActs() {
-        return this.scanAll('Act');
+        try {
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery("SELECT * FROM acts LIMIT 2000");
+            return res.map((r) => ({
+                ActCode: r.acts.ActCode || r.acts.actcode || r.acts.ACTCODE || '',
+                ActDescription: r.acts.ActDescription || r.acts.actdescription || r.acts.ACTDESCRIPTION || '',
+                ShortName: r.acts.ShortName || r.acts.shortname || r.acts.SHORTNAME || '',
+                Active: true
+            }));
+        }
+        catch (e) {
+            console.error('getActs ZCQL error:', e.message);
+            return [];
+        }
     }
     async getSections() {
-        return this.scanAll('Section');
+        try {
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery("SELECT * FROM sections LIMIT 2000");
+            return res.map((r) => ({
+                ActCode: r.sections.ActCode || r.sections.actcode || r.sections.ACTCODE || '',
+                SectionCode: r.sections.SectionCode || r.sections.sectioncode || r.sections.SECTIONCODE || '',
+                SectionDescription: r.sections.SectionDescription || r.sections.sectiondescription || r.sections.SECTIONDESCRIPTION || '',
+                Active: true
+            }));
+        }
+        catch (e) {
+            console.error('getSections ZCQL error:', e.message);
+            return [];
+        }
     }
     async getRepeatOffenders() {
         const allAccused = await this.scanAll('Accused');
@@ -877,7 +903,7 @@ class CloudScaleRepository {
         if (!note.NoteID)
             note.NoteID = Date.now();
         const item = NoSQLItem.from(note);
-        await nosql.table('timelinenotes').insertRow(item);
+        await nosql.table('timelinenotes').insertItems({ item });
         // Audit log
         await this.createAuditLog({
             Action: 'ADD_TIMELINE_NOTE',
@@ -915,7 +941,7 @@ class CloudScaleRepository {
         if (!evidence.EvidenceID)
             evidence.EvidenceID = Date.now();
         const item = NoSQLItem.from(evidence);
-        await nosql.table('evidencefiles').insertRow(item);
+        await nosql.table('evidencefiles').insertItems({ item });
         // Audit log
         await this.createAuditLog({
             Action: 'UPLOAD_EVIDENCE',
@@ -950,7 +976,7 @@ class CloudScaleRepository {
         if (!cs.CSID)
             cs.CSID = Date.now();
         const item = NoSQLItem.from(cs);
-        await nosql.table('chargesheets').insertRow(item);
+        await nosql.table('chargesheets').insertItems({ item });
         // Audit log
         await this.createAuditLog({
             Action: 'SUBMIT_CHARGESHEET',
@@ -1022,7 +1048,7 @@ class CloudScaleRepository {
                         target: 'index',
                         label: JSON.stringify(ids)
                     });
-                    await nosql.table('customedges').insertRow(item);
+                    await nosql.table('customedges').insertItems({ item });
                 }
             }
         }
@@ -1037,7 +1063,7 @@ class CloudScaleRepository {
                         target: 'index',
                         label: JSON.stringify([edgeId])
                     });
-                    await nosql.table('customedges').insertRow(item);
+                    await nosql.table('customedges').insertItems({ item });
                 }
                 catch (insertError) {
                     console.error('syncManualIndex fallback insert error:', insertError.message);
@@ -1054,7 +1080,7 @@ class CloudScaleRepository {
             edge.EdgeID = crypto.randomUUID();
         }
         const item = NoSQLItem.from(edge);
-        await nosql.table('customedges').insertRow(item);
+        await nosql.table('customedges').insertItems({ item });
         await this.syncManualIndex(edge.CaseMasterID, edge.EdgeID, 'add');
         const cacheKey = `customedges_${edge.CaseMasterID}`;
         if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
@@ -1097,7 +1123,7 @@ class CloudScaleRepository {
             label: JSON.stringify({ type: entityType, value: entity.value, description: entity.description })
         };
         const item = NoSQLItem.from(edge);
-        await nosql.table('customedges').insertRow(item);
+        await nosql.table('customedges').insertItems({ item });
         await this.syncManualIndex(entity.CaseMasterID, edge.EdgeID, 'add');
         const cacheKey = `customedges_${entity.CaseMasterID}`;
         if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
@@ -1290,7 +1316,7 @@ class CloudScaleRepository {
                 OldValue: log.OldValue || null,
                 NewValue: log.NewValue || null
             });
-            await table.insertRow(item);
+            await table.insertItems({ item });
         }
         catch (e) {
             // Do not re-throw here so the business operation succeeds even if auditing fails.
