@@ -16,6 +16,8 @@ const GLOBAL_CACHE = {
     customedges: { data: null, promise: null, timestamp: 0 },
     complainants: { data: null, promise: null, timestamp: 0 },
     actsections: { data: null, promise: null, timestamp: 0 },
+    acts: { data: null, promise: null, timestamp: 0 },
+    sections: { data: null, promise: null, timestamp: 0 },
     auditlogs: { data: null, promise: null, timestamp: 0 }
 };
 const CACHE_TTL = 60 * 1000; // 60 seconds (interim scalability mitigation)
@@ -96,6 +98,10 @@ class CloudScaleRepository {
             actualTableName = 'victims';
         if (tableName === 'CaseEntity')
             actualTableName = 'case_entities';
+        if (tableName === 'Act')
+            actualTableName = 'acts';
+        if (tableName === 'Section')
+            actualTableName = 'sections';
         const cacheEntry = GLOBAL_CACHE[actualTableName];
         if (!cacheEntry)
             throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -218,7 +224,7 @@ class CloudScaleRepository {
                 else if (actualTableName === 'victims')
                     maxHardcodedId = 300150;
                 if (maxHardcodedId > 0) {
-                    const res = await zcql.executeZCQLQuery(`SELECT * FROM ${actualTableName} WHERE ${pkField} > ${maxHardcodedId} LIMIT 200`);
+                    const res = await zcql.executeZCQLQuery(`SELECT * FROM ${actualTableName} WHERE ${pkField} > ${maxHardcodedId} LIMIT 2000`);
                     if (res && res.length > 0) {
                         const newItems = res.map((r) => r[actualTableName] || r[tableName] || r).filter(Boolean);
                         allItems.push(...newItems);
@@ -442,9 +448,23 @@ class CloudScaleRepository {
         const nosql = this.app.nosql();
         const table = nosql.table('casemasters');
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        const item = NoSQLItem.from(caseData);
+        const validKeys = ["CaseMasterID", "CrimeNo", "CaseNo", "CrimeRegisteredDate", "PolicePersonID", "PoliceStationID", "CaseCategoryID", "GravityOffenceID", "CrimeMajorHeadID", "CrimeMinorHeadID", "CaseStatusID", "CourtID", "IncidentFromDate", "IncidentToDate", "InfoReceivedPSDate", "latitude", "longitude", "BriefFacts"];
+        const cleanCaseData = {};
+        for (const key of validKeys) {
+            if (caseData[key] !== undefined) {
+                cleanCaseData[key] = caseData[key];
+            }
+        }
+        const item = NoSQLItem.from(cleanCaseData);
         // Use the correctly supported insertRow method
-        await table.insertRow(item);
+        try {
+            await table.insertRow(item);
+        }
+        catch (err) {
+            console.error('[DEBUG] insertRow failed for caseData:', JSON.stringify(cleanCaseData, null, 2));
+            console.error('[DEBUG] insertRow exact error:', err);
+            throw err;
+        }
         // Invalidate caches explicitly
         GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
         // Audit log
@@ -471,7 +491,9 @@ class CloudScaleRepository {
                 const term = filter.search.toLowerCase();
                 const caseNoStr = (c.CaseNo || '').toLowerCase();
                 const firNoStr = (c.FIRNo || '').toLowerCase();
-                if (!caseNoStr.includes(term) && !firNoStr.includes(term))
+                const crimeNoStr = (c.CrimeNo || '').toLowerCase();
+                const briefStr = (c.BriefFacts || '').toLowerCase();
+                if (!caseNoStr.includes(term) && !firNoStr.includes(term) && !crimeNoStr.includes(term) && !briefStr.includes(term))
                     return false;
             }
             if (filter.PoliceStationID) {
@@ -480,6 +502,9 @@ class CloudScaleRepository {
                 if (filter.PoliceStationID.$in && !filter.PoliceStationID.$in.includes(Number(c.PoliceStationID)))
                     return false;
             }
+            // Officer-level scoping: filter by PolicePersonID (assigned investigating officer)
+            if (filter.PolicePersonID && Number(c.PolicePersonID) !== filter.PolicePersonID)
+                return false;
             if (filter.CrimeMajorHeadID && Number(c.CrimeMajorHeadID) !== filter.CrimeMajorHeadID)
                 return false;
             if (filter.CaseStatusID && Number(c.CaseStatusID) !== filter.CaseStatusID)
@@ -626,6 +651,12 @@ class CloudScaleRepository {
             console.error('getActSections ZCQL error:', e.message);
             return [];
         }
+    }
+    async getActs() {
+        return this.scanAll('Act');
+    }
+    async getSections() {
+        return this.scanAll('Section');
     }
     async getRepeatOffenders() {
         const allAccused = await this.scanAll('Accused');
@@ -805,6 +836,36 @@ class CloudScaleRepository {
         }
         catch (e) {
             console.error('reassignCase error', e);
+            throw e;
+        }
+    }
+    async deleteCase(caseId, actorId = 'system') {
+        // First, fetch the case so we can include stationId/officerId in the audit log
+        const caseRecord = await this.getCaseById(caseId);
+        if (!caseRecord) {
+            throw new Error(`Case ${caseId} not found`);
+        }
+        const nosql = this.app.nosql();
+        const table = nosql.table('casemasters');
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        try {
+            const keys = new NoSQLItem().addNumber('CaseMasterID', caseId);
+            await table.deleteItems({ keys: [keys] });
+            // Invalidate the casemasters cache so subsequent reads reflect the deletion
+            GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
+            // Audit log
+            await this.createAuditLog({
+                Action: 'DELETE_CASE',
+                EntityType: 'CASE',
+                EntityID: String(caseId),
+                Description: `Case ${caseRecord.CaseNo || caseId} deleted`,
+                ActorID: actorId
+            }).catch(e => console.error('[Audit] Failed to log deleteCase:', e));
+            console.log(`[DB] CaseMaster ${caseId} deleted by ${actorId}`);
+            return true;
+        }
+        catch (e) {
+            console.error('deleteCase error', e);
             throw e;
         }
     }

@@ -1648,6 +1648,26 @@ sseClient.subscribe('FIR_CREATED', (newCase) => {
     }
 });
 
+sseClient.subscribe('FIR_UPDATED', (updatedCase) => {
+    const state = loadDbState();
+    const idx = state.cases.findIndex((c: any) => c.CaseMasterID === updatedCase.CaseMasterID);
+    if (idx !== -1) {
+        state.cases[idx] = { ...state.cases[idx], ...updatedCase };
+    } else {
+        // Case not yet in local state — add it
+        state.cases.push(updatedCase);
+    }
+    saveDbState(state);
+});
+
+sseClient.subscribe('FIR_DELETED', (payload) => {
+    const caseId = payload?.id || payload?.CaseMasterID;
+    if (!caseId) return;
+    const state = loadDbState();
+    state.cases = state.cases.filter((c: any) => c.CaseMasterID !== caseId);
+    saveDbState(state);
+});
+
 sseClient.subscribe('OFFICER_CREATED', (newOfficer) => {
     const state = loadDbState();
     if (!state.employees.find((e: any) => e.EmployeeID === newOfficer.EmployeeID)) {

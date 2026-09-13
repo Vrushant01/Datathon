@@ -46,6 +46,7 @@ export const AdminGISMap: React.FC = () => {
       const handlers = [
         sseClient.subscribe('FIR_CREATED', refetchCases),
         sseClient.subscribe('FIR_UPDATED', refetchCases),
+        sseClient.subscribe('FIR_DELETED', refetchCases),
         sseClient.subscribe('STATION_CREATED', refetchCases),
         sseClient.subscribe('STATION_UPDATED', refetchCases),
         sseClient.subscribe('STATION_DELETED', refetchCases),

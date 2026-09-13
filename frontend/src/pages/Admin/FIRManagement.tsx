@@ -424,6 +424,7 @@ export const FIRManagement: React.FC = () => {
       const handlers = [
         sseClient.subscribe('FIR_CREATED', fetchRef),
         sseClient.subscribe('FIR_UPDATED', fetchRef),
+        sseClient.subscribe('FIR_DELETED', fetchRef),
         sseClient.onReconnect(fetchRef),
       ];
       return () => handlers.forEach(unsub => unsub());

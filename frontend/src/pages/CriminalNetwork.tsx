@@ -93,6 +93,7 @@ export const CriminalNetwork: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+
   const [selectedFirId, setSelectedFirId] = useState<number | null>(null);
   const [selectedNodeData, setSelectedNodeData] = useState<any | null>(null);
   const [currentCaseData, setCurrentCaseData] = useState<any | null>(null);
@@ -117,6 +118,40 @@ export const CriminalNetwork: React.FC = () => {
     setNotification({ type, text });
     setTimeout(() => setNotification(null), 3000);
   };
+
+  // SSE: refresh search results and evict cache when FIR data changes
+  // This ensures new/updated/deleted FIRs are reflected without page reload.
+  // Does NOT redesign the Criminal Network persistence (customedges) architecture.
+  useEffect(() => {
+    const handleFIRChange = (event: any) => {
+      // Clear local graph cache so stale data isn't shown
+      graphCache.current.clear();
+      // If a deleted FIR is currently selected, deselect it
+      if (event?.CaseMasterID && selectedFirId === Number(event.CaseMasterID)) {
+        setSelectedFirId(null);
+        setCurrentCaseData(null);
+        setNodes([]);
+        setEdges([]);
+      }
+      // Re-run the current search to fetch updated case list
+      if (searchQuery) {
+        authFetch(`${API_BASE_URL}/api/network/search?query=${encodeURIComponent(searchQuery)}`)
+          .then(r => r.json())
+          .then(data => { if (Array.isArray(data)) setSearchResults(data); })
+          .catch(() => {});
+      }
+    };
+
+    const unsubCreated = sseClient.subscribe('FIR_CREATED', handleFIRChange);
+    const unsubUpdated = sseClient.subscribe('FIR_UPDATED', handleFIRChange);
+    const unsubDeleted = sseClient.subscribe('FIR_DELETED', handleFIRChange);
+
+    return () => {
+      unsubCreated();
+      unsubUpdated();
+      unsubDeleted();
+    };
+  }, [searchQuery, selectedFirId]);
 
   const isOfficer = user?.role === 'Officer';
   const isAnalytics = user?.role === 'Analytics';

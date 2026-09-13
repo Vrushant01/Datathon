@@ -58,6 +58,7 @@ export const AdminDashboard: React.FC = () => {
       const handlers = [
         sseClient.subscribe('FIR_CREATED', refetch),
         sseClient.subscribe('FIR_UPDATED', refetch),
+        sseClient.subscribe('FIR_DELETED', refetch),
         sseClient.subscribe('OFFICER_CREATED', refetch),
         sseClient.subscribe('OFFICER_UPDATED', refetch),
         sseClient.subscribe('OFFICER_DELETED', refetch),

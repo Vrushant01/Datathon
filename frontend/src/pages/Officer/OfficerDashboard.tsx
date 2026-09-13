@@ -39,6 +39,7 @@ export const OfficerDashboard: React.FC = () => {
       const handlers = [
         sseClient.subscribe('FIR_CREATED', () => fetchCases()),
         sseClient.subscribe('FIR_UPDATED', () => fetchCases()),
+        sseClient.subscribe('FIR_DELETED', () => fetchCases()),
         sseClient.subscribe('ASSIGNMENT_UPDATED', () => fetchCases()),
         sseClient.onReconnect(() => fetchCases()),
       ];

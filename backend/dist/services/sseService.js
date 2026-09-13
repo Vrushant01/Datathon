@@ -55,24 +55,37 @@ class SSEService {
             if (client.role === 'Admin' || client.role === 'SuperAdmin') {
                 authorized = true;
             }
-            else if (client.role === 'Station' && options?.stationId) {
-                if (client.stationId === options.stationId)
-                    authorized = true;
-            }
-            else if (client.role === 'Officer' && options?.officerId) {
-                if (client.employeeId === options.officerId)
-                    authorized = true;
-            }
-            else {
-                // If it's a globally broadcastable event like STATION_CREATED, allow all authenticated users
-                if (['STATION_CREATED', 'STATION_UPDATED', 'OFFICER_CREATED'].includes(eventType)) {
+            else if (client.role === 'Station' || client.role === 'Analytics') {
+                // Station/Analytics: receive FIR events only for their own station
+                if (['FIR_CREATED', 'FIR_UPDATED', 'FIR_DELETED'].includes(eventType)) {
+                    if (options?.stationId && client.stationId === options.stationId)
+                        authorized = true;
+                }
+                else {
+                    // Non-FIR events (station/officer changes) broadcast to all Station users
                     authorized = true;
                 }
             }
-            // For now, to ensure the multi-user requirement works flawlessly and considering 
-            // some stations might not be strictly partitioned in the mock yet, we allow basic sync.
-            // But we implement the role check skeleton above.
-            authorized = true; // Temporary full-sync to meet "Admin A sees Admin B instantly" etc.
+            else if (client.role === 'Officer') {
+                // Officers: receive FIR events only for their own assigned FIRs
+                if (['FIR_CREATED', 'FIR_UPDATED', 'FIR_DELETED'].includes(eventType)) {
+                    if (options?.officerId && client.employeeId === options.officerId)
+                        authorized = true;
+                    // Also receive if it's their station (for new FIRs at their station)
+                    if (options?.stationId && client.stationId === options.stationId)
+                        authorized = true;
+                }
+                else {
+                    // Non-FIR events broadcast to all authenticated Officers
+                    authorized = true;
+                }
+            }
+            else {
+                // Globally broadcastable events (station/officer CRUD) reach all authenticated users
+                if (['STATION_CREATED', 'STATION_UPDATED', 'STATION_DELETED', 'OFFICER_CREATED', 'OFFICER_UPDATED', 'OFFICER_DELETED', 'ASSIGNMENT_UPDATED'].includes(eventType)) {
+                    authorized = true;
+                }
+            }
             if (authorized) {
                 this.sendEventToClient(client, eventType, data);
             }

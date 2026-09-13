@@ -58,6 +58,7 @@ export interface IDataRepository {
   // New Case Update Operations
   updateCase(caseId: number, updateData: CaseUpdatePayload, actorId?: string): Promise<any>;
   reassignCase(caseId: number, targetOfficerId: number, actorId?: string): Promise<boolean>;
+  deleteCase(caseId: number, actorId?: string): Promise<boolean>;
 
   // Audit Logs
   createAuditLog(log: AuditLogPayload): Promise<void>;

@@ -162,6 +162,7 @@ router.post('/login', async (req, res) => {
           email: emp.email || `${emp.EmployeeID}@ksp.gov.in`,
           role: 'Officer',
           employeeId: emp.EmployeeID,
+          unitId: emp.UnitID,
           kgid: emp.KGID,
           firstName: emp.FirstName,
           stationName: station,

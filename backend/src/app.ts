@@ -417,17 +417,36 @@ app.get('/api/units', async (req, res) => {
 app.get('/api/cases', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
+    const user = (req as any).user;
     
     // Convert query params for filter
     const filter: any = {};
     if (req.query.search) filter.search = req.query.search;
     if (req.query.requireLocation === 'true') filter.requireLocation = true;
-    if (req.query.district) {
-      // If we needed to filter by district, it requires joining with units.
-      // But CloudScaleRepository already has getCases. We can just add it here if needed.
-    }
-    if (req.query.station) filter.PoliceStationID = parseInt(req.query.station as string);
     if (req.query.status) filter.CaseStatusID = parseInt(req.query.status as string);
+
+    // ── BACKEND ROLE-BASED SECURITY ──────────────────────────────────────
+    // Admin: unrestricted access to all FIRs
+    // Station / Analytics: only FIRs belonging to their station (unitId from JWT)
+    // Officer: only FIRs assigned to their EmployeeID (employeeId from JWT)
+    if (user?.role === 'Admin' || user?.role === 'SuperAdmin') {
+      // Admin can additionally filter by station or district via query params
+      if (req.query.station) filter.PoliceStationID = parseInt(req.query.station as string);
+    } else if (user?.role === 'Station' || user?.role === 'Analytics') {
+      // Station users can ONLY see their own station's FIRs
+      const stationId = user?.unitId;
+      if (!stationId) return res.status(403).json({ error: 'Station ID not found in token' });
+      filter.PoliceStationID = Number(stationId);
+    } else if (user?.role === 'Officer') {
+      // Officers can ONLY see FIRs assigned to them
+      const employeeId = user?.employeeId;
+      if (!employeeId) return res.status(403).json({ error: 'Employee ID not found in token' });
+      filter.PolicePersonID = Number(employeeId);
+    } else {
+      // Unknown role — deny
+      return res.status(403).json({ error: 'Forbidden: Insufficient role permissions' });
+    }
+    // ─────────────────────────────────────────────────────────────────────
     
     let data = await db.getCases(filter);
     
@@ -665,7 +684,7 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
 });
 
 // Basic CRUD for Cases to trigger invalidation
-app.post('/api/cases', async (req, res) => {
+app.post('/api/cases', requireAuth, async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const caseData = { ...req.body };
@@ -786,7 +805,38 @@ app.patch('/api/cases/:id', requireAuth, async (req, res) => {
 });
 
 app.delete('/api/cases/:id', requireAuth, requireRole('Admin'), async (req, res) => {
-  res.status(501).json({ error: 'Delete case is not implemented in CloudScale yet' });
+  try {
+    const db = RepositoryFactory.getRepository(req);
+    const caseId = Number(req.params.id);
+    const actorId = req.headers['x-user-email'] as string || (req as any).user?.email || 'admin';
+
+    if (!caseId || isNaN(caseId)) {
+      return res.status(400).json({ error: 'Invalid case ID' });
+    }
+
+    // Fetch case metadata before deletion so we can scope the SSE broadcast
+    const existingCase = await db.getCaseById(caseId);
+    if (!existingCase) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    const stationId = existingCase.PoliceStationID;
+    const officerId = existingCase.PolicePersonID;
+
+    await db.deleteCase(caseId, actorId);
+    invalidateHotspotCache();
+
+    // Broadcast FIR_DELETED — SSE service will route to authorized clients only
+    sseService.broadcast('FIR_DELETED', { id: caseId, CaseMasterID: caseId }, { stationId, officerId });
+
+    res.json({ success: true, deletedId: caseId });
+  } catch (error: any) {
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    console.error('Failed to delete case:', error);
+    res.status(500).json({ error: 'Failed to delete case', details: error.message });
+  }
 });
 
 app.get('/api/victims', requireAuth, async (req, res) => {
