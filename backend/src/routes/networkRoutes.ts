@@ -382,7 +382,7 @@ router.put('/cases/:caseId/entities/:entityId', requireAuth, async (req, res) =>
         const db = RepositoryFactory.getRepository(req);
         
         const userEmail = (req as any).user?.email || 'system';
-        const updatedEntity = await (db as any).updateCaseEntity(entityId, type, value, description, userEmail, position);
+        const updatedEntity = await (db as any).updateCaseEntity(entityId, type, value, description, userEmail, position, caseId);
 
         sseService.broadcast('CASE_ENTITY_UPDATED', { CaseMasterID: caseId, ...updatedEntity });
         res.json(updatedEntity);

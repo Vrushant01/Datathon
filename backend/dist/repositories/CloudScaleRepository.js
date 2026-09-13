@@ -483,44 +483,40 @@ class CloudScaleRepository {
         const all = await this.scanAll('Victim');
         return all.filter(v => Number(v.CaseMasterID) === caseId);
     }
-    async getCustomEdgesFromNoSQL() {
-        const cache = GLOBAL_CACHE['customedges'];
-        if (cache && cache.data && (Date.now() - cache.timestamp < 60000))
+    async getEdgesByCaseViaZCQL(caseId) {
+        const cacheKey = `customedges_${caseId}`;
+        let cache = GLOBAL_CACHE[cacheKey];
+        if (!cache) {
+            cache = { data: null, promise: null, timestamp: 0 };
+            GLOBAL_CACHE[cacheKey] = cache;
+        }
+        if (cache.data && (Date.now() - cache.timestamp < 300000))
             return cache.data;
-        if (cache && cache.promise)
+        if (cache.promise)
             return cache.promise;
         const promise = (async () => {
-            const nosql = this.app.nosql();
-            let allEdges = [];
-            let nextToken = undefined;
             try {
-                do {
-                    const page = await nosql.table('customedges').getPage({ max_rows: 200, next_token: nextToken });
-                    allEdges.push(...(page.data || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item));
-                    nextToken = page.next_token;
-                } while (nextToken);
-                if (cache) {
-                    cache.data = allEdges;
-                    cache.timestamp = Date.now();
-                }
+                const zcql = this.app.zcql();
+                const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
+                const allEdges = res.map((r) => r.customedges);
+                cache.data = allEdges;
+                cache.timestamp = Date.now();
                 return allEdges;
             }
             catch (e) {
-                console.error('getCustomEdgesFromNoSQL error:', e.message);
+                console.error('getEdgesByCaseViaZCQL error:', e.message);
                 return [];
             }
             finally {
-                if (cache)
-                    cache.promise = null;
+                cache.promise = null;
             }
         })();
-        if (cache)
-            cache.promise = promise;
+        cache.promise = promise;
         return promise;
     }
     async getCustomEdgesByCase(caseId) {
         try {
-            const allEdges = await this.getCustomEdgesFromNoSQL();
+            const allEdges = await this.getEdgesByCaseViaZCQL(caseId);
             return allEdges.filter((e) => Number(e.CaseMasterID) === Number(caseId) && e.source !== 'entity');
         }
         catch (e) {
@@ -862,12 +858,15 @@ class CloudScaleRepository {
         }
         const item = NoSQLItem.from(edge);
         await nosql.table('customedges').insertItems({ item });
-        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        const cacheKey = `customedges_${edge.CaseMasterID}`;
+        if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
+            GLOBAL_CACHE[cacheKey].data.push(item);
+        }
         return edge;
     }
     async getCaseEntities(caseId) {
         try {
-            const allEdges = await this.getCustomEdgesFromNoSQL();
+            const allEdges = await this.getEdgesByCaseViaZCQL(caseId);
             return allEdges.filter((e) => Number(e.CaseMasterID) === Number(caseId) && e.source === 'entity').map((edge) => {
                 try {
                     return {
@@ -901,7 +900,10 @@ class CloudScaleRepository {
         };
         const item = NoSQLItem.from(edge);
         await nosql.table('customedges').insertItems({ item });
-        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        const cacheKey = `customedges_${entity.CaseMasterID}`;
+        if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
+            GLOBAL_CACHE[cacheKey].data.push(item);
+        }
         // Audit log
         await this.createAuditLog({
             Action: 'CREATE_CASE_ENTITY',
@@ -925,9 +927,9 @@ class CloudScaleRepository {
         catch (e) {
             console.error('Failed to delete primary entity node:', e);
         }
-        // 2. Fetch and delete any connected relationship edges using NoSQL getPage
+        // 2. Fetch and delete any connected relationship edges using NoSQL ZCQL
         try {
-            const allEdges = await this.getCustomEdgesFromNoSQL();
+            const allEdges = await this.getEdgesByCaseViaZCQL(caseId);
             for (const edge of allEdges) {
                 if (Number(edge.CaseMasterID) === Number(caseId) && (edge.source === entityEdgeId || edge.target === entityEdgeId)) {
                     if (edge.EdgeID) {
@@ -940,7 +942,11 @@ class CloudScaleRepository {
         catch (e) {
             console.error('Failed to query/delete connected edges:', e);
         }
-        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        // Update cache
+        const cacheKey = `customedges_${caseId}`;
+        if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
+            GLOBAL_CACHE[cacheKey].data = GLOBAL_CACHE[cacheKey].data.filter((e) => e.EdgeID !== entityEdgeId && e.source !== entityEdgeId && e.target !== entityEdgeId);
+        }
         // Audit log
         await this.createAuditLog({
             Action: 'DELETE_CASE_ENTITY',
@@ -1010,7 +1016,7 @@ class CloudScaleRepository {
                 throw new Error(`Metric '${metric}' is not supported.`);
         }
     }
-    async updateCaseEntity(entityId, entityType, value, description, actorId = 'system', position) {
+    async updateCaseEntity(entityId, entityType, value, description, actorId = 'system', position, caseId) {
         const nosql = this.app.nosql();
         const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         const edgeId = `entity-${entityId}`;
@@ -1021,12 +1027,14 @@ class CloudScaleRepository {
         }
         else {
             try {
-                const existingEdges = await this.getCustomEdgesFromNoSQL();
-                const existing = existingEdges.find((e) => e.EdgeID === edgeId);
-                if (existing && existing.label) {
-                    const parsed = JSON.parse(existing.label);
-                    if (parsed.position)
-                        labelObj.position = parsed.position;
+                if (caseId) {
+                    const existingEdges = await this.getEdgesByCaseViaZCQL(caseId);
+                    const existing = existingEdges.find((e) => e.EdgeID === edgeId);
+                    if (existing && existing.label) {
+                        const parsed = JSON.parse(existing.label);
+                        if (parsed.position)
+                            labelObj.position = parsed.position;
+                    }
                 }
             }
             catch (e) { }
@@ -1041,7 +1049,17 @@ class CloudScaleRepository {
                 }
             ]
         });
-        GLOBAL_CACHE['customedges'] = { data: null, promise: null, timestamp: 0 };
+        if (caseId) {
+            const cacheKey = `customedges_${caseId}`;
+            if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
+                const idx = GLOBAL_CACHE[cacheKey].data.findIndex((e) => e.EdgeID === edgeId);
+                if (idx !== -1) {
+                    const e = GLOBAL_CACHE[cacheKey].data[idx];
+                    const newLabel = { ...JSON.parse(e.label || '{}'), ...labelObj };
+                    e.label = JSON.stringify(newLabel);
+                }
+            }
+        }
         await this.createAuditLog({
             Action: 'UPDATE_CASE_ENTITY',
             EntityType: 'CUSTOM_ENTITY',
