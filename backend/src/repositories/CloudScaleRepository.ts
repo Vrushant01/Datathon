@@ -266,7 +266,7 @@ export class CloudScaleRepository implements IDataRepository {
     employeeData.EmployeeID = maxId + 1;
 
     const item = NoSQLItem.from(employeeData);
-    await table.insertItems({ item });
+    await table.insertRow(item);
     GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
 
     await this.createAuditLog({
@@ -350,7 +350,7 @@ export class CloudScaleRepository implements IDataRepository {
     unitData.UnitID = maxId + 1;
 
     const item = NoSQLItem.from(unitData);
-    await table.insertItems({ item });
+    await table.insertRow(item);
     GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
 
     await this.createAuditLog({
@@ -430,8 +430,8 @@ export class CloudScaleRepository implements IDataRepository {
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
     const item = NoSQLItem.from(caseData);
 
-    // Explicitly using the already-proven insertItems
-    await table.insertItems({ item });
+    // Use the correctly supported insertRow method
+    await table.insertRow(item);
 
     // Invalidate caches explicitly
     GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
@@ -827,7 +827,7 @@ export class CloudScaleRepository implements IDataRepository {
     // Ensure NoteID is present
     if (!note.NoteID) note.NoteID = Date.now();
     const item = NoSQLItem.from(note);
-    await nosql.table('timelinenotes').insertItems({ item });
+    await nosql.table('timelinenotes').insertRow(item);
 
     // Audit log
     await this.createAuditLog({
@@ -866,7 +866,7 @@ export class CloudScaleRepository implements IDataRepository {
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
     if (!evidence.EvidenceID) evidence.EvidenceID = Date.now();
     const item = NoSQLItem.from(evidence);
-    await nosql.table('evidencefiles').insertItems({ item });
+    await nosql.table('evidencefiles').insertRow(item);
 
     // Audit log
     await this.createAuditLog({
@@ -903,7 +903,7 @@ export class CloudScaleRepository implements IDataRepository {
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
     if (!cs.CSID) cs.CSID = Date.now();
     const item = NoSQLItem.from(cs);
-    await nosql.table('chargesheets').insertItems({ item });
+    await nosql.table('chargesheets').insertRow(item);
 
     // Audit log
     await this.createAuditLog({
@@ -980,7 +980,7 @@ export class CloudScaleRepository implements IDataRepository {
             target: 'index',
             label: JSON.stringify(ids)
           });
-          await nosql.table('customedges').insertItems({ item });
+          await nosql.table('customedges').insertRow(item);
         }
       }
     } catch (e: any) {
@@ -994,7 +994,7 @@ export class CloudScaleRepository implements IDataRepository {
             target: 'index',
             label: JSON.stringify([edgeId])
           });
-          await nosql.table('customedges').insertItems({ item });
+          await nosql.table('customedges').insertRow(item);
         } catch (insertError: any) {
           console.error('syncManualIndex fallback insert error:', insertError.message);
         }
@@ -1011,7 +1011,7 @@ export class CloudScaleRepository implements IDataRepository {
       edge.EdgeID = crypto.randomUUID();
     }
     const item = NoSQLItem.from(edge);
-    await nosql.table('customedges').insertItems({ item });
+    await nosql.table('customedges').insertRow(item);
     await this.syncManualIndex(edge.CaseMasterID, edge.EdgeID, 'add');
     
     const cacheKey = `customedges_${edge.CaseMasterID}`;
@@ -1059,7 +1059,7 @@ export class CloudScaleRepository implements IDataRepository {
     };
     
     const item = NoSQLItem.from(edge);
-    await nosql.table('customedges').insertItems({ item });
+    await nosql.table('customedges').insertRow(item);
     await this.syncManualIndex(entity.CaseMasterID, edge.EdgeID, 'add');
     
     const cacheKey = `customedges_${entity.CaseMasterID}`;
@@ -1274,7 +1274,7 @@ export class CloudScaleRepository implements IDataRepository {
         OldValue: log.OldValue || null,
         NewValue: log.NewValue || null
       });
-      await table.insertItems({ item });
+      await table.insertRow(item);
     } catch (e: any) {
       // Do not re-throw here so the business operation succeeds even if auditing fails.
       // But log heavily.

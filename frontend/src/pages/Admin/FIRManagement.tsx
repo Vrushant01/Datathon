@@ -318,7 +318,25 @@ export const FIRManagement: React.FC = () => {
 
       showNotification('success', 'FIR Case Registered officially and assigned.');
       setModalOpen(false);
-      fetchCases(); // Refresh the list immediately in this browser
+      const createdCase = await res.json();
+      createdCase.stationName = stations.find(s => s.UnitID === createdCase.PoliceStationID)?.UnitName || 'Unknown';
+      createdCase.officerName = employees.find(e => e.EmployeeID === createdCase.PolicePersonID)?.FirstName || 'Unassigned';
+      createdCase.caseVictims = victimName || 'N/A';
+      createdCase.caseAccused = accusedName || 'Unknown';
+      
+      setServerCases(prev => {
+        // Prevent duplicate if SSE already fetched it
+        if (prev.some(c => c.CaseMasterID === createdCase.CaseMasterID)) return prev;
+        
+        // Sort the array by CrimeRegisteredDateTime to ensure newest is always at top
+        const newList = [createdCase, ...prev];
+        return newList.sort((a, b) => {
+          const dateA = a.CrimeRegisteredDateTime ? new Date(a.CrimeRegisteredDateTime).getTime() : 0;
+          const dateB = b.CrimeRegisteredDateTime ? new Date(b.CrimeRegisteredDateTime).getTime() : 0;
+          return dateB - dateA;
+        });
+      });
+      setTotalCases(prev => prev + 1);
     } catch (e: any) {
       console.error("Error creating case:", e);
       showNotification('error', `Failed to save case record. Error: ${e.message}`);
