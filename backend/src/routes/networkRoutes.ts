@@ -99,6 +99,44 @@ router.get('/cases/:caseId/graph', requireAuth, async (req, res) => {
             return { x, y };
         };
 
+        res.json({
+            case: mainCase,
+            nodes,
+            edges
+        });
+
+    } catch (error: any) {
+        console.error('Network graph error:', error);
+        res.status(500).json({ error: 'Failed to fetch graph', details: error.message });
+    }
+});
+
+// DEBUG
+router.get('/cases/:caseId/debug_index', async (req, res) => {
+    try {
+        const db = RepositoryFactory.getRepository(req) as any;
+        const nosql = db.app.nosql();
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const caseId = Number(req.params.caseId);
+        const indexEdgeId = `case-idx-${caseId}`;
+        
+        let zcqlRes;
+        try {
+            zcqlRes = await db.app.zcql().executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
+        } catch(e:any){ zcqlRes = e.message; }
+
+        let manualIndex;
+        try {
+            const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', indexEdgeId)] });
+            manualIndex = (resp as any).get;
+        } catch(e:any){ manualIndex = e.message; }
+        
+        res.json({ indexEdgeId, manualIndex, zcqlRes });
+    } catch (e: any) {
+        res.json({ error: e.message });
+    }
+});
+
         // 2. Accused Nodes
         accusedList.forEach((acc: any) => {
             const nodeId = `accused:${acc.AccusedMasterID || acc.AccusedName}`;
