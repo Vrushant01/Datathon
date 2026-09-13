@@ -188,6 +188,7 @@ export const CriminalNetwork: React.FC = () => {
               color: getNodeColor(newEntity.type, false),
               symbol: getNodeSymbol(newEntity.type),
               type: newEntity.type,
+              databaseEntityId: newEntity.EntityID,
               rawData: newEntity
             }
           };
@@ -467,6 +468,7 @@ export const CriminalNetwork: React.FC = () => {
             color: getNodeColor(newEntity.type, false),
             symbol: getNodeSymbol(newEntity.type),
             type: newEntity.type,
+            databaseEntityId: newEntity.EntityID,
             rawData: newEntity
           }
         };

@@ -484,22 +484,14 @@ class CloudScaleRepository {
         return all.filter(v => Number(v.CaseMasterID) === caseId);
     }
     async getCustomEdgesByCase(caseId) {
-        const nosql = this.app.nosql();
-        const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         try {
-            const resp = await nosql.table('customedges').queryTable({
-                key_condition: {
-                    attribute: ['CaseMasterID'],
-                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                    value: NoSQLMarshall.makeNumber(caseId)
-                }
-            });
-            const raw = resp;
-            const allEdges = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
+            const allEdges = res.map((r) => r.customedges);
             return allEdges.filter((e) => e.source !== 'entity');
         }
         catch (e) {
-            console.error('getCustomEdgesByCase NoSQL error:', e.message);
+            console.error('getCustomEdgesByCase ZCQL error:', e.message);
             return [];
         }
     }
@@ -841,18 +833,10 @@ class CloudScaleRepository {
         return edge;
     }
     async getCaseEntities(caseId) {
-        const nosql = this.app.nosql();
-        const { NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
         try {
-            const resp = await nosql.table('customedges').queryTable({
-                key_condition: {
-                    attribute: ['CaseMasterID'],
-                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                    value: NoSQLMarshall.makeNumber(caseId)
-                }
-            });
-            const raw = resp;
-            const allEdges = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
+            const allEdges = res.map((r) => r.customedges);
             return allEdges.filter((e) => e.source === 'entity').map((edge) => {
                 try {
                     return {
@@ -867,7 +851,7 @@ class CloudScaleRepository {
             }).filter(Boolean);
         }
         catch (e) {
-            console.error('getCaseEntities NoSQL error:', e.message);
+            console.error('getCaseEntities ZCQL error:', e.message);
             return [];
         }
     }
@@ -910,17 +894,11 @@ class CloudScaleRepository {
         catch (e) {
             console.error('Failed to delete primary entity node:', e);
         }
-        // 2. Fetch and delete any connected relationship edges using queryTable instead of ZCQL
+        // 2. Fetch and delete any connected relationship edges using ZCQL
         try {
-            const resp = await nosql.table('customedges').queryTable({
-                key_condition: {
-                    attribute: ['CaseMasterID'],
-                    operator: NoSQLEnum.NoSQLOperator.EQUALS,
-                    value: NoSQLMarshall.makeNumber(caseId)
-                }
-            });
-            const raw = resp;
-            const allEdges = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
+            const allEdges = res.map((r) => r.customedges);
             for (const edge of allEdges) {
                 if (edge.source === entityEdgeId || edge.target === entityEdgeId) {
                     if (edge.EdgeID) {

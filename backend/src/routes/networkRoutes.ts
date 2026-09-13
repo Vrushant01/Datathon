@@ -272,6 +272,7 @@ router.get('/cases/:caseId/graph', requireAuth, async (req, res) => {
                 color: getNodeColor(ent.type),
                 symbol: getNodeSymbol(ent.type),
                 type: ent.type,
+                databaseEntityId: ent.EntityID,
                 rawData: ent
               }
             });

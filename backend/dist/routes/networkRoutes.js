@@ -263,6 +263,7 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
                     color: getNodeColor(ent.type),
                     symbol: getNodeSymbol(ent.type),
                     type: ent.type,
+                    databaseEntityId: ent.EntityID,
                     rawData: ent
                 }
             });
