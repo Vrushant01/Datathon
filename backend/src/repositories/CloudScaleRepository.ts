@@ -131,9 +131,9 @@ export class CloudScaleRepository implements IDataRepository {
         case 'districts': pkField = 'DistrictID'; for (let i = 1001; i <= 1031; i++) ids.push(i); break;
         case 'units': pkField = 'UnitID'; for (let i = 2000; i <= 2960; i++) ids.push(i); break;
         case 'employees': pkField = 'EmployeeID'; for (let i = 10001; i <= 11900; i++) ids.push(i); for (let i = 30001; i <= 30960; i++) ids.push(i); break;
-        case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
-        case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
-        case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); for (let i = 300001; i <= 300150; i++) ids.push(i); break;
+        case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); for (let i = 300001; i <= 300500; i++) ids.push(i); break;
+        case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); for (let i = 300001; i <= 300500; i++) ids.push(i); break;
+        case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); for (let i = 300001; i <= 300500; i++) ids.push(i); break;
       }
 
       const allItems: any[] = [];
@@ -633,8 +633,8 @@ export class CloudScaleRepository implements IDataRepository {
   async getActSections(): Promise<any[]> {
     try {
       const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery("SELECT * FROM actsections LIMIT 200");
-      return res.map((r: any) => r.actsections);
+      const res = await zcql.executeZCQLQuery("SELECT * FROM ActSectionAssociation LIMIT 2000");
+      return res.map((r: any) => r.ActSectionAssociation);
     } catch (e: any) {
       console.error('getActSections ZCQL error:', e.message);
       return [];
@@ -644,11 +644,11 @@ export class CloudScaleRepository implements IDataRepository {
   async getActs(): Promise<any[]> {
     try {
       const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery("SELECT * FROM acts LIMIT 2000");
+      const res = await zcql.executeZCQLQuery("SELECT * FROM Act LIMIT 2000");
       return res.map((r: any) => ({
-        ActCode: r.acts.ActCode || r.acts.actcode || r.acts.ACTCODE || '',
-        ActDescription: r.acts.ActDescription || r.acts.actdescription || r.acts.ACTDESCRIPTION || '',
-        ShortName: r.acts.ShortName || r.acts.shortname || r.acts.SHORTNAME || '',
+        ActCode: r.Act.ActCode || r.Act.actcode || r.Act.ACTCODE || '',
+        ActDescription: r.Act.ActDescription || r.Act.actdescription || r.Act.ACTDESCRIPTION || '',
+        ShortName: r.Act.ShortName || r.Act.shortname || r.Act.SHORTNAME || '',
         Active: true
       }));
     } catch (e: any) {
@@ -660,11 +660,11 @@ export class CloudScaleRepository implements IDataRepository {
   async getSections(): Promise<any[]> {
     try {
       const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery("SELECT * FROM sections LIMIT 2000");
+      const res = await zcql.executeZCQLQuery("SELECT * FROM Section LIMIT 2000");
       return res.map((r: any) => ({
-        ActCode: r.sections.ActCode || r.sections.actcode || r.sections.ACTCODE || '',
-        SectionCode: r.sections.SectionCode || r.sections.sectioncode || r.sections.SECTIONCODE || '',
-        SectionDescription: r.sections.SectionDescription || r.sections.sectiondescription || r.sections.SECTIONDESCRIPTION || '',
+        ActCode: r.Section.ActCode || r.Section.actcode || r.Section.ACTCODE || '',
+        SectionCode: r.Section.SectionCode || r.Section.sectioncode || r.Section.SECTIONCODE || '',
+        SectionDescription: r.Section.SectionDescription || r.Section.sectiondescription || r.Section.SECTIONDESCRIPTION || '',
         Active: true
       }));
     } catch (e: any) {
@@ -1135,10 +1135,35 @@ export class CloudScaleRepository implements IDataRepository {
     const nosql = this.app.nosql();
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
+    // Route proper entities to their real tables
+    if (entityType === 'Complainant') {
+      const item = NoSQLItem.from(entity);
+      await nosql.table('complainants').insertItems({ item });
+      GLOBAL_CACHE['complainants'] = { data: null, promise: null, timestamp: 0 };
+      return entity;
+    }
+    if (entityType === 'Victim') {
+      const item = NoSQLItem.from(entity);
+      await nosql.table('victims').insertItems({ item });
+      GLOBAL_CACHE['victims'] = { data: null, promise: null, timestamp: 0 };
+      return entity;
+    }
+    if (entityType === 'Accused') {
+      const item = NoSQLItem.from(entity);
+      await nosql.table('accuseds').insertItems({ item });
+      GLOBAL_CACHE['accuseds'] = { data: null, promise: null, timestamp: 0 };
+      return entity;
+    }
+    if (entityType === 'ActSection') {
+      // ActSectionAssociation is a Datastore table, not NoSQL
+      const datastore = this.app.datastore();
+      await datastore.table('ActSectionAssociation').insertRow(entity);
+      return entity;
+    }
+
+    // Fallback: Persist to customedges for pure Network Graph custom entities
     const crypto = require('crypto');
     const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || crypto.randomUUID();
-
-    // Persist to customedges to avoid unsupported table errors
     const edge = {
       EdgeID: `entity-${entityId}`,
       CaseMasterID: entity.CaseMasterID,
