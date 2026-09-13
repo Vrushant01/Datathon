@@ -257,7 +257,7 @@ router.get('/cases/:caseId/graph', authMiddleware_1.requireAuth, async (req, res
             nodes.push({
                 id: entityNodeId,
                 type: 'custom',
-                position: getPos(),
+                position: ent.position || getPos(),
                 data: {
                     label: ent.value,
                     color: getNodeColor(ent.type),
@@ -364,10 +364,10 @@ router.put('/cases/:caseId/entities/:entityId', authMiddleware_1.requireAuth, as
     try {
         const caseId = Number(req.params.caseId);
         const entityId = req.params.entityId;
-        const { type, value, description } = req.body;
+        const { type, value, description, position } = req.body;
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const userEmail = req.user?.email || 'system';
-        const updatedEntity = await db.updateCaseEntity(entityId, type, value, description, userEmail);
+        const updatedEntity = await db.updateCaseEntity(entityId, type, value, description, userEmail, position);
         sseService_1.sseService.broadcast('CASE_ENTITY_UPDATED', { CaseMasterID: caseId, ...updatedEntity });
         res.json(updatedEntity);
     }

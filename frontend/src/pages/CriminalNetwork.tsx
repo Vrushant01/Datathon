@@ -422,6 +422,29 @@ export const CriminalNetwork: React.FC = () => {
     })));
   }, [setEdges]);
 
+  const onNodeDragStop = useCallback(async (event: React.MouseEvent, node: Node) => {
+    if (!isCaseEditable(selectedFirId!)) return;
+    if (node.type !== 'custom' || node.data.type === 'case' || node.data.type === 'accused' || node.data.type === 'victim') return;
+
+    try {
+      const entityId = node.data.databaseEntityId || node.data.rawData?.EntityID;
+      if (!entityId) return;
+
+      await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${entityId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: node.data.type,
+          value: node.data.label,
+          description: node.data.rawData?.description || '',
+          position: node.position
+        })
+      });
+    } catch (e) {
+      console.error('Failed to save node position', e);
+    }
+  }, [selectedFirId, isCaseEditable]);
+
   const handleAddEntityNode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFirId === null || !newEntityValue) return;
@@ -722,6 +745,7 @@ export const CriminalNetwork: React.FC = () => {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={onNodeClick}
+                onNodeDragStop={onNodeDragStop}
                 onConnect={onConnect}
                 nodeTypes={nodeTypes}
                 fitView

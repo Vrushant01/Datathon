@@ -480,14 +480,44 @@ export class CloudScaleRepository implements IDataRepository {
     return all.filter(v => Number(v.CaseMasterID) === caseId);
   }
 
+  private async getCustomEdgesFromNoSQL(): Promise<any[]> {
+    const cache = GLOBAL_CACHE['customedges'];
+    if (cache && cache.data && (Date.now() - cache.timestamp < 60000)) return cache.data;
+    if (cache && cache.promise) return cache.promise;
+
+    const promise = (async () => {
+      const nosql = this.app.nosql();
+      let allEdges: any[] = [];
+      let nextToken = undefined;
+      try {
+        do {
+          const page: any = await nosql.table('customedges').getPage({ max_rows: 200, next_token: nextToken });
+          allEdges.push(...(page.data || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item));
+          nextToken = page.next_token;
+        } while (nextToken);
+        if (cache) {
+          cache.data = allEdges;
+          cache.timestamp = Date.now();
+        }
+        return allEdges;
+      } catch (e: any) {
+        console.error('getCustomEdgesFromNoSQL error:', e.message);
+        return [];
+      } finally {
+        if (cache) cache.promise = null;
+      }
+    })();
+    
+    if (cache) cache.promise = promise;
+    return promise;
+  }
+
   async getCustomEdgesByCase(caseId: number): Promise<any[]> {
     try {
-      const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
-      const allEdges = res.map((r: any) => r.customedges);
-      return allEdges.filter((e: any) => e.source !== 'entity');
+      const allEdges = await this.getCustomEdgesFromNoSQL();
+      return allEdges.filter((e: any) => Number(e.CaseMasterID) === Number(caseId) && e.source !== 'entity');
     } catch (e: any) {
-      console.error('getCustomEdgesByCase ZCQL error:', e.message);
+      console.error('getCustomEdgesByCase error:', e.message);
       return [];
     }
   }
@@ -857,11 +887,9 @@ export class CloudScaleRepository implements IDataRepository {
 
   async getCaseEntities(caseId: number): Promise<any[]> {
     try {
-      const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
-      const allEdges = res.map((r: any) => r.customedges);
+      const allEdges = await this.getCustomEdgesFromNoSQL();
       
-      return allEdges.filter((e: any) => e.source === 'entity').map((edge: any) => {
+      return allEdges.filter((e: any) => Number(e.CaseMasterID) === Number(caseId) && e.source === 'entity').map((edge: any) => {
         try {
           return {
             EntityID: edge.target,
@@ -873,7 +901,7 @@ export class CloudScaleRepository implements IDataRepository {
         }
       }).filter(Boolean);
     } catch (e: any) {
-      console.error('getCaseEntities ZCQL error:', e.message);
+      console.error('getCaseEntities error:', e.message);
       return [];
     }
   }
@@ -925,14 +953,12 @@ export class CloudScaleRepository implements IDataRepository {
       console.error('Failed to delete primary entity node:', e);
     }
 
-    // 2. Fetch and delete any connected relationship edges using ZCQL
+    // 2. Fetch and delete any connected relationship edges using NoSQL getPage
     try {
-      const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery(`SELECT * FROM customedges WHERE CaseMasterID = ${caseId}`);
-      const allEdges = res.map((r: any) => r.customedges);
+      const allEdges = await this.getCustomEdgesFromNoSQL();
 
       for (const edge of allEdges) {
-        if (edge.source === entityEdgeId || edge.target === entityEdgeId) {
+        if (Number(edge.CaseMasterID) === Number(caseId) && (edge.source === entityEdgeId || edge.target === entityEdgeId)) {
           if (edge.EdgeID) {
             const edgeKeys = new NoSQLItem().addString('EdgeID', edge.EdgeID);
             await nosql.table('customedges').deleteItems({ keys: [edgeKeys] }).catch((err: any) => console.error(err));
@@ -1020,18 +1046,33 @@ export class CloudScaleRepository implements IDataRepository {
     }
   }
 
-  async updateCaseEntity(entityId: string, entityType: string, value: string, description: string, actorId: string = 'system'): Promise<any> {
+  async updateCaseEntity(entityId: string, entityType: string, value: string, description: string, actorId: string = 'system', position?: any): Promise<any> {
     const nosql = this.app.nosql();
     const { NoSQLItem, NoSQLEnum, NoSQLMarshall } = require('zcatalyst-sdk-node/lib/no-sql');
 
     const edgeId = `entity-${entityId}`;
     
+    // Support keeping existing position if not provided
+    let labelObj: any = { type: entityType, value, description };
+    if (position) {
+      labelObj.position = position;
+    } else {
+      try {
+        const existingEdges = await this.getCustomEdgesFromNoSQL();
+        const existing = existingEdges.find((e: any) => e.EdgeID === edgeId);
+        if (existing && existing.label) {
+          const parsed = JSON.parse(existing.label);
+          if (parsed.position) labelObj.position = parsed.position;
+        }
+      } catch (e) {}
+    }
+
     await nosql.table('customedges').updateItems({
       keys: new NoSQLItem().addString('EdgeID', edgeId),
       update_attributes: [
         {
           operation_type: NoSQLEnum.NoSQLUpdateOperationType.PUT,
-          update_value: NoSQLMarshall.make(JSON.stringify({ type: entityType, value, description })),
+          update_value: NoSQLMarshall.make(JSON.stringify(labelObj)),
           attribute_path: ['label']
         }
       ]
