@@ -296,7 +296,7 @@ class CloudScaleRepository {
         const maxId = employees.length > 0 ? Math.max(...employees.map((e) => e.EmployeeID || 0)) : 9000;
         employeeData.EmployeeID = maxId + 1;
         const item = NoSQLItem.from(employeeData);
-        await table.insertItems({ item });
+        await table.insertRow(item);
         GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
         await this.createAuditLog({
             Action: 'CREATE_EMPLOYEE',
@@ -371,7 +371,7 @@ class CloudScaleRepository {
         const maxId = units.length > 0 ? Math.max(...units.map((u) => u.UnitID || 0)) : 2000;
         unitData.UnitID = maxId + 1;
         const item = NoSQLItem.from(unitData);
-        await table.insertItems({ item });
+        await table.insertRow(item);
         GLOBAL_CACHE['units'] = { data: null, promise: null, timestamp: 0 };
         await this.createAuditLog({
             Action: 'CREATE_UNIT',
@@ -443,8 +443,8 @@ class CloudScaleRepository {
         const table = nosql.table('casemasters');
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
         const item = NoSQLItem.from(caseData);
-        // Explicitly using the already-proven insertItems
-        await table.insertItems({ item });
+        // Use the correctly supported insertRow method
+        await table.insertRow(item);
         // Invalidate caches explicitly
         GLOBAL_CACHE['casemasters'] = { data: null, promise: null, timestamp: 0 };
         // Audit log
@@ -816,7 +816,7 @@ class CloudScaleRepository {
         if (!note.NoteID)
             note.NoteID = Date.now();
         const item = NoSQLItem.from(note);
-        await nosql.table('timelinenotes').insertItems({ item });
+        await nosql.table('timelinenotes').insertRow(item);
         // Audit log
         await this.createAuditLog({
             Action: 'ADD_TIMELINE_NOTE',
@@ -854,7 +854,7 @@ class CloudScaleRepository {
         if (!evidence.EvidenceID)
             evidence.EvidenceID = Date.now();
         const item = NoSQLItem.from(evidence);
-        await nosql.table('evidencefiles').insertItems({ item });
+        await nosql.table('evidencefiles').insertRow(item);
         // Audit log
         await this.createAuditLog({
             Action: 'UPLOAD_EVIDENCE',
@@ -889,7 +889,7 @@ class CloudScaleRepository {
         if (!cs.CSID)
             cs.CSID = Date.now();
         const item = NoSQLItem.from(cs);
-        await nosql.table('chargesheets').insertItems({ item });
+        await nosql.table('chargesheets').insertRow(item);
         // Audit log
         await this.createAuditLog({
             Action: 'SUBMIT_CHARGESHEET',
@@ -961,7 +961,7 @@ class CloudScaleRepository {
                         target: 'index',
                         label: JSON.stringify(ids)
                     });
-                    await nosql.table('customedges').insertItems({ item });
+                    await nosql.table('customedges').insertRow(item);
                 }
             }
         }
@@ -976,7 +976,7 @@ class CloudScaleRepository {
                         target: 'index',
                         label: JSON.stringify([edgeId])
                     });
-                    await nosql.table('customedges').insertItems({ item });
+                    await nosql.table('customedges').insertRow(item);
                 }
                 catch (insertError) {
                     console.error('syncManualIndex fallback insert error:', insertError.message);
@@ -993,7 +993,7 @@ class CloudScaleRepository {
             edge.EdgeID = crypto.randomUUID();
         }
         const item = NoSQLItem.from(edge);
-        await nosql.table('customedges').insertItems({ item });
+        await nosql.table('customedges').insertRow(item);
         await this.syncManualIndex(edge.CaseMasterID, edge.EdgeID, 'add');
         const cacheKey = `customedges_${edge.CaseMasterID}`;
         if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
@@ -1036,7 +1036,7 @@ class CloudScaleRepository {
             label: JSON.stringify({ type: entityType, value: entity.value, description: entity.description })
         };
         const item = NoSQLItem.from(edge);
-        await nosql.table('customedges').insertItems({ item });
+        await nosql.table('customedges').insertRow(item);
         await this.syncManualIndex(entity.CaseMasterID, edge.EdgeID, 'add');
         const cacheKey = `customedges_${entity.CaseMasterID}`;
         if (GLOBAL_CACHE[cacheKey] && GLOBAL_CACHE[cacheKey].data) {
@@ -1229,7 +1229,7 @@ class CloudScaleRepository {
                 OldValue: log.OldValue || null,
                 NewValue: log.NewValue || null
             });
-            await table.insertItems({ item });
+            await table.insertRow(item);
         }
         catch (e) {
             // Do not re-throw here so the business operation succeeds even if auditing fails.

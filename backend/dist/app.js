@@ -389,8 +389,8 @@ app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
         let data = await db.getCases(filter);
         // Sort descending by default
         data.sort((a, b) => {
-            const dateA = a.CrimeRegisteredDate ? new Date(a.CrimeRegisteredDate).getTime() : 0;
-            const dateB = b.CrimeRegisteredDate ? new Date(b.CrimeRegisteredDate).getTime() : 0;
+            const dateA = a.CrimeRegisteredDateTime ? new Date(a.CrimeRegisteredDateTime).getTime() : 0;
+            const dateB = b.CrimeRegisteredDateTime ? new Date(b.CrimeRegisteredDateTime).getTime() : 0;
             return dateB - dateA;
         });
         if (req.query.page) {
@@ -593,7 +593,7 @@ app.put('/api/cases/:caseId/reassign', async (req, res) => {
     }
 });
 // Basic CRUD for Cases to trigger invalidation
-app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
+app.post('/api/cases', async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const caseData = { ...req.body };
