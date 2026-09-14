@@ -11,12 +11,11 @@ import { FIRDocument } from '../../components/FIRDocument';
 import { printFIRDocument } from '../../utils/printFIRDocument';
 
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
-import { useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 export const FIRManagement: React.FC = () => {
   const { t } = useLanguage();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams, setSearchParams] = useSearchParams();
   const dbVersion = useMockDb();
   
   const [serverCases, setServerCases] = useState<any[]>([]);
