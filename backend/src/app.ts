@@ -655,8 +655,8 @@ app.get('/api/actsections', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getActSections();
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch actsections' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch actsections' });
   }
 });
 
@@ -665,8 +665,8 @@ app.get('/api/acts', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getActs();
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch acts' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch acts' });
   }
 });
 
@@ -675,8 +675,8 @@ app.get('/api/sections', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
     const data = await db.getSections();
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch sections' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || 'Failed to fetch sections' });
   }
 });
 
