@@ -761,9 +761,13 @@ app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
             accusedData.AccusedMasterID = newCaseId; // Mock ID
             entityPromises.push(db.addCaseEntity('Accused', accusedData, actorId));
         }
-        // Save Acts if provided
+        // Save Acts if provided — skip any entry with empty/null ActID or SectionID
         if (actsData && Array.isArray(actsData)) {
             for (const act of actsData) {
+                if (!act.ActID || !act.SectionID) {
+                    console.log('[POST /api/cases] Skipping ActSection with missing ActID or SectionID:', act);
+                    continue;
+                }
                 act.CaseMasterID = newCaseId;
                 entityPromises.push(db.addCaseEntity('ActSection', act, actorId));
             }

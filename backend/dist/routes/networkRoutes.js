@@ -16,14 +16,34 @@ router.get('/search', authMiddleware_1.requireAuth, async (req, res) => {
         const allCases = await db.getCases({});
         // Filter cases based on CaseNo, CrimeNo, BriefFacts
         let matched = allCases;
+        // 1. Role-based filtering
+        const user = req.user;
+        if (user) {
+            if (user.role === 'Officer') {
+                matched = matched.filter((c) => c.PolicePersonID === user.employeeId);
+            }
+            else if (user.role === 'Analytics') {
+                matched = matched.filter((c) => c.PoliceStationID === user.unitId);
+            }
+        }
         if (query) {
-            matched = allCases.filter((c) => {
+            matched = matched.filter((c) => {
                 return ((c.CaseNo && String(c.CaseNo).toLowerCase().includes(query)) ||
                     (c.CrimeNo && String(c.CrimeNo).toLowerCase().includes(query)) ||
                     (c.BriefFacts && String(c.BriefFacts).toLowerCase().includes(query)));
             });
         }
-        // Limit to 30 cases
+        // 2. Sort by Date Descending, then CaseMasterID Descending
+        matched.sort((a, b) => {
+            const dateA = a.CrimeRegisteredDateTime || a.CrimeRegisteredDate || '';
+            const dateB = b.CrimeRegisteredDateTime || b.CrimeRegisteredDate || '';
+            const timeA = dateA ? new Date(dateA).getTime() : 0;
+            const timeB = dateB ? new Date(dateB).getTime() : 0;
+            if (timeB !== timeA)
+                return timeB - timeA;
+            return (b.CaseMasterID || 0) - (a.CaseMasterID || 0);
+        });
+        // 3. Limit to 30 cases
         matched = matched.slice(0, 30);
         // Format response
         const formatted = matched.map((c) => ({
@@ -31,6 +51,7 @@ router.get('/search', authMiddleware_1.requireAuth, async (req, res) => {
             CaseNo: c.CaseNo,
             CrimeNo: c.CrimeNo,
             CrimeRegisteredDate: c.CrimeRegisteredDate,
+            CrimeRegisteredDateTime: c.CrimeRegisteredDateTime,
             BriefFacts: c.BriefFacts,
             PolicePersonID: c.PolicePersonID,
             PoliceStationID: c.PoliceStationID

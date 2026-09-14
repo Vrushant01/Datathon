@@ -249,179 +249,156 @@ export const CriminalNetwork: React.FC = () => {
     return 'EVI';
   };
 
-  // Real-time synchronization for nodes and edges
+  // SSE: Graph Node Synchronization
   useEffect(() => {
-    const unsubEntity = sseClient.subscribe('CASE_ENTITY_CREATED', (payload: any) => {
-      try {
-        const newEntity = payload?.caseEntity ?? payload?.CaseEntity ?? payload?.entity ?? payload?.data?.caseEntity ?? payload?.data?.CaseEntity ?? payload?.data ?? payload;
-        const caseMasterId = newEntity?.CaseMasterID ?? newEntity?.caseMasterId ?? newEntity?.id ?? payload?.CaseMasterID ?? payload?.caseMasterId;
-        
-        if (!caseMasterId || !newEntity?.EntityID) return;
+    if (selectedFirId === null) return;
 
-        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
-        const entityNodeId = `entity-${newEntity.EntityID}`;
-        setNodes(prev => {
-          if (prev.find(n => n.id === entityNodeId)) return prev;
-          
-          const newNode: Node = {
-            id: entityNodeId,
-            type: 'custom',
-            position: { x: 400 + Math.random() * 100 - 50, y: 300 + Math.random() * 100 - 50 },
+    const handleEntityCreated = (event: any) => {
+      if (Number(event.CaseMasterID) !== selectedFirId) return;
+      const entityNodeId = `entity-${event.EntityID}`;
+      
+      setNodes(prev => {
+        if (prev.find(n => n.id === entityNodeId)) return prev;
+        const newNode: Node = {
+          id: entityNodeId,
+          type: 'custom',
+          position: event.position || { x: 400 + Math.random() * 100 - 50, y: 300 + Math.random() * 100 - 50 },
+          data: {
+            label: event.value,
+            color: getNodeColor(event.type, false),
+            symbol: getNodeSymbol(event.type),
+            type: event.type,
+            databaseEntityId: event.EntityID,
+            rawData: event
+          }
+        };
+        if (graphCache.current.has(selectedFirId)) {
+          graphCache.current.get(selectedFirId)!.nodes.push(newNode);
+        }
+        return [...prev, newNode];
+      });
+
+      setEdges(prev => {
+        const edgeId = `e-case-${selectedFirId}-${entityNodeId}`;
+        if (prev.find(edge => edge.id === edgeId)) return prev;
+        let relationLabel = 'Associated';
+        if (event.type === 'Vehicle') relationLabel = 'Transported In';
+        if (event.type === 'Phone') relationLabel = 'Calls From';
+        if (event.type === 'Bank') relationLabel = 'Wire Transfer';
+        if (event.type === 'Location') relationLabel = 'Frequents';
+        if (event.type === 'Weapon') relationLabel = 'Used In Crime';
+        if (event.type === 'Evidence') relationLabel = 'Seized';
+
+        const newEdge: Edge = {
+          id: edgeId,
+          source: `fir:${selectedFirId}`,
+          target: entityNodeId,
+          type: 'straight',
+          label: relationLabel,
+          animated: true,
+          style: { stroke: getNodeColor(event.type, false), strokeWidth: 1.5, opacity: 0.6 },
+          labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+          labelBgStyle: { fill: '#0f172a' }
+        };
+        if (graphCache.current.has(selectedFirId)) {
+          graphCache.current.get(selectedFirId)!.edges.push(newEdge);
+        }
+        return [...prev, newEdge];
+      });
+    };
+
+    const handleEntityUpdated = (event: any) => {
+      if (Number(event.CaseMasterID) !== selectedFirId) return;
+      const entityNodeId = `entity-${event.EntityID || event.id || event.EntityId}`;
+      setNodes(prev => prev.map(n => {
+        if (n.id === entityNodeId) {
+          const updatedNode = {
+            ...n,
+            position: event.position || n.position,
             data: {
-              label: newEntity.value,
-              color: getNodeColor(newEntity.type, false),
-              symbol: getNodeSymbol(newEntity.type),
-              type: newEntity.type,
-              databaseEntityId: newEntity.EntityID,
-              rawData: newEntity
+              ...n.data,
+              label: event.value || n.data.label,
+              rawData: { ...n.data.rawData, ...event }
             }
           };
-          
           if (graphCache.current.has(selectedFirId)) {
-            graphCache.current.get(selectedFirId)!.nodes.push(newNode);
+            const cache = graphCache.current.get(selectedFirId)!;
+            const idx = cache.nodes.findIndex((cn: any) => cn.id === entityNodeId);
+            if (idx >= 0) cache.nodes[idx] = updatedNode;
           }
-          return [...prev, newNode];
-        });
-
-        setEdges(prev => {
-          const edgeId = `e-case-${selectedFirId}-${entityNodeId}`;
-          if (prev.find(edge => edge.id === edgeId)) return prev;
-
-          let relationLabel = 'Associated';
-          if (newEntity.type === 'Vehicle') relationLabel = 'Transported In';
-          if (newEntity.type === 'Phone') relationLabel = 'Calls From';
-          if (newEntity.type === 'Bank') relationLabel = 'Wire Transfer';
-          if (newEntity.type === 'Location') relationLabel = 'Frequents';
-          if (newEntity.type === 'Weapon') relationLabel = 'Used In Crime';
-          if (newEntity.type === 'Evidence') relationLabel = 'Seized';
-
-          const newEdge: Edge = {
-            id: edgeId,
-            source: `fir:${selectedFirId}`,
-            target: entityNodeId,
-            type: 'straight',
-            label: relationLabel,
-            animated: true,
-            style: { stroke: getNodeColor(newEntity.type, false), strokeWidth: 1.5, opacity: 0.6 },
-            labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-            labelBgStyle: { fill: '#0f172a' }
+          return updatedNode;
+        }
+        return n;
+      }));
+      
+      setSelectedNodeData(prev => {
+        if (prev && prev.rawData?.EntityID === (event.EntityID || event.id || event.EntityId)) {
+          return {
+            ...prev,
+            label: event.value || prev.label,
+            rawData: { ...prev.rawData, ...event }
           };
+        }
+        return prev;
+      });
+    };
 
-          if (graphCache.current.has(selectedFirId)) {
-            graphCache.current.get(selectedFirId)!.edges.push(newEdge);
-          }
-          return [...prev, newEdge];
-        });
-      }
-      } catch (err) {
-        console.error("[SSE] Invalid CASE_ENTITY_CREATED payload", payload, err);
-      }
-    });
-
-    const unsubEdge = sseClient.subscribe('CASE_EDGE_CREATED', (payload: any) => {
-      try {
-        const newEdgeData = payload?.edge ?? payload?.Edge ?? payload?.data?.edge ?? payload?.data?.Edge ?? payload?.data ?? payload;
-        const caseMasterId = newEdgeData?.CaseMasterID ?? newEdgeData?.caseMasterId ?? payload?.CaseMasterID ?? payload?.caseMasterId;
-
-        if (!caseMasterId || !newEdgeData?.EdgeID) return;
-
-        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
-        setEdges(prev => {
-          if (prev.find(edge => edge.id === newEdgeData.EdgeID)) return prev;
-          
-          const newEdge: Edge = {
-            id: newEdgeData.EdgeID,
-            source: newEdgeData.source,
-            target: newEdgeData.target,
+    const handleEntityDeleted = (event: any) => {
+      if (Number(event.CaseMasterID) !== selectedFirId) return;
+      const entityNodeId = `entity-${event.id || event.EntityID}`;
+      
+      setNodes(prev => {
+        const filtered = prev.filter(n => n.id !== entityNodeId);
+        if (graphCache.current.has(selectedFirId)) graphCache.current.get(selectedFirId)!.nodes = filtered;
+        return filtered;
+      });
+      setEdges(prev => {
+        const filtered = prev.filter(e => e.source !== entityNodeId && e.target !== entityNodeId);
+        if (graphCache.current.has(selectedFirId)) graphCache.current.get(selectedFirId)!.edges = filtered;
+        return filtered;
+      });
+      
+      setSelectedNodeData(prev => {
+         if (prev && prev.rawData?.EntityID === (event.id || event.EntityID)) return null;
+         return prev;
+      });
+    };
+    
+    const handleEdgeCreated = (event: any) => {
+      if (Number(event.CaseMasterID) !== selectedFirId) return;
+      
+      setEdges(prev => {
+        if (prev.find(e => e.id === event.EdgeID)) return prev;
+        const newEdge: Edge = {
+            id: event.EdgeID,
+            source: event.source,
+            target: event.target,
             type: 'straight',
-            label: newEdgeData.label || 'Linked',
+            label: event.label || 'Linked',
             animated: true,
             style: { stroke: '#eab308', strokeWidth: 2, strokeDasharray: '5, 5' },
             labelStyle: { fill: '#eab308', fontWeight: 700, fontSize: 11 },
             labelBgStyle: { fill: '#0f172a' }
-          };
-          if (graphCache.current.has(selectedFirId)) {
-            graphCache.current.get(selectedFirId)!.edges.push(newEdge);
-          }
-          return [...prev, newEdge];
-        });
-      }
-      } catch (err) {
-        console.error("[SSE] Invalid CASE_EDGE_CREATED payload", payload, err);
-      }
-    });
-
-    const unsubEntityUpdated = sseClient.subscribe('CASE_ENTITY_UPDATED', (payload: any) => {
-      try {
-        const updateData = payload?.data ?? payload;
-        const caseMasterId = updateData?.CaseMasterID ?? updateData?.caseMasterId;
-        // @ts-ignore
-        const entityId = updateData?.EntityID ?? updateData?.id;
-
-        if (!caseMasterId || !entityId) return;
-
-        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
-          const entityNodeId = `entity-${entityId}`;
-          setNodes(prev => prev.map(n => {
-            if (n.id === entityNodeId) {
-              const updatedNode = {
-                ...n,
-                data: {
-                  ...n.data,
-                  label: updateData.value,
-                  rawData: updateData
-                }
-              };
-              
-              if (graphCache.current.has(selectedFirId)) {
-                const cache = graphCache.current.get(selectedFirId)!;
-                const idx = cache.nodes.findIndex(cn => cn.id === entityNodeId);
-                if (idx !== -1) cache.nodes[idx] = updatedNode;
-              }
-              
-              return updatedNode;
-            }
-            return n;
-          }));
+        };
+        if (graphCache.current.has(selectedFirId)) {
+          graphCache.current.get(selectedFirId)!.edges.push(newEdge);
         }
-      } catch (err) {
-        console.error("[SSE] Invalid CASE_ENTITY_UPDATED payload", payload, err);
-      }
-    });
+        return [...prev, newEdge];
+      });
+    };
 
-    const unsubEntityDeleted = sseClient.subscribe('CASE_ENTITY_DELETED', (payload: any) => {
-      try {
-        const delData = payload?.data ?? payload;
-        const caseMasterId = delData?.CaseMasterID ?? delData?.caseMasterId;
-        // @ts-ignore
-        const deletedId = delData?.id ?? delData?.EntityID;
-
-        if (!caseMasterId || !deletedId) return;
-
-        if (selectedFirId !== null && Number(caseMasterId) === selectedFirId) {
-          const entityNodeId = `entity-${deletedId}`;
-          setNodes(prev => prev.filter(n => n.id !== entityNodeId));
-          setEdges(prev => prev.filter(e => e.source !== entityNodeId && e.target !== entityNodeId));
-          
-          if (graphCache.current.has(selectedFirId)) {
-            const cache = graphCache.current.get(selectedFirId)!;
-            cache.nodes = cache.nodes.filter(n => n.id !== entityNodeId);
-            cache.edges = cache.edges.filter(e => e.source !== entityNodeId && e.target !== entityNodeId);
-          }
-        }
-      } catch (err) {
-        console.error("[SSE] Invalid CASE_ENTITY_DELETED payload", payload, err);
-      }
-    });
+    const unsubEntCreated = sseClient.subscribe('CASE_ENTITY_CREATED', handleEntityCreated);
+    const unsubEntUpdated = sseClient.subscribe('CASE_ENTITY_UPDATED', handleEntityUpdated);
+    const unsubEntDeleted = sseClient.subscribe('CASE_ENTITY_DELETED', handleEntityDeleted);
+    const unsubEdgeCreated = sseClient.subscribe('CASE_EDGE_CREATED', handleEdgeCreated);
 
     return () => {
-      unsubEntity();
-      unsubEdge();
-      unsubEntityUpdated();
-      unsubEntityDeleted();
+      unsubEntCreated();
+      unsubEntUpdated();
+      unsubEntDeleted();
+      unsubEdgeCreated();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFirId, setNodes, setEdges]);
+  }, [selectedFirId, setNodes, setEdges, setSelectedNodeData]);
 
   // Recompute graph when FIR is selected
   useEffect(() => {
@@ -797,10 +774,10 @@ export const CriminalNetwork: React.FC = () => {
         </div>
       ) : (
         // --- REACT FLOW VISUALIZER ---
-        <div className="flex-1 grid grid-cols-12 gap-4 p-4 min-h-0 overflow-hidden relative">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 lg:min-h-0 overflow-y-auto lg:overflow-hidden relative">
           
           {/* Main Visualizer (9 cols) */}
-          <div className="col-span-12 lg:col-span-9 h-full flex flex-col relative glass-panel rounded-xl border-white/10 overflow-hidden">
+          <div className="col-span-1 lg:col-span-9 min-h-[500px] lg:min-h-0 h-full flex flex-col relative glass-panel rounded-xl border-white/10 overflow-hidden">
             
             <div className="absolute top-4 left-4 z-20 flex gap-2">
               <button 
@@ -846,7 +823,7 @@ export const CriminalNetwork: React.FC = () => {
           </div>
 
           {/* Sidebar Panel (3 cols) */}
-          <div className="col-span-12 lg:col-span-3 h-full flex flex-col gap-4 overflow-y-auto">
+          <div className="col-span-1 lg:col-span-3 h-auto lg:h-full flex flex-col gap-4 overflow-y-auto">
             
             <div className="glass-panel rounded-xl border-white/10 flex-1 flex flex-col p-5">
               <div className="border-b border-white/10 pb-4 mb-4 flex items-center justify-between">

@@ -314,7 +314,14 @@ class CloudScaleRepository {
                 return clean;
             }).filter(Boolean);
             cacheEntry.data = cleaned;
-            cacheEntry.timestamp = Date.now();
+            // If we got 0 records (unexpected for core tables) or had batch errors, do not cache for 5 minutes.
+            // This allows the frontend's 10s retry to actually hit the database again instead of getting stuck on a cached empty array.
+            if (cleaned.length === 0 || batchErrors > 0) {
+                cacheEntry.timestamp = 0;
+            }
+            else {
+                cacheEntry.timestamp = Date.now();
+            }
             cacheEntry.promise = null;
             return cleaned;
         })();
@@ -649,8 +656,11 @@ class CloudScaleRepository {
                     const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', `case-idx-${caseId}`)] });
                     const raw = resp;
                     if (raw.get && raw.get.length > 0) {
-                        const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : raw.get[0].item;
-                        indexIds = JSON.parse(itemObj?.label || '[]');
+                        const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : (typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item);
+                        let labelStr = itemObj?.label;
+                        if (labelStr && typeof labelStr === 'object' && 'S' in labelStr)
+                            labelStr = labelStr.S;
+                        indexIds = JSON.parse(labelStr || '[]');
                     }
                 }
                 catch (e) { }
@@ -663,7 +673,30 @@ class CloudScaleRepository {
                         try {
                             const resp = await nosql.table('customedges').fetchItem({ keys });
                             const raw = resp;
-                            stronglyConsistentEdges.push(...(raw.get || []).map((d) => typeof d.item?.to === 'function' ? d.item.to() : d.item));
+                            stronglyConsistentEdges.push(...(raw.get || []).map((d) => {
+                                const itemObj = typeof d.item?.to === 'function' ? d.item.to() : (typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item);
+                                if (!itemObj)
+                                    return null;
+                                const clean = {};
+                                for (const [k, v] of Object.entries(itemObj)) {
+                                    if (v && typeof v === 'object') {
+                                        if ('S' in v)
+                                            clean[k] = v.S;
+                                        else if ('N' in v)
+                                            clean[k] = Number(v.N);
+                                        else if ('BOOL' in v)
+                                            clean[k] = v.BOOL === true || v.BOOL === 'true';
+                                        else if ('NULL' in v)
+                                            clean[k] = null;
+                                        else
+                                            clean[k] = v;
+                                    }
+                                    else {
+                                        clean[k] = v;
+                                    }
+                                }
+                                return clean;
+                            }).filter(Boolean));
                         }
                         catch (e) { }
                     }
@@ -1079,8 +1112,11 @@ class CloudScaleRepository {
             let exists = false;
             if (raw.get && raw.get.length > 0) {
                 exists = true;
-                const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : raw.get[0].item;
-                ids = JSON.parse(itemObj?.label || '[]');
+                const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : (typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item);
+                let labelStr = itemObj?.label;
+                if (labelStr && typeof labelStr === 'object' && 'S' in labelStr)
+                    labelStr = labelStr.S;
+                ids = JSON.parse(labelStr || '[]');
             }
             let changed = false;
             if (action === 'add' && !ids.includes(edgeId)) {
@@ -1194,13 +1230,19 @@ class CloudScaleRepository {
             return entity;
         }
         if (entityType === 'ActSection') {
+            // Guard: skip insert entirely if ActID or SectionID are empty/falsy
+            if (!entity.ActID || !entity.SectionID) {
+                console.log('[addCaseEntity] Skipping ActSection insert: missing ActID or SectionID', entity);
+                return entity;
+            }
             // ActSectionAssociation is a Datastore table, not NoSQL
             const datastore = this.app.datastore();
             try {
                 await datastore.table('ActSectionAssociation').insertRow(entity);
             }
             catch (err) {
-                throw new Error(`Failed to insert ActSectionAssociation: ${err.message || 'Table does not exist'}`);
+                // Log but do NOT throw — a missing act-section link should never fail the whole FIR creation
+                console.error(`Failed to insert ActSectionAssociation (non-fatal):`, err.message || err);
             }
             return entity;
         }
@@ -1386,7 +1428,7 @@ class CloudScaleRepository {
             Description: `Updated entity ${entityId} to type ${entityType}, value ${value}`,
             ActorID: actorId
         });
-        return { EntityID: entityId, type: entityType, value, description };
+        return { EntityID: entityId, type: entityType, value, description, position: labelObj.position };
     }
     // --- Audit Logs ---
     async createAuditLog(log) {

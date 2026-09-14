@@ -263,7 +263,13 @@ export class CloudScaleRepository implements IDataRepository {
       }).filter(Boolean);
 
       cacheEntry.data = cleaned;
-      cacheEntry.timestamp = Date.now();
+      // If we got 0 records (unexpected for core tables) or had batch errors, do not cache for 5 minutes.
+      // This allows the frontend's 10s retry to actually hit the database again instead of getting stuck on a cached empty array.
+      if (cleaned.length === 0 || batchErrors > 0) {
+        cacheEntry.timestamp = 0;
+      } else {
+        cacheEntry.timestamp = Date.now();
+      }
       cacheEntry.promise = null;
       return cleaned;
     })();
@@ -627,8 +633,10 @@ export class CloudScaleRepository implements IDataRepository {
           const resp = await nosql.table('customedges').fetchItem({ keys: [new NoSQLItem().addString('EdgeID', `case-idx-${caseId}`)] });
           const raw = resp as any;
           if (raw.get && raw.get.length > 0) {
-            const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : raw.get[0].item;
-            indexIds = JSON.parse(itemObj?.label || '[]');
+            const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : (typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item);
+            let labelStr = itemObj?.label;
+            if (labelStr && typeof labelStr === 'object' && 'S' in labelStr) labelStr = labelStr.S;
+            indexIds = JSON.parse(labelStr || '[]');
           }
         } catch (e) {}
 
@@ -641,7 +649,23 @@ export class CloudScaleRepository implements IDataRepository {
             try {
               const resp = await nosql.table('customedges').fetchItem({ keys });
               const raw = resp as any;
-              stronglyConsistentEdges.push(...(raw.get || []).map((d: any) => typeof d.item?.to === 'function' ? d.item.to() : d.item));
+              stronglyConsistentEdges.push(...(raw.get || []).map((d: any) => {
+                const itemObj = typeof d.item?.to === 'function' ? d.item.to() : (typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item);
+                if (!itemObj) return null;
+                const clean: any = {};
+                for (const [k, v] of Object.entries(itemObj)) {
+                  if (v && typeof v === 'object') {
+                    if ('S' in (v as any)) clean[k] = (v as any).S;
+                    else if ('N' in (v as any)) clean[k] = Number((v as any).N);
+                    else if ('BOOL' in (v as any)) clean[k] = (v as any).BOOL === true || (v as any).BOOL === 'true';
+                    else if ('NULL' in (v as any)) clean[k] = null;
+                    else clean[k] = v;
+                  } else {
+                    clean[k] = v;
+                  }
+                }
+                return clean;
+              }).filter(Boolean));
             } catch (e) {}
           }
         }
@@ -1093,8 +1117,10 @@ export class CloudScaleRepository implements IDataRepository {
       let exists = false;
       if (raw.get && raw.get.length > 0) {
         exists = true;
-        const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : raw.get[0].item;
-        ids = JSON.parse(itemObj?.label || '[]');
+        const itemObj = typeof raw.get[0].item?.to === 'function' ? raw.get[0].item.to() : (typeof raw.get[0].item?.toJSON === 'function' ? raw.get[0].item.toJSON() : raw.get[0].item);
+        let labelStr = itemObj?.label;
+        if (labelStr && typeof labelStr === 'object' && 'S' in labelStr) labelStr = labelStr.S;
+        ids = JSON.parse(labelStr || '[]');
       }
       
       let changed = false;
@@ -1428,7 +1454,7 @@ export class CloudScaleRepository implements IDataRepository {
       ActorID: actorId
     });
 
-    return { EntityID: entityId, type: entityType, value, description };
+    return { EntityID: entityId, type: entityType, value, description, position: labelObj.position };
   }
 
   // --- Audit Logs ---
