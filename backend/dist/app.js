@@ -224,8 +224,12 @@ app.get('/api/units', async (req, res) => {
         if (req.query.district) {
             data = data.filter(u => u.DistrictID === parseInt(req.query.district));
         }
-        // Sort by UnitID
-        data.sort((a, b) => Number(a.UnitID) - Number(b.UnitID));
+        if (req.query.sort === 'newest') {
+            data.sort((a, b) => Number(b.UnitID) - Number(a.UnitID));
+        }
+        else {
+            data.sort((a, b) => Number(a.UnitID) - Number(b.UnitID));
+        }
         if (req.query.page) {
             const page = parseInt(req.query.page) || 1;
             const pageSize = parseInt(req.query.pageSize) || 30;
@@ -302,6 +306,15 @@ app.get('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
 app.post('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        // Validation: Ensure Police Station belongs to District
+        const units = await db.getUnits();
+        const targetUnit = units.find((u) => Number(u.UnitID) === Number(req.body.UnitID));
+        if (!targetUnit) {
+            return res.status(400).json({ error: 'Invalid PoliceStationID / UnitID provided.' });
+        }
+        if (Number(targetUnit.DistrictID) !== Number(req.body.DistrictID)) {
+            return res.status(400).json({ error: `Validation Error: The selected Police Station (UnitID ${req.body.UnitID}) does not belong to the selected District (DistrictID ${req.body.DistrictID}).` });
+        }
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const newEmployee = await db.createEmployee(req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
@@ -326,6 +339,15 @@ app.post('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
 app.put('/api/employees/:id', authMiddleware_1.requireAuth, async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        // Validation: Ensure Police Station belongs to District
+        const units = await db.getUnits();
+        const targetUnit = units.find((u) => Number(u.UnitID) === Number(req.body.UnitID));
+        if (!targetUnit) {
+            return res.status(400).json({ error: 'Invalid PoliceStationID / UnitID provided.' });
+        }
+        if (Number(targetUnit.DistrictID) !== Number(req.body.DistrictID)) {
+            return res.status(400).json({ error: `Validation Error: The selected Police Station (UnitID ${req.body.UnitID}) does not belong to the selected District (DistrictID ${req.body.DistrictID}).` });
+        }
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updated = await db.updateEmployee(Number(req.params.id), req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
@@ -610,7 +632,8 @@ app.get('/api/actsections', async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch actsections' });
+        const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
+        res.status(500).json({ error: msg });
     }
 });
 app.get('/api/acts', async (req, res) => {
@@ -620,7 +643,26 @@ app.get('/api/acts', async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch acts' });
+        const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
+        res.status(500).json({ error: msg });
+    }
+});
+app.get('/api/test-zcql', async (req, res) => {
+    try {
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
+        const q = req.query.q;
+        const t = req.query.t;
+        let resData;
+        if (t) {
+            resData = await db.scanAll(t);
+        }
+        else {
+            resData = await db.app.zcql().executeZCQLQuery(q);
+        }
+        res.json(resData);
+    }
+    catch (error) {
+        res.status(500).json({ error: typeof error === 'object' ? JSON.stringify(error) : String(error) });
     }
 });
 app.get('/api/sections', async (req, res) => {
@@ -630,7 +672,8 @@ app.get('/api/sections', async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch sections' });
+        const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
+        res.status(500).json({ error: msg });
     }
 });
 app.put('/api/cases/:caseId/reassign', async (req, res) => {

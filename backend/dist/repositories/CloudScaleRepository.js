@@ -190,6 +190,10 @@ class CloudScaleRepository {
                         if (e && e.message && e.message.includes('No such Item')) {
                             // Genuninely no records found for these keys, ignore
                         }
+                        else if (e && e.message && e.message.includes('No such resource')) {
+                            // Table does not exist - throw to abort
+                            throw e;
+                        }
                         else {
                             batchErrors++;
                             console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
@@ -213,31 +217,50 @@ class CloudScaleRepository {
             if (batchErrors > 0) {
                 console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
             }
-            // Fetch dynamically created records (IDs > hardcoded bounds) using ZCQL
-            try {
-                const zcql = this.app.zcql();
-                let maxHardcodedId = 0;
-                if (actualTableName === 'casemasters')
-                    maxHardcodedId = 300150;
-                else if (actualTableName === 'employees')
-                    maxHardcodedId = 30960;
-                else if (actualTableName === 'units')
-                    maxHardcodedId = 2960;
-                else if (actualTableName === 'accuseds')
-                    maxHardcodedId = 300150;
-                else if (actualTableName === 'victims')
-                    maxHardcodedId = 300150;
-                if (maxHardcodedId > 0) {
-                    const res = await zcql.executeZCQLQuery(`SELECT * FROM ${actualTableName} WHERE ${pkField} > ${maxHardcodedId} LIMIT 2000`);
-                    if (res && res.length > 0) {
-                        const newItems = res.map((r) => r[actualTableName] || r[tableName] || r).filter(Boolean);
-                        allItems.push(...newItems);
-                        console.log(`[DB] Fetched ${newItems.length} new dynamic records for ${actualTableName} via ZCQL`);
+            // Fetch dynamically created records sequentially since NoSQL ZCQL is unreliable for NoSQL tables
+            let dynamicStartId = 0;
+            if (actualTableName === 'casemasters')
+                dynamicStartId = 300501;
+            else if (actualTableName === 'employees')
+                dynamicStartId = 30961;
+            else if (actualTableName === 'units')
+                dynamicStartId = 2961;
+            else if (actualTableName === 'accuseds')
+                dynamicStartId = 300501;
+            else if (actualTableName === 'victims')
+                dynamicStartId = 300501;
+            if (dynamicStartId > 0) {
+                let currentDynamicId = dynamicStartId;
+                let foundEmpty = false;
+                let consecutiveEmptyBatches = 0;
+                while (!foundEmpty && currentDynamicId < dynamicStartId + 10000) { // Safety bound
+                    const batchIds = [];
+                    for (let i = 0; i < 25; i++)
+                        batchIds.push(currentDynamicId + i);
+                    const keys = batchIds.map(v => new NoSQLItem().addNumber(pkField, v));
+                    try {
+                        this.metrics.nosqlCalls++;
+                        const resp = await table.fetchItem({ keys });
+                        const raw = resp;
+                        const items = (raw.get || []).map((d) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+                        if (items.length === 0) {
+                            consecutiveEmptyBatches++;
+                            if (consecutiveEmptyBatches >= 2)
+                                foundEmpty = true; // Tolerate small gaps
+                        }
+                        else {
+                            consecutiveEmptyBatches = 0;
+                            allItems.push(...items);
+                            console.log(`[DB] Fetched dynamic records for ${actualTableName}: +${items.length} (ID: ${currentDynamicId})`);
+                        }
                     }
+                    catch (e) {
+                        consecutiveEmptyBatches++;
+                        if (consecutiveEmptyBatches >= 2)
+                            foundEmpty = true;
+                    }
+                    currentDynamicId += 25;
                 }
-            }
-            catch (e) {
-                console.warn(`[DB] ZCQL dynamic fetch failed for ${actualTableName}:`, e?.message);
             }
             const cleaned = allItems.map(item => {
                 if (!item)
@@ -302,46 +325,53 @@ class CloudScaleRepository {
         const nosql = this.app.nosql();
         const table = nosql.table('employees');
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        // Concurrency-safe ID Generation using Cache Mutex
-        const cacheSegment = this.app.cache().segment();
-        const lockKey = 'EMPLOYEE_ID_LOCK';
-        const lockToken = require('crypto').randomUUID();
-        let locked = false;
+        const employees = await this.getEmployees();
+        let employeeId = employees.length > 0 ? Math.max(...employees.map((e) => Number(e.EmployeeID) || 0)) : 9000;
+        employeeId++;
+        let inserted = false;
         let attempts = 0;
-        while (!locked && attempts < 30) {
-            await cacheSegment.put(lockKey, lockToken, 1); // 1 hour expiry
-            const currentToken = await cacheSegment.getValue(lockKey);
-            if (currentToken === lockToken) {
-                locked = true;
-                break;
-            }
-            await new Promise(r => setTimeout(r, 100 + Math.random() * 100));
-            attempts++;
-        }
-        if (!locked) {
-            throw new Error('Failed to acquire lock for generating Employee ID. Please try again.');
-        }
-        try {
-            // Safe to read maxId since we hold the lock
-            const employees = await this.getEmployees();
-            const maxId = employees.length > 0 ? Math.max(...employees.map((e) => Number(e.EmployeeID) || 0)) : 9000;
-            employeeData.EmployeeID = maxId + 1;
+        // Concurrency-safe strategy using the database's native unique constraint.
+        // Catalyst NoSQL insertItems will throw if the partition key already exists.
+        while (!inserted && attempts < 30) {
+            employeeData.EmployeeID = employeeId;
             const item = NoSQLItem.from(employeeData);
-            await table.insertItems({ item });
-            GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
-            await this.createAuditLog({
-                Action: 'CREATE_EMPLOYEE',
-                EntityType: 'EMPLOYEE',
-                EntityID: String(employeeData.EmployeeID),
-                Description: `Officer ${employeeData.FirstName} registered`,
-                ActorID: actorId
-            }).catch(e => console.error(e));
-            return employeeData;
+            try {
+                await table.insertItems({ item });
+                inserted = true;
+            }
+            catch (e) {
+                let errorMsg = '';
+                try {
+                    errorMsg = typeof e === 'object' ? JSON.stringify(e).toLowerCase() : String(e).toLowerCase();
+                }
+                catch {
+                    errorMsg = String(e.message || e).toLowerCase();
+                }
+                // If the item already exists or duplicate key error, we increment and retry
+                if (errorMsg.includes('exist') || errorMsg.includes('duplicate') || errorMsg.includes('already')) {
+                    employeeId++;
+                    attempts++;
+                    // slight backoff to reduce contention
+                    await new Promise(r => setTimeout(r, 50 + Math.random() * 50));
+                }
+                else {
+                    console.error("NoSQL Insert Error:", e);
+                    throw new Error(`DB Insert Error: ${errorMsg}`); // Throw informative actual network/DB errors
+                }
+            }
         }
-        finally {
-            // Always release the lock
-            await cacheSegment.delete(lockKey).catch(() => { });
+        if (!inserted) {
+            throw new Error('Failed to generate a unique Employee ID after multiple attempts due to high concurrency. Please try again.');
         }
+        GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
+        await this.createAuditLog({
+            Action: 'CREATE_EMPLOYEE',
+            EntityType: 'EMPLOYEE',
+            EntityID: String(employeeData.EmployeeID),
+            Description: `Officer ${employeeData.FirstName} registered`,
+            ActorID: actorId
+        }).catch(e => console.error(e));
+        return employeeData;
     }
     async updateEmployee(employeeId, updateData, actorId = 'system') {
         const nosql = this.app.nosql();
@@ -672,47 +702,13 @@ class CloudScaleRepository {
         }
     }
     async getActSections() {
-        try {
-            const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM ActSectionAssociation LIMIT 2000");
-            return res.map((r) => r.ActSectionAssociation);
-        }
-        catch (e) {
-            console.error('getActSections ZCQL error:', e.message);
-            return [];
-        }
+        return this.scanAll('ActSectionAssociation');
     }
     async getActs() {
-        try {
-            const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM Act LIMIT 2000");
-            return res.map((r) => ({
-                ActCode: r.Act.ActCode || r.Act.actcode || r.Act.ACTCODE || '',
-                ActDescription: r.Act.ActDescription || r.Act.actdescription || r.Act.ACTDESCRIPTION || '',
-                ShortName: r.Act.ShortName || r.Act.shortname || r.Act.SHORTNAME || '',
-                Active: true
-            }));
-        }
-        catch (e) {
-            console.error('getActs ZCQL error:', e.message);
-            return [];
-        }
+        return this.scanAll('Act');
     }
     async getSections() {
-        try {
-            const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM Section LIMIT 2000");
-            return res.map((r) => ({
-                ActCode: r.Section.ActCode || r.Section.actcode || r.Section.ACTCODE || '',
-                SectionCode: r.Section.SectionCode || r.Section.sectioncode || r.Section.SECTIONCODE || '',
-                SectionDescription: r.Section.SectionDescription || r.Section.sectiondescription || r.Section.SECTIONDESCRIPTION || '',
-                Active: true
-            }));
-        }
-        catch (e) {
-            console.error('getSections ZCQL error:', e.message);
-            return [];
-        }
+        return this.scanAll('Section');
     }
     async getRepeatOffenders() {
         const allAccused = await this.scanAll('Accused');
@@ -1164,7 +1160,12 @@ class CloudScaleRepository {
         if (entityType === 'ActSection') {
             // ActSectionAssociation is a Datastore table, not NoSQL
             const datastore = this.app.datastore();
-            await datastore.table('ActSectionAssociation').insertRow(entity);
+            try {
+                await datastore.table('ActSectionAssociation').insertRow(entity);
+            }
+            catch (err) {
+                throw new Error(`Failed to insert ActSectionAssociation: ${err.message || 'Table does not exist'}`);
+            }
             return entity;
         }
         // Fallback: Persist to customedges for pure Network Graph custom entities
