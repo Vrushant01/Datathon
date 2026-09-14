@@ -3,7 +3,7 @@ import { mockDb, CaseMasterRow } from '../../../data/mockDb';
 import { useAuth } from '../../context/AuthContext';
 import { FileText, Search, X } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
-import { PrintFIR } from '../../components/PrintFIR';
+
 
 export const AnalyticsFIRs: React.FC = () => {
   const { user } = useAuth();
@@ -178,7 +178,7 @@ export const AnalyticsFIRs: React.FC = () => {
       )}
 
       {/* Official Print Layout (Hidden unless printing) */}
-      <PrintFIR firData={selectedFirDetails?.mainCase || null} />
+
 
     </div>
   );

@@ -8,7 +8,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../config/api';
 import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
-import { PrintFIR } from '../../components/PrintFIR';
+
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { useLocation } from 'react-router-dom';
 
@@ -468,7 +468,7 @@ export const FIRManagement: React.FC = () => {
       )}
 
       {/* Official Print Layout (Hidden unless printing) */}
-      <PrintFIR firData={selectedFirDetails?.mainCase || null} />
+
 
       {/* Offender Filter Indicator */}
       {filterPersonId && (

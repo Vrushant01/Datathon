@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { TransparentLogo } from '../../components/TransparentLogo';
 import { FIRDocument } from '../../components/FIRDocument';
-import { PrintFIR } from '../../components/PrintFIR';
+
 
 export const CaseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -514,7 +514,7 @@ export const CaseDetail: React.FC = () => {
         </div>
       </div>
     </div>
-    <PrintFIR firData={cDetails?.mainCase || null} />
+
     </>
   );
 };

@@ -261,31 +261,55 @@
 }
 
 @media print {
-  #root {
-    display: none !important;
-  }
+  /* Ensure the body and HTML don't clip content */
   html, body {
     height: auto !important;
+    min-height: 100% !important;
     overflow: visible !important;
     background: white !important;
   }
-  .print-only-portal {
-    display: block !important;
-    position: relative !important;
-    width: 100%;
+
+  /* Hide everything on the page by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* But make the printable FIR document and all its children visible */
+  .printable-fir-document, .printable-fir-document * {
+    visibility: visible;
+  }
+
+  /* Detach the FIR document from all modal wrappers so it starts at the top left of the printed page */
+  .printable-fir-document {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
   }
-  @page {
-    size: A4;
-    margin: 20mm;
-  }
-}
 
-@media screen {
-  .print-only-portal {
+  /* Remove positioning/overflow constraints from ALL elements to prevent clipping the absolute positioned FIR */
+  * {
+    overflow: visible !important;
+  }
+  
+  .fixed, .relative, .absolute, .sticky {
+    position: static !important;
+    transform: none !important;
+  }
+
+  /* Hide elements that shouldn't be printed */
+  .no-print {
     display: none !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 10mm;
   }
 }
 
