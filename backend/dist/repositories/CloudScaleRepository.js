@@ -187,25 +187,13 @@ class CloudScaleRepository {
                         allItems.push(...items);
                     }
                     catch (e) {
-                        // Batch failed due to missing keys (Catalyst NoSQL throws if any key in batch is missing)
-                        // Fallback: fetch individually concurrently
-                        await Promise.all(keys.map(async (key) => {
-                            try {
-                                this.metrics.nosqlCalls++;
-                                const singleResp = await table.fetchItem({ keys: [key] });
-                                const singleRaw = singleResp;
-                                const singleItems = (singleRaw.get || []).map((d) => {
-                                    const item = d.item;
-                                    if (!item)
-                                        return null;
-                                    return typeof item.toJSON === 'function' ? item.toJSON() : item;
-                                }).filter(Boolean);
-                                allItems.push(...singleItems);
-                            }
-                            catch (err) {
-                                // Key truly missing or actual error, ignore for this single item
-                            }
-                        }));
+                        if (e && e.message && e.message.includes('No such Item')) {
+                            // Genuninely no records found for these keys, ignore
+                        }
+                        else {
+                            batchErrors++;
+                            console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
+                        }
                     }
                 });
             }
@@ -314,20 +302,46 @@ class CloudScaleRepository {
         const nosql = this.app.nosql();
         const table = nosql.table('employees');
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-        const employees = await this.getEmployees();
-        const maxId = employees.length > 0 ? Math.max(...employees.map((e) => e.EmployeeID || 0)) : 9000;
-        employeeData.EmployeeID = maxId + 1;
-        const item = NoSQLItem.from(employeeData);
-        await table.insertItems({ item });
-        GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
-        await this.createAuditLog({
-            Action: 'CREATE_EMPLOYEE',
-            EntityType: 'EMPLOYEE',
-            EntityID: String(employeeData.EmployeeID),
-            Description: `Employee ${employeeData.FirstName} registered`,
-            ActorID: actorId
-        }).catch(e => console.error(e));
-        return employeeData;
+        // Concurrency-safe ID Generation using Cache Mutex
+        const cacheSegment = this.app.cache().segment();
+        const lockKey = 'EMPLOYEE_ID_LOCK';
+        const lockToken = require('crypto').randomUUID();
+        let locked = false;
+        let attempts = 0;
+        while (!locked && attempts < 30) {
+            await cacheSegment.put(lockKey, lockToken, 1); // 1 hour expiry
+            const currentToken = await cacheSegment.getValue(lockKey);
+            if (currentToken === lockToken) {
+                locked = true;
+                break;
+            }
+            await new Promise(r => setTimeout(r, 100 + Math.random() * 100));
+            attempts++;
+        }
+        if (!locked) {
+            throw new Error('Failed to acquire lock for generating Employee ID. Please try again.');
+        }
+        try {
+            // Safe to read maxId since we hold the lock
+            const employees = await this.getEmployees();
+            const maxId = employees.length > 0 ? Math.max(...employees.map((e) => Number(e.EmployeeID) || 0)) : 9000;
+            employeeData.EmployeeID = maxId + 1;
+            const item = NoSQLItem.from(employeeData);
+            await table.insertItems({ item });
+            GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
+            await this.createAuditLog({
+                Action: 'CREATE_EMPLOYEE',
+                EntityType: 'EMPLOYEE',
+                EntityID: String(employeeData.EmployeeID),
+                Description: `Officer ${employeeData.FirstName} registered`,
+                ActorID: actorId
+            }).catch(e => console.error(e));
+            return employeeData;
+        }
+        finally {
+            // Always release the lock
+            await cacheSegment.delete(lockKey).catch(() => { });
+        }
     }
     async updateEmployee(employeeId, updateData, actorId = 'system') {
         const nosql = this.app.nosql();

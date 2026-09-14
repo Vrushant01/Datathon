@@ -176,16 +176,14 @@ app.post('/api/zcql', express_1.default.json(), async (req, res) => {
         const catalyst = require('zcatalyst-sdk-node');
         const catalystApp = catalyst.initialize(req);
         if (query === 'TEST_FETCH') {
-            const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-            const nosql = catalystApp.nosql();
-            const table = nosql.table('employees');
-            const keys = [
-                new NoSQLItem().addNumber('EmployeeID', 30001),
-                new NoSQLItem().addNumber('EmployeeID', 99999) // Invalid
-            ];
             try {
+                const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+                const nosql = catalystApp.nosql();
+                const table = nosql.table('employees');
+                const keys = [new NoSQLItem().addNumber('EmployeeID', 99999)];
                 const resp = await table.fetchItem({ keys });
-                return res.json({ success: true, type: Array.isArray(resp) ? 'array' : typeof resp, keys: Object.keys(resp), resp });
+                const raw = resp;
+                return res.json({ success: true, count: raw.get ? raw.get.length : 0 });
             }
             catch (e) {
                 return res.json({ success: false, error: e.message, stack: e.stack });
@@ -307,11 +305,22 @@ app.post('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const newEmployee = await db.createEmployee(req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        // REQUIRED: Verify persistence by doing a direct DB read immediately after creation
+        // We bypass GLOBAL_CACHE to ensure we hit Catalyst directly
+        const nosql = require('zcatalyst-sdk-node').initialize(req).nosql();
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const table = nosql.table('employees');
+        const keys = [new NoSQLItem().addNumber('EmployeeID', newEmployee.EmployeeID)];
+        const fetchResponse = await table.fetchItem({ keys });
+        const raw = fetchResponse;
+        if (!raw.get || raw.get.length === 0) {
+            throw new Error(`CRITICAL: Officer ${newEmployee.EmployeeID} was NOT persisted to the database!`);
+        }
         sseService_1.sseService.broadcast('OFFICER_CREATED', newEmployee, { stationId: req.body.UnitID });
         res.status(201).json(newEmployee);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to create employee' });
+        res.status(500).json({ error: error.message || 'Failed to create employee' });
     }
 });
 app.put('/api/employees/:id', authMiddleware_1.requireAuth, async (req, res) => {

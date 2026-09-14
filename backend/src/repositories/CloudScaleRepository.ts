@@ -158,26 +158,12 @@ export class CloudScaleRepository implements IDataRepository {
             }).filter(Boolean);
             allItems.push(...items);
           } catch (e: any) {
-            // Batch failed due to missing keys (Catalyst NoSQL throws if any key in batch is missing)
-            // Fallback: fetch individually concurrently
-            await Promise.all(keys.map(async (key) => {
-              try {
-                this.metrics.nosqlCalls++;
-                const singleResp = await table.fetchItem({ keys: [key] });
-                const singleRaw = singleResp as any;
-                const singleItems = (singleRaw.get || []).map((d: any) => {
-                  const item = d.item;
-                  if (!item) return null;
-                  return typeof item.toJSON === 'function' ? item.toJSON() : item;
-                }).filter(Boolean);
-                allItems.push(...singleItems);
-              } catch (err: any) {
-                // Key truly missing or actual error, ignore for this single item
-                if (err.message && !err.message.includes('No such Item')) {
-                  console.error(`[DB] Fallback fetchItem error for ${key.toJSON ? JSON.stringify(key.toJSON()) : key}:`, err.message);
-                }
-              }
-            }));
+            if (e && e.message && e.message.includes('No such Item')) {
+              // Genuninely no records found for these keys, ignore
+            } else {
+              batchErrors++;
+              console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
+            }
           }
         });
       }
@@ -283,18 +269,45 @@ export class CloudScaleRepository implements IDataRepository {
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
     const employees = await this.getEmployees();
-    const maxId = employees.length > 0 ? Math.max(...employees.map((e: any) => e.EmployeeID || 0)) : 9000;
-    employeeData.EmployeeID = maxId + 1;
+    let employeeId = employees.length > 0 ? Math.max(...employees.map((e: any) => Number(e.EmployeeID) || 0)) : 9000;
+    employeeId++;
 
-    const item = NoSQLItem.from(employeeData);
-    await table.insertItems({ item });
+    let inserted = false;
+    let attempts = 0;
+    
+    // Concurrency-safe strategy using the database's native unique constraint.
+    // Catalyst NoSQL insertItems will throw if the partition key already exists.
+    while (!inserted && attempts < 30) {
+      employeeData.EmployeeID = employeeId;
+      const item = NoSQLItem.from(employeeData);
+      try {
+        await table.insertItems({ item });
+        inserted = true;
+      } catch (e: any) {
+        const errorMsg = String(e.message || e).toLowerCase();
+        // If the item already exists or duplicate key error, we increment and retry
+        if (errorMsg.includes('exist') || errorMsg.includes('duplicate') || errorMsg.includes('already')) {
+          employeeId++;
+          attempts++;
+          // slight backoff to reduce contention
+          await new Promise(r => setTimeout(r, 50 + Math.random() * 50));
+        } else {
+          throw e; // Throw actual network/DB errors
+        }
+      }
+    }
+
+    if (!inserted) {
+      throw new Error('Failed to generate a unique Employee ID after multiple attempts due to high concurrency. Please try again.');
+    }
+
     GLOBAL_CACHE['employees'] = { data: null, promise: null, timestamp: 0 };
 
     await this.createAuditLog({
       Action: 'CREATE_EMPLOYEE',
       EntityType: 'EMPLOYEE',
       EntityID: String(employeeData.EmployeeID),
-      Description: `Employee ${employeeData.FirstName} registered`,
+      Description: `Officer ${employeeData.FirstName} registered`,
       ActorID: actorId
     }).catch(e => console.error(e));
 

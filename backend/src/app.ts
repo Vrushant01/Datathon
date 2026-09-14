@@ -199,13 +199,15 @@ app.post('/api/zcql', express.json(), async (req, res) => {
     const catalyst = require('zcatalyst-sdk-node');
     const catalystApp = catalyst.initialize(req);
 
-    if (query === 'TEST_FALLBACK') {
+    if (query === 'TEST_FETCH') {
       try {
-        const db = RepositoryFactory.getRepository(req) as any;
-        const start = Date.now();
-        const data = await db.scanAll('Employee');
-        const end = Date.now();
-        return res.json({ success: true, count: data.length, time: end - start, sample: data.slice(0, 2) });
+        const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        const nosql = catalystApp.nosql();
+        const table = nosql.table('employees');
+        const keys = [new NoSQLItem().addNumber('EmployeeID', 99999)];
+        const resp = await table.fetchItem({ keys });
+        const raw = resp as any;
+        return res.json({ success: true, count: raw.get ? raw.get.length : 0 });
       } catch (e: any) {
         return res.json({ success: false, error: e.message, stack: e.stack });
       }
@@ -346,11 +348,23 @@ app.get('/api/units', async (req, res) => {
       const newEmployee = await (db as any).createEmployee(req.body, actorId);
       invalidateHotspotCache();
       
+      // REQUIRED: Verify persistence by doing a direct DB read immediately after creation
+      // We bypass GLOBAL_CACHE to ensure we hit Catalyst directly
+      const nosql = require('zcatalyst-sdk-node').initialize(req).nosql();
+      const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+      const table = nosql.table('employees');
+      const keys = [new NoSQLItem().addNumber('EmployeeID', newEmployee.EmployeeID)];
+      const fetchResponse = await table.fetchItem({ keys });
+      const raw = fetchResponse as any;
+      if (!raw.get || raw.get.length === 0) {
+        throw new Error(`CRITICAL: Officer ${newEmployee.EmployeeID} was NOT persisted to the database!`);
+      }
+
       sseService.broadcast('OFFICER_CREATED', newEmployee, { stationId: req.body.UnitID });
       
       res.status(201).json(newEmployee);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create employee' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to create employee' });
     }
   });
 

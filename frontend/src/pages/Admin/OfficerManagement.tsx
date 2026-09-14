@@ -118,8 +118,8 @@ export const OfficerManagement: React.FC = () => {
     setFirstName('');
     
     // Auto-generate next sequential KGID
-    const maxKgidNum = employees.reduce((max, emp) => {
-      const num = parseInt(emp.KGID.replace(/\D/g, ''), 10);
+    const maxKgidNum = serverEmployees.reduce((max, emp) => {
+      const num = parseInt((emp.KGID || '').replace(/\D/g, ''), 10);
       return isNaN(num) ? max : Math.max(max, num);
     }, 910928);
     setKgid(`KGID${maxKgidNum + 1}`);
