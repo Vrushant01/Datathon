@@ -255,9 +255,11 @@ app.get('/api/units', async (req, res) => {
       data = data.filter(u => u.DistrictID === parseInt(req.query.district as string));
     }
     
-    // Sort by UnitID
-    data.sort((a, b) => Number(a.UnitID) - Number(b.UnitID));
-
+    if (req.query.sort === 'newest') {
+      data.sort((a, b) => Number(b.UnitID) - Number(a.UnitID));
+    } else {
+      data.sort((a, b) => Number(a.UnitID) - Number(b.UnitID));
+    }
     if (req.query.page) {
       const page = parseInt(req.query.page as string) || 1;
       const pageSize = parseInt(req.query.pageSize as string) || 30;

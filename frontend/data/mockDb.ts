@@ -1428,6 +1428,13 @@ export const mockDb = {
     return newUnit;
   },
   getRanks: () => loadDbState().ranks,
+  injectUnit: (unit: UnitRow) => {
+    const state = loadDbState();
+    if (!state.units.some(u => u.UnitID === unit.UnitID)) {
+      state.units.push(unit);
+      saveDbState(state);
+    }
+  },
   getDesignations: () => loadDbState().designations,
   getCastes: () => loadDbState().castes,
   getReligions: () => loadDbState().religions,

@@ -47,7 +47,10 @@ export const AdminGISMap: React.FC = () => {
         sseClient.subscribe('FIR_CREATED', refetchCases),
         sseClient.subscribe('FIR_UPDATED', refetchCases),
         sseClient.subscribe('FIR_DELETED', refetchCases),
-        sseClient.subscribe('STATION_CREATED', refetchCases),
+        sseClient.subscribe('STATION_CREATED', (station: any) => {
+          mockDb.injectUnit(station);
+          refetchCases();
+        }),
         sseClient.subscribe('STATION_UPDATED', refetchCases),
         sseClient.subscribe('STATION_DELETED', refetchCases),
         sseClient.onReconnect(refetchCases),
@@ -780,9 +783,16 @@ export const AdminGISMap: React.FC = () => {
           el.className = 'custom-station-pin transition-all duration-300';
           el.innerHTML = `<div style="background-color: #facc15; width: 16px; height: 16px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid #0b2240; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);"></div>`;
           
+          const statusText = s.Active === false ? 'Inactive' : 'Active';
           const fullPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 25 })
               .setLngLat([s.longitude, s.latitude])
-              .setHTML(`<div style="font-family: sans-serif; font-size: 11px; padding: 2px;"><b>${s.UnitName}</b><br/>Police Station</div>`);
+              .setHTML(`<div style="font-family: sans-serif; font-size: 11px; padding: 2px;">
+                <b>${s.UnitName}</b><br/>
+                <b>ID:</b> ${s.UnitID}<br/>
+                <b>District ID:</b> ${s.DistrictID}<br/>
+                <b>Status:</b> ${statusText}<br/>
+                <b>Location:</b> ${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)}
+              </div>`);
 
           const marker = new maplibregl.Marker({ element: el })
             .setLngLat([s.longitude, s.latitude])

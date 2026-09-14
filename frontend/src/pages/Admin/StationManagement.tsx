@@ -108,7 +108,21 @@ export const StationManagement: React.FC = () => {
       if (res.ok) {
         showNotification('success', 'Police Station created successfully.');
         setModalOpen(false);
-        fetchStations(); // Refresh list immediately
+        const createdStation = await res.json();
+        
+        // Immediate UI injection to appear at top
+        setServerStations(prev => {
+          // If a specific district is selected, only inject if it matches
+          if (filterDistrict !== 'ALL' && createdStation.DistrictID !== filterDistrict) {
+            return prev;
+          }
+          // Prevent duplicates if SSE arrived early
+          if (prev.some(s => s.UnitID === createdStation.UnitID)) return prev;
+          
+          const newList = [createdStation, ...prev];
+          return newList.slice(0, 30); // keep max 30
+        });
+        setTotalStations(prev => prev + 1);
       }
     } catch (e: any) {
       showNotification('error', `Failed to create station: ${e.message}`);
@@ -121,6 +135,7 @@ export const StationManagement: React.FC = () => {
       const params = new URLSearchParams({
         page: page.toString(),
         pageSize: '30',
+        sort: 'newest',
         type: '1' // Police Stations
       });
       if (searchQuery) params.append('search', searchQuery);
@@ -147,8 +162,19 @@ export const StationManagement: React.FC = () => {
   useEffect(() => {
     const fetchRef = () => fetchStations();
     import('../../utils/SSEClient').then(({ sseClient }) => {
+      const handleStationCreated = (station: any) => {
+        setServerStations(prev => {
+          if (filterDistrict !== 'ALL' && station.DistrictID !== filterDistrict) {
+            return prev;
+          }
+          if (prev.some(s => s.UnitID === station.UnitID)) return prev;
+          return [station, ...prev].slice(0, 30);
+        });
+        setTotalStations(prev => prev + 1);
+      };
+
       const handlers = [
-        sseClient.subscribe('STATION_CREATED', fetchRef),
+        sseClient.subscribe('STATION_CREATED', handleStationCreated),
         sseClient.subscribe('STATION_UPDATED', fetchRef),
         sseClient.subscribe('STATION_DELETED', fetchRef),
         sseClient.onReconnect(fetchRef),
