@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { CaseMasterRow } from '../../data/mockDb';
 
 interface PrintFIRProps {
@@ -8,8 +9,8 @@ interface PrintFIRProps {
 export const PrintFIR: React.FC<PrintFIRProps> = ({ firData }) => {
   if (!firData) return null;
 
-  return (
-    <div className="hidden print:block absolute inset-0 bg-white z-[99999] p-8 text-black" style={{ minHeight: '100vh' }}>
+  return ReactDOM.createPortal(
+    <div className="print-only-portal bg-white p-8 text-black min-h-screen">
       <div className="flex flex-col items-center border-b-2 border-black pb-4 mb-6">
         <h1 className="text-2xl font-bold uppercase tracking-widest text-center">First Information Report (F.I.R)</h1>
         <h2 className="text-lg font-semibold text-center mt-2">(Under Section 154 Cr.P.C.)</h2>
@@ -71,6 +72,7 @@ export const PrintFIR: React.FC<PrintFIRProps> = ({ firData }) => {
           <span className="text-xs">Rank: {firData.RecordingOfficerRank || 'SHO'}</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

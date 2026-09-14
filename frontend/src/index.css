@@ -261,25 +261,31 @@
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+  #root {
+    display: none !important;
   }
-  .printable-fir-document, .printable-fir-document * {
-    visibility: visible;
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
   }
-  .printable-fir-document {
-    position: absolute;
-    left: 0;
-    top: 0;
+  .print-only-portal {
+    display: block !important;
+    position: relative !important;
     width: 100%;
-    border: none !important;
-    box-shadow: none !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
   }
   @page {
     size: A4;
     margin: 20mm;
+  }
+}
+
+@media screen {
+  .print-only-portal {
+    display: none !important;
   }
 }
 

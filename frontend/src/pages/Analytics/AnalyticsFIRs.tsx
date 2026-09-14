@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { mockDb, CaseMasterRow } from '../../../data/mockDb';
 import { useAuth } from '../../context/AuthContext';
-import { FileText, Search } from 'lucide-react';
+import { FileText, Search, X } from 'lucide-react';
+import { FIRDocument } from '../../components/FIRDocument';
+import { PrintFIR } from '../../components/PrintFIR';
 
 export const AnalyticsFIRs: React.FC = () => {
   const { user } = useAuth();
@@ -9,6 +11,9 @@ export const AnalyticsFIRs: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<number | 'ALL'>('ALL');
+  
+  const [viewFirModalOpen, setViewFirModalOpen] = useState(false);
+  const [selectedFirDetails, setSelectedFirDetails] = useState<any>(null);
   
   const cases = mockDb.getCases();
   const employees = mockDb.getEmployees().filter(e => e.status === 'Active');
@@ -85,6 +90,7 @@ export const AnalyticsFIRs: React.FC = () => {
               <th className="p-4">Investigating Officer</th>
               <th className="p-4">Category</th>
               <th className="p-4">Status</th>
+              <th className="p-4 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -119,17 +125,61 @@ export const AnalyticsFIRs: React.FC = () => {
                       {statusName}
                     </span>
                   </td>
+                  <td className="p-4 text-center">
+                    <button 
+                      onClick={() => {
+                        setSelectedFirDetails(mockDb.getCaseDetails(c.CaseMasterID));
+                        setViewFirModalOpen(true);
+                      }}
+                      className="p-1.5 inline-flex text-slate-500 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 border rounded transition"
+                      title="View FIR"
+                    >
+                      <FileText size={14} />
+                    </button>
+                  </td>
                 </tr>
               );
             })}
             {filteredCases.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center p-8 text-slate-400 font-bold">No active FIR records found matching filters.</td>
+                <td colSpan={7} className="text-center p-8 text-slate-400 font-bold">No active FIR records found matching filters.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* View FIR Modal */}
+      {viewFirModalOpen && selectedFirDetails && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 overflow-y-auto backdrop-blur-sm !mt-0">
+          <div className="bg-slate-100 rounded-xl shadow-2xl border max-w-5xl w-full relative overflow-hidden my-8 h-[90vh] flex flex-col">
+            <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
+              <h3 className="text-sm font-extrabold text-ksp-navy uppercase">
+                View FIR Document
+              </h3>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => window.print()} 
+                  className="bg-white border hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"
+                >
+                  <FileText size={14} /> Print
+                </button>
+                <button onClick={() => setViewFirModalOpen(false)} className="text-slate-400 hover:text-slate-600 ml-2">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-200/50">
+              <FIRDocument cDetails={selectedFirDetails} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Print Layout (Hidden unless printing) */}
+      <PrintFIR firData={selectedFirDetails?.mainCase || null} />
+
     </div>
   );
 };
