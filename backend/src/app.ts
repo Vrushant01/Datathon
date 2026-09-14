@@ -642,15 +642,21 @@ app.get('/api/repeated-offenders', requireAuth, async (req, res) => {
 });
 
 app.get('/api/repeated-offenders/:personId', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const { personId } = req.params;
   try {
     const db = RepositoryFactory.getRepository(req);
     const all = await getRepeatedOffenders(db);
-    const p = all.find((p: any) => p.PersonID === id);
+    const p = all.find((p: any) => p.PersonID === personId);
     if (!p) return res.status(404).json({ error: 'Offender not found' });
-    res.json({ success: true, offender: p });
+    
+    // The frontend expects an array of cases (offenderCases) to map over.
+    // The pre-calculated p.Cases contains exactly the chronological history needed.
+    // We sort it descending (newest first) before sending, as chronological history usually expects newest at top.
+    const sortedCases = [...p.Cases].sort((a, b) => new Date(b.CrimeRegisteredDate).getTime() - new Date(a.CrimeRegisteredDate).getTime());
+    res.json(sortedCases);
   } catch (error: any) {
-    res.status(500).json({ error: 'Failed to fetch offender cases' });
+    console.error('[API] Failed to fetch offender cases:', error);
+    res.status(500).json({ error: 'Failed to fetch offender cases', details: error?.message });
   }
 });
 

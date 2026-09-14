@@ -91,32 +91,43 @@ export const RepeatedOffenders: React.FC = () => {
   const [selectedOffender, setSelectedOffender] = useState<any | null>(null);
   const [offenderCases, setOffenderCases] = useState<any[]>([]);
   const [casesLoading, setCasesLoading] = useState(false);
+  const [casesError, setCasesError] = useState<string | null>(null);
+
+  const fetchCases = async () => {
+    if (!selectedOffender) return;
+    setCasesLoading(true);
+    setCasesError(null);
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/repeated-offenders/${selectedOffender.PersonID}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Support both direct array response or structured { success, data } response
+        const cases = Array.isArray(data) ? data : (data.data || data.Cases || []);
+        setOffenderCases(cases);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Failed to load specific case history');
+        setCasesError(errData.error || `Failed to load case history (HTTP ${res.status})`);
+        setOffenderCases([]);
+      }
+    } catch (e: any) {
+      console.error(e);
+      setCasesError('Network error or server unreachable');
+      setOffenderCases([]);
+    } finally {
+      setCasesLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedOffender) {
       document.body.style.overflow = 'hidden';
       // Lazy load case history
-      const fetchCases = async () => {
-        setCasesLoading(true);
-        try {
-          const res = await authFetch(`${API_BASE_URL}/api/repeated-offenders/${selectedOffender.PersonID}`);
-          if (res.ok) {
-            setOffenderCases(await res.json());
-          } else {
-            console.error('Failed to load specific case history');
-            setOffenderCases([]);
-          }
-        } catch (e) {
-          console.error(e);
-          setOffenderCases([]);
-        } finally {
-          setCasesLoading(false);
-        }
-      };
       fetchCases();
     } else {
       document.body.style.overflow = 'unset';
       setOffenderCases([]);
+      setCasesError(null);
     }
     return () => {
       document.body.style.overflow = 'unset';
@@ -461,6 +472,22 @@ export const RepeatedOffenders: React.FC = () => {
                 <History size={16} className="text-ksp-gold" />
                 Chronological Case History
               </h3>
+
+              {/* States */}
+              {casesError && !casesLoading && (
+                <div className="bg-red-50 text-red-700 p-4 rounded border border-red-200 flex flex-col items-center gap-3">
+                  <p className="font-bold text-sm">{casesError}</p>
+                  <button onClick={fetchCases} className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded text-xs font-bold transition flex items-center gap-2">
+                    <History size={14} /> RETRY
+                  </button>
+                </div>
+              )}
+              
+              {!casesError && !casesLoading && offenderCases.length === 0 && (
+                <div className="bg-slate-100 text-slate-500 p-8 rounded border border-slate-200 text-center text-sm font-bold">
+                  No case history found.
+                </div>
+              )}
 
               {/* Timeline */}
               <div className="relative pl-6 border-l-2 border-slate-200 space-y-6">
