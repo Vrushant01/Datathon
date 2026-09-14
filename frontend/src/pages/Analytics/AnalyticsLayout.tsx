@@ -15,20 +15,7 @@ export const AnalyticsLayout: React.FC = () => {
 
   // Security route guard check
   const token = localStorage.getItem('token');
-  if (!token || role !== 'Analytics') {
-    return (
-      <div className="flex-grow flex items-center justify-center bg-slate-100 flex-col gap-4 min-h-screen">
-        <div className="text-red-500 font-bold text-lg">UNAUTHORIZED ACCESS</div>
-        <p className="text-sm text-slate-500">You must be logged in as an Analytics Officer to view this portal.</p>
-        <button 
-          onClick={() => navigate('/analytics-login')}
-          className="bg-ksp-blue text-white px-6 py-2 rounded font-bold"
-        >
-          Return to Login
-        </button>
-      </div>
-    );
-  }
+  const isUnauthorized = !token || role !== 'Analytics';
 
   const menuItems = [
     { label: t('nav.dashboard'), path: '/analytics-portal', icon: <LayoutDashboard size={18} /> },
@@ -111,7 +98,24 @@ export const AnalyticsLayout: React.FC = () => {
             : 'px-4 pt-4 pb-24 xl:p-8 flex flex-col'
         }`}>
           <div className={location.pathname.includes('/network') ? 'flex-grow flex flex-col w-full h-full' : 'w-full flex-1 flex flex-col min-w-0'}>
-            <Outlet />
+            {isUnauthorized ? (
+              <div className="flex-grow flex items-center justify-center p-8 select-none">
+                <div className="bg-white p-8 rounded-xl border border-red-200 shadow-lg text-center max-w-md">
+                  <div className="text-red-500 font-black text-xl mb-3 tracking-wide">UNAUTHORIZED ACCESS</div>
+                  <p className="text-sm text-slate-500 font-medium mb-6">
+                    You must be logged in as an Analytics Officer to view this portal.
+                  </p>
+                  <button 
+                    onClick={() => navigate('/analytics-login')}
+                    className="bg-ksp-navy hover:bg-ksp-navy-light text-white px-6 py-2.5 rounded-lg text-sm font-bold transition w-full"
+                  >
+                    Return to Login
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </div>
         </main>
       </div>
