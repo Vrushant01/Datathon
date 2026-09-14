@@ -35,9 +35,7 @@ export const AdminLogin: React.FC = () => {
       const res = await login(email.trim(), password, 'admin');
       if (res.success) {
         setSuccess(true);
-        setTimeout(() => {
-          navigate('/admin-portal');
-        }, 800);
+        // Navigation is handled authoritatively by the useEffect on authentication state change
       } else {
         setError(res.message);
       }
