@@ -508,6 +508,7 @@ export class CloudScaleRepository implements IDataRepository {
       }
     }
 
+
     const item = NoSQLItem.from(cleanCaseData);
 
     // Use the correctly supported insertRow method
@@ -1209,12 +1210,18 @@ export class CloudScaleRepository implements IDataRepository {
       return entity;
     }
     if (entityType === 'ActSection') {
+      // Guard: skip insert entirely if ActID or SectionID are empty/falsy
+      if (!entity.ActID || !entity.SectionID) {
+        console.log('[addCaseEntity] Skipping ActSection insert: missing ActID or SectionID', entity);
+        return entity;
+      }
       // ActSectionAssociation is a Datastore table, not NoSQL
       const datastore = this.app.datastore();
       try {
         await datastore.table('ActSectionAssociation').insertRow(entity);
       } catch (err: any) {
-        throw new Error(`Failed to insert ActSectionAssociation: ${err.message || 'Table does not exist'}`);
+        // Log but do NOT throw — a missing act-section link should never fail the whole FIR creation
+        console.error(`Failed to insert ActSectionAssociation (non-fatal):`, err.message || err);
       }
       return entity;
     }

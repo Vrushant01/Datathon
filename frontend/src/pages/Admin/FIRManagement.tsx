@@ -69,8 +69,21 @@ export const FIRManagement: React.FC = () => {
   const courts = mockDb.getCourts();
   const crimeHeads = mockDb.getCrimeHeads();
   const crimeSubHeads = mockDb.getCrimeSubHeads();
-  const acts = mockDb.getActs();
-  const sections = mockDb.getSections();
+
+  // Acts & Sections — loaded from API (not local mockDb, which has empty arrays)
+  const [acts, setActs] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+
+  useEffect(() => {
+    authFetch(`${API_BASE_URL}/api/acts`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => Array.isArray(data) ? setActs(data) : setActs([]))
+      .catch(() => setActs([]));
+    authFetch(`${API_BASE_URL}/api/sections`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => Array.isArray(data) ? setSections(data) : setSections([]))
+      .catch(() => setSections([]));
+  }, []);
   const victims = mockDb.getVictims();
   const accused = mockDb.getAccused();
 
@@ -145,9 +158,12 @@ export const FIRManagement: React.FC = () => {
   const [jurisdictionFlag, setJurisdictionFlag] = useState<'Inside' | 'Outside'>('Inside');
   const [stolenProperty, setStolenProperty] = useState('');
 
-  // Act & Section
-  const [selectedAct, setSelectedAct] = useState('IPC');
-  const [selectedSection, setSelectedSection] = useState('307');
+  // Act & Section — empty by default, optional
+  const [selectedAct, setSelectedAct] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
+
+  // Submission guard to prevent duplicate POSTs
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [notification, setNotification] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -227,19 +243,26 @@ export const FIRManagement: React.FC = () => {
     setJurisdictionFlag('Inside');
     setStolenProperty('');
 
-    setSelectedAct('IPC');
-    setSelectedSection('307');
+    setSelectedAct('');
+    setSelectedSection('');
+    setIsSubmitting(false);
     setModalOpen(true);
   };
 
   const handleRegisterFIR = async () => {
+    if (isSubmitting) return; // Prevent duplicate submissions
     if (!gdEntryNumber || !crimeSceneLocation || !compName || !compPhone || !compAddress || !compFatherSpouse || !compIdentityProof || !briefFacts || !victimName || (accusedStatus === 'Known' && (!accusedName || !accusedFatherSpouse || !accusedAddress || !accusedPhysicalDesc))) {
       showNotification('error', 'Please fill all mandatory fields including GD Entry, Crime Scene, complete Complainant and Accused details.');
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      // Backend expects CaseMaster schema (it auto-generates CaseMasterID and CrimeRegisteredDateTime)
+      // Only include Acts if both ActID and SectionID are valid non-empty selections
+      const actsPayload = (selectedAct && selectedSection)
+        ? [{ ActID: selectedAct, SectionID: selectedSection, ActOrderID: 1, SectionOrderID: 1 }]
+        : [];
+
       const casePayload = {
           PolicePersonID: assignedOfficer,
           PoliceStationID: stationId,
@@ -271,7 +294,6 @@ export const FIRManagement: React.FC = () => {
           DispatchCopyHanded: true,
           DispatchCopyDate: new Date().toISOString(),
 
-          // Additional Parties Data (We must send this up so backend mock can save it)
           Complainant: {
             ComplainantName: compName,
             AgeYear: compAge,
@@ -301,12 +323,8 @@ export const FIRManagement: React.FC = () => {
             PhysicalDescription: accusedPhysicalDesc,
             Status: accusedStatus
           },
-          Acts: [{
-            ActID: selectedAct,
-            SectionID: selectedSection,
-            ActOrderID: 1,
-            SectionOrderID: 1
-          }]
+          // Only send Acts if user actually selected valid values
+          ...(actsPayload.length > 0 && { Acts: actsPayload })
       };
 
       const res = await authFetch(`${API_BASE_URL}/api/cases`, {
@@ -326,8 +344,6 @@ export const FIRManagement: React.FC = () => {
         throw new Error(errMessage);
       }
 
-      showNotification('success', 'FIR Case Registered officially and assigned.');
-      setModalOpen(false);
       const createdCase = await res.json();
       createdCase.stationName = stations.find(s => s.UnitID === createdCase.PoliceStationID)?.UnitName || 'Unknown';
       createdCase.officerName = employees.find(e => e.EmployeeID === createdCase.PolicePersonID)?.FirstName || 'Unassigned';
@@ -337,8 +353,6 @@ export const FIRManagement: React.FC = () => {
       setServerCases(prev => {
         // Prevent duplicate if SSE already fetched it
         if (prev.some(c => c.CaseMasterID === createdCase.CaseMasterID)) return prev;
-        
-        // Sort the array by CrimeRegisteredDateTime to ensure newest is always at top
         const newList = [createdCase, ...prev];
         return newList.sort((a, b) => {
           const dateA = a.CrimeRegisteredDateTime ? new Date(a.CrimeRegisteredDateTime).getTime() : 0;
@@ -347,9 +361,13 @@ export const FIRManagement: React.FC = () => {
         });
       });
       setTotalCases(prev => prev + 1);
+      showNotification('success', 'FIR Case Registered officially and assigned.');
+      setModalOpen(false);
     } catch (e: any) {
       console.error("Error creating case:", e);
       showNotification('error', `Failed to save case record. Error: ${e.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1053,24 +1071,35 @@ export const FIRManagement: React.FC = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Act Book Code</label>
-                      <select value={selectedAct} onChange={(e) => setSelectedAct(e.target.value)} className="w-full p-2 bg-slate-50 border rounded text-xs">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Act Book Code <span className="text-slate-400 normal-case font-normal">(Optional)</span></label>
+                      <select
+                        value={selectedAct}
+                        onChange={(e) => { setSelectedAct(e.target.value); setSelectedSection(''); }}
+                        className="w-full p-2 bg-slate-50 border rounded text-xs"
+                      >
+                        <option value="">— Select Act (Optional) —</option>
                         {acts.length === 0 ? (
-                          <option value="">Unable to load acts</option>
+                          <option value="" disabled>Loading acts...</option>
                         ) : (
-                          acts.map(a => <option key={a.ActCode} value={a.ActCode}>{a.ShortName || a.ActDescription || a.ActCode}</option>)
+                          acts.map((a: any) => <option key={a.ActCode || a.ActID} value={a.ActCode || a.ActID}>{a.ShortName || a.ActDescription || a.ActCode}</option>)
                         )}
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Section Code Invoked</label>
-                      <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} className="w-full p-2 bg-slate-50 border rounded text-xs" disabled={!selectedAct || acts.length === 0}>
-                        {acts.length === 0 || sections.length === 0 ? (
-                          <option value="">Unable to load sections</option>
-                        ) : !selectedAct ? (
-                          <option value="">Select Act first</option>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Section Code Invoked <span className="text-slate-400 normal-case font-normal">(Optional)</span></label>
+                      <select
+                        value={selectedSection}
+                        onChange={(e) => setSelectedSection(e.target.value)}
+                        className="w-full p-2 bg-slate-50 border rounded text-xs"
+                        disabled={!selectedAct}
+                      >
+                        <option value="">— Select Section (Optional) —</option>
+                        {!selectedAct ? null : sections.length === 0 ? (
+                          <option value="" disabled>Loading sections...</option>
                         ) : (
-                          sections.filter(s => String(s.ActCode) === String(selectedAct)).map(s => <option key={s.SectionCode} value={s.SectionCode}>{s.SectionCode} - {s.SectionDescription}</option>)
+                          sections
+                            .filter((s: any) => String(s.ActCode) === String(selectedAct))
+                            .map((s: any) => <option key={s.SectionCode || s.SectionID} value={s.SectionCode || s.SectionID}>{s.SectionCode} - {s.SectionDescription || s.SectionName}</option>)
                         )}
                       </select>
                     </div>
@@ -1148,9 +1177,12 @@ export const FIRManagement: React.FC = () => {
                     <button 
                       type="button" 
                       onClick={handleRegisterFIR}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded text-xs shadow"
+                      disabled={isSubmitting}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold px-5 py-2 rounded text-xs shadow flex items-center gap-2"
                     >
-                      Register Case File
+                      {isSubmitting ? (
+                        <><span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span> Saving...</>
+                      ) : 'Register Case File'}
                     </button>
                   )}
                 </div>
