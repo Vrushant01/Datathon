@@ -1026,13 +1026,23 @@ export const FIRManagement: React.FC = () => {
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Act Book Code</label>
                       <select value={selectedAct} onChange={(e) => setSelectedAct(e.target.value)} className="w-full p-2 bg-slate-50 border rounded text-xs">
-                        {acts.map(a => <option key={a.ActCode} value={a.ActCode}>{a.ShortName}</option>)}
+                        {acts.length === 0 ? (
+                          <option value="">Unable to load acts</option>
+                        ) : (
+                          acts.map(a => <option key={a.ActCode} value={a.ActCode}>{a.ShortName || a.ActDescription || a.ActCode}</option>)
+                        )}
                       </select>
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Section Code Invoked</label>
-                      <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} className="w-full p-2 bg-slate-50 border rounded text-xs">
-                        {sections.filter(s => s.ActCode === selectedAct).map(s => <option key={s.SectionCode} value={s.SectionCode}>{s.SectionCode} - {s.SectionDescription}</option>)}
+                      <select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} className="w-full p-2 bg-slate-50 border rounded text-xs" disabled={!selectedAct || acts.length === 0}>
+                        {acts.length === 0 || sections.length === 0 ? (
+                          <option value="">Unable to load sections</option>
+                        ) : !selectedAct ? (
+                          <option value="">Select Act first</option>
+                        ) : (
+                          sections.filter(s => String(s.ActCode) === String(selectedAct)).map(s => <option key={s.SectionCode} value={s.SectionCode}>{s.SectionCode} - {s.SectionDescription}</option>)
+                        )}
                       </select>
                     </div>
                   </div>
