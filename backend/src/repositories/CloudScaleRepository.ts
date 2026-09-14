@@ -99,6 +99,7 @@ export class CloudScaleRepository implements IDataRepository {
     if (tableName === 'CaseEntity') actualTableName = 'case_entities';
     if (tableName === 'Act') actualTableName = 'acts';
     if (tableName === 'Section') actualTableName = 'sections';
+    if (tableName === 'ActSectionAssociation') actualTableName = 'actsections';
 
     const cacheEntry = GLOBAL_CACHE[actualTableName];
     if (!cacheEntry) throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -134,6 +135,15 @@ export class CloudScaleRepository implements IDataRepository {
         case 'casemasters': pkField = 'CaseMasterID'; for (let i = 100001; i <= 110500; i++) ids.push(i); for (let i = 300001; i <= 300500; i++) ids.push(i); break;
         case 'accuseds': pkField = 'AccusedMasterID'; for (let i = 80001; i <= 90500; i++) ids.push(i); for (let i = 300001; i <= 300500; i++) ids.push(i); break;
         case 'victims': pkField = 'VictimMasterID'; for (let i = 70001; i <= 80500; i++) ids.push(i); for (let i = 300001; i <= 300500; i++) ids.push(i); break;
+        case 'acts': pkField = 'ActID'; for (let i = 1; i <= 500; i++) ids.push(i); break;
+        case 'sections': pkField = 'SectionID'; for (let i = 1; i <= 3000; i++) ids.push(i); break;
+        case 'actsections':
+          // ActSectionAssociation is stored in Catalyst Datastore (SQL), not NoSQL.
+          // Return empty array gracefully — the Datastore query path is in a separate method.
+          cacheEntry.data = [];
+          cacheEntry.timestamp = Date.now();
+          cacheEntry.promise = null;
+          return [];
       }
 
       const allItems: any[] = [];
@@ -689,7 +699,16 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
   async getActSections(): Promise<any[]> {
-    return this.scanAll('ActSectionAssociation');
+    // ActSectionAssociation lives in Catalyst Datastore (SQL), not NoSQL.
+    // Use ZCQL to query it, same as complainants/customedges.
+    try {
+      const zcql = this.app.zcql();
+      const res = await zcql.executeZCQLQuery('SELECT * FROM ActSectionAssociation LIMIT 5000');
+      return res.map((r: any) => r.ActSectionAssociation || r);
+    } catch (e: any) {
+      console.warn('[DB] getActSections: ZCQL failed (table may not exist):', e.message);
+      return [];
+    }
   }
 
   async getActs(): Promise<any[]> {

@@ -28,15 +28,26 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    const fetchStats = async () => {
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const fetchStats = async (isRetry = false) => {
       try {
-        setIsLoading(true);
+        if (!isRetry) setIsLoading(true);
         setError(null);
         const res = await authFetch(`${API_BASE_URL}/api/admin/dashboard-stats`);
-        if (!res.ok) throw new Error('Failed to fetch stats');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
         const data = await res.json();
         if (mounted && data.success) {
           setStats(data.data);
+          // If backend returned all zeros (cold-start cache miss), auto-retry in 10s
+          const d = data.data;
+          if (d.totalFirs === 0 && d.activeOfficers === 0 && d.policeStations === 0) {
+            console.warn('[Dashboard] All stats are 0 — likely cold-start cache miss. Will retry in 10s...');
+            retryTimer = setTimeout(() => { if (mounted) fetchStats(true); }, 10000);
+          }
         }
       } catch (err: any) {
         if (mounted) setError(err.message);
@@ -45,7 +56,10 @@ export const AdminDashboard: React.FC = () => {
       }
     };
     fetchStats();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -85,11 +99,12 @@ export const AdminDashboard: React.FC = () => {
     });
   }, [stats?.casesLight, timeFilter]);
 
-  const totalFIR = stats?.totalFirs || 0;
-  const underInvestigation = stats?.pendingCases || 0;
-  const solved = stats?.solvedClosed || 0;
-  const activeOfficersCount = stats?.activeOfficers || 0;
-  const totalStations = stats?.policeStations || 0;
+  // Use null check — NOT || 0 — to preserve genuine 0 vs "not yet loaded"
+  const totalFIR = stats != null ? stats.totalFirs : null;
+  const underInvestigation = stats != null ? stats.pendingCases : null;
+  const solved = stats != null ? stats.solvedClosed : null;
+  const activeOfficersCount = stats != null ? stats.activeOfficers : null;
+  const totalStations = stats != null ? stats.policeStations : null;
 
   // Chart 1: Dynamic Trends
   const trendData = useMemo(() => {
@@ -223,7 +238,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.total_firs')}</div>
-            <div className="text-xl font-extrabold text-ksp-navy">{isLoading ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : totalFIR}</div>
+            <div className="text-xl font-extrabold text-ksp-navy">{(isLoading || totalFIR === null) ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : totalFIR}</div>
           </div>
         </div>
 
@@ -233,7 +248,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.pending_cases')}</div>
-            <div className="text-xl font-extrabold text-amber-600">{isLoading ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : underInvestigation}</div>
+            <div className="text-xl font-extrabold text-amber-600">{(isLoading || underInvestigation === null) ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : underInvestigation}</div>
           </div>
         </div>
 
@@ -243,7 +258,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.solved_cases')}</div>
-            <div className="text-xl font-extrabold text-emerald-600">{isLoading ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : solved}</div>
+            <div className="text-xl font-extrabold text-emerald-600">{(isLoading || solved === null) ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : solved}</div>
           </div>
         </div>
 
@@ -253,7 +268,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.active_officers')}</div>
-            <div className="text-xl font-extrabold text-slate-800">{isLoading ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : activeOfficersCount}</div>
+            <div className="text-xl font-extrabold text-slate-800">{(isLoading || activeOfficersCount === null) ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : activeOfficersCount}</div>
           </div>
         </div>
 
@@ -263,7 +278,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div>
             <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider text-[10px]">{t('dashboard.police_stations')}</div>
-            <div className="text-xl font-extrabold text-slate-800">{isLoading ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : totalStations}</div>
+            <div className="text-xl font-extrabold text-slate-800">{(isLoading || totalStations === null) ? <span className="text-sm font-normal text-slate-400">{t('common.loading')}</span> : totalStations}</div>
           </div>
         </div>
 
