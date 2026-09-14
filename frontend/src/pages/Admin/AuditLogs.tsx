@@ -103,19 +103,41 @@ export const AuditLogs: React.FC = () => {
           <button 
             disabled={page <= 1 || loading} 
             onClick={() => setPage(p => p - 1)}
-            className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
+            className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition"
           >
             <ChevronLeft size={16} />
           </button>
-          <span>Page {page}</span>
+          
+          <div className="flex items-center gap-1 mx-1">
+            {[1, 2, 3, 4, 5].map(p => {
+              const isKnown = p <= cursors.length + 1 || (p === page + 1 && hasNextPage);
+              if (!isKnown) return null;
+
+              return (
+                <button
+                  key={p}
+                  disabled={loading || p > cursors.length + 1}
+                  onClick={() => setPage(p)}
+                  className={`w-7 h-7 rounded flex items-center justify-center transition ${
+                    page === p 
+                      ? 'bg-ksp-navy text-white shadow-sm' 
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-50'
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+
           <button 
-            disabled={!hasNextPage || loading} 
+            disabled={!hasNextPage || loading || page >= 5} 
             onClick={() => setPage(p => p + 1)}
-            className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50"
+            className="p-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-50 transition"
           >
             <ChevronRight size={16} />
           </button>
-          <span className="ml-4 border-l pl-4">Showing latest logs</span>
+          <span className="ml-4 border-l pl-4 hidden sm:inline">Showing latest 5 pages</span>
         </div>
       </div>
 
