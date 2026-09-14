@@ -189,26 +189,44 @@ export class CloudScaleRepository implements IDataRepository {
         console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
       }
 
-      // Fetch dynamically created records (IDs > hardcoded bounds) using ZCQL
-      try {
-        const zcql = this.app.zcql();
-        let maxHardcodedId = 0;
-        if (actualTableName === 'casemasters') maxHardcodedId = 300150;
-        else if (actualTableName === 'employees') maxHardcodedId = 30960;
-        else if (actualTableName === 'units') maxHardcodedId = 2960;
-        else if (actualTableName === 'accuseds') maxHardcodedId = 300150;
-        else if (actualTableName === 'victims') maxHardcodedId = 300150;
+      // Fetch dynamically created records sequentially since NoSQL ZCQL is unreliable for NoSQL tables
+      let dynamicStartId = 0;
+      if (actualTableName === 'casemasters') dynamicStartId = 300501;
+      else if (actualTableName === 'employees') dynamicStartId = 30961;
+      else if (actualTableName === 'units') dynamicStartId = 2961;
+      else if (actualTableName === 'accuseds') dynamicStartId = 300501;
+      else if (actualTableName === 'victims') dynamicStartId = 300501;
 
-        if (maxHardcodedId > 0) {
-          const res = await zcql.executeZCQLQuery(`SELECT * FROM ${actualTableName} WHERE ${pkField} > ${maxHardcodedId} LIMIT 2000`);
-          if (res && res.length > 0) {
-            const newItems = res.map((r: any) => r[actualTableName] || r[tableName] || r).filter(Boolean);
-            allItems.push(...newItems);
-            console.log(`[DB] Fetched ${newItems.length} new dynamic records for ${actualTableName} via ZCQL`);
+      if (dynamicStartId > 0) {
+        let currentDynamicId = dynamicStartId;
+        let foundEmpty = false;
+        let consecutiveEmptyBatches = 0;
+        
+        while (!foundEmpty && currentDynamicId < dynamicStartId + 10000) { // Safety bound
+          const batchIds = [];
+          for (let i = 0; i < 25; i++) batchIds.push(currentDynamicId + i);
+          const keys = batchIds.map(v => new NoSQLItem().addNumber(pkField, v));
+          
+          try {
+            this.metrics.nosqlCalls++;
+            const resp = await table.fetchItem({ keys });
+            const raw = resp as any;
+            const items = (raw.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+            
+            if (items.length === 0) {
+              consecutiveEmptyBatches++;
+              if (consecutiveEmptyBatches >= 2) foundEmpty = true; // Tolerate small gaps
+            } else {
+              consecutiveEmptyBatches = 0;
+              allItems.push(...items);
+              console.log(`[DB] Fetched dynamic records for ${actualTableName}: +${items.length} (ID: ${currentDynamicId})`);
+            }
+          } catch (e: any) {
+            consecutiveEmptyBatches++;
+            if (consecutiveEmptyBatches >= 2) foundEmpty = true;
           }
+          currentDynamicId += 25;
         }
-      } catch (e: any) {
-        console.warn(`[DB] ZCQL dynamic fetch failed for ${actualTableName}:`, e?.message);
       }
 
       const cleaned = allItems.map(item => {
