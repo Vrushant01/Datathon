@@ -668,7 +668,7 @@ export const OfficerManagement: React.FC = () => {
                   className="w-full p-2 bg-slate-50 border rounded text-xs font-semibold text-slate-700"
                 >
                   <option value="">-- Select Officer --</option>
-                  {employees.filter(e => assignStationId ? e.UnitID === assignStationId || e.DistrictID === units.find(u=>u.UnitID === assignStationId)?.DistrictID : true).map(emp => (
+                  {serverEmployees.filter((e: any) => assignStationId ? e.UnitID === assignStationId || e.DistrictID === units.find(u=>u.UnitID === assignStationId)?.DistrictID : true).map((emp: any) => (
                     <option key={emp.EmployeeID} value={emp.EmployeeID}>{emp.FirstName} - {emp.KGID}</option>
                   ))}
                 </select>
