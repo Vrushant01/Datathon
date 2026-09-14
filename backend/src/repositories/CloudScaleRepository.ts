@@ -173,6 +173,9 @@ export class CloudScaleRepository implements IDataRepository {
                 allItems.push(...singleItems);
               } catch (err: any) {
                 // Key truly missing or actual error, ignore for this single item
+                if (err.message && !err.message.includes('No such Item')) {
+                  console.error(`[DB] Fallback fetchItem error for ${key.toJSON ? JSON.stringify(key.toJSON()) : key}:`, err.message);
+                }
               }
             }));
           }

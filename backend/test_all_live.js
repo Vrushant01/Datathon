@@ -11,8 +11,11 @@ async function testAllLive() {
   const headers = { 'Authorization': `Bearer ${token}` };
 
   try {
-    let res = await axios.get(`${baseURL}/api/forensic?zcql=SELECT%20*%20FROM%20Act%20LIMIT%205`, { headers });
-    console.log("zcql Act:", JSON.stringify(res.data, null, 2));
+    const endpoints = ['/api/cases', '/api/employees', '/api/units', '/api/districts', '/api/accuseds', '/api/victims'];
+    for (const ep of endpoints) {
+      const res = await axios.get(`${baseURL}${ep}`, { headers });
+      console.log(`${ep}: length ${Array.isArray(res.data) ? res.data.length : 'not array'}`, typeof res.data === 'object' ? Object.keys(res.data) : '');
+    }
   } catch (err) {
     console.error(err.message);
     if(err.response) console.error(err.response.data);

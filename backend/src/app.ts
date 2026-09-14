@@ -199,19 +199,13 @@ app.post('/api/zcql', express.json(), async (req, res) => {
     const catalyst = require('zcatalyst-sdk-node');
     const catalystApp = catalyst.initialize(req);
 
-    if (query === 'TEST_FETCH') {
-      const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-      const nosql = catalystApp.nosql();
-      const table = nosql.table('employees');
-      
-      const keys = [
-        new NoSQLItem().addNumber('EmployeeID', 30001),
-        new NoSQLItem().addNumber('EmployeeID', 99999) // Invalid
-      ];
-      
+    if (query === 'TEST_FALLBACK') {
       try {
-        const resp = await table.fetchItem({ keys });
-        return res.json({ success: true, type: Array.isArray(resp) ? 'array' : typeof resp, keys: Object.keys(resp), resp });
+        const db = RepositoryFactory.getRepository(req) as any;
+        const start = Date.now();
+        const data = await db.scanAll('Employee');
+        const end = Date.now();
+        return res.json({ success: true, count: data.length, time: end - start, sample: data.slice(0, 2) });
       } catch (e: any) {
         return res.json({ success: false, error: e.message, stack: e.stack });
       }
