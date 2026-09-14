@@ -668,46 +668,35 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
   async getActSections(): Promise<any[]> {
-    try {
-      const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery("SELECT * FROM ActSectionAssociation LIMIT 2000");
-      return res.map((r: any) => r.ActSectionAssociation);
-    } catch (e: any) {
-      console.error('getActSections ZCQL error:', e.message);
-      return [];
-    }
+    const zcql = this.app.zcql();
+    const res = await zcql.executeZCQLQuery("SELECT * FROM ActSection LIMIT 2000");
+    return res.map((r: any) => ({
+      ActCode: r.ActSection.ActCode || r.ActSection.actcode || r.ActSection.ACTCODE || '',
+      SectionCode: r.ActSection.SectionCode || r.ActSection.sectioncode || r.ActSection.SECTIONCODE || '',
+      Active: true
+    }));
   }
 
   async getActs(): Promise<any[]> {
-    try {
-      const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery("SELECT * FROM Act LIMIT 2000");
-      return res.map((r: any) => ({
-        ActCode: r.Act.ActCode || r.Act.actcode || r.Act.ACTCODE || '',
-        ActDescription: r.Act.ActDescription || r.Act.actdescription || r.Act.ACTDESCRIPTION || '',
-        ShortName: r.Act.ShortName || r.Act.shortname || r.Act.SHORTNAME || '',
-        Active: true
-      }));
-    } catch (e: any) {
-      console.error('getActs ZCQL error:', e.message);
-      return [];
-    }
+    const zcql = this.app.zcql();
+    const res = await zcql.executeZCQLQuery("SELECT * FROM Act LIMIT 2000");
+    return res.map((r: any) => ({
+      ActCode: r.Act.ActCode || r.Act.actcode || r.Act.ACTCODE || '',
+      ActDescription: r.Act.ActDescription || r.Act.actdescription || r.Act.ACTDESCRIPTION || '',
+      ShortName: r.Act.ShortName || r.Act.shortname || r.Act.SHORTNAME || '',
+      Active: true
+    }));
   }
 
   async getSections(): Promise<any[]> {
-    try {
-      const zcql = this.app.zcql();
-      const res = await zcql.executeZCQLQuery("SELECT * FROM Section LIMIT 2000");
-      return res.map((r: any) => ({
-        ActCode: r.Section.ActCode || r.Section.actcode || r.Section.ACTCODE || '',
-        SectionCode: r.Section.SectionCode || r.Section.sectioncode || r.Section.SECTIONCODE || '',
-        SectionDescription: r.Section.SectionDescription || r.Section.sectiondescription || r.Section.SECTIONDESCRIPTION || '',
-        Active: true
-      }));
-    } catch (e: any) {
-      console.error('getSections ZCQL error:', e.message);
-      return [];
-    }
+    const zcql = this.app.zcql();
+    const res = await zcql.executeZCQLQuery("SELECT * FROM Section LIMIT 2000");
+    return res.map((r: any) => ({
+      ActCode: r.Section.ActCode || r.Section.actcode || r.Section.ACTCODE || '',
+      SectionCode: r.Section.SectionCode || r.Section.sectioncode || r.Section.SECTIONCODE || '',
+      SectionDescription: r.Section.SectionDescription || r.Section.sectiondescription || r.Section.SECTIONDESCRIPTION || '',
+      Active: true
+    }));
   }
 
   async getRepeatOffenders(): Promise<any[]> {
