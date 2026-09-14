@@ -102,6 +102,8 @@ class CloudScaleRepository {
             actualTableName = 'acts';
         if (tableName === 'Section')
             actualTableName = 'sections';
+        if (tableName === 'ActSectionAssociation')
+            actualTableName = 'actsections';
         const cacheEntry = GLOBAL_CACHE[actualTableName];
         if (!cacheEntry)
             throw new Error(`scanAll not supported for table: ${tableName}`);
@@ -164,6 +166,23 @@ class CloudScaleRepository {
                     for (let i = 300001; i <= 300500; i++)
                         ids.push(i);
                     break;
+                case 'acts':
+                    pkField = 'ActID';
+                    for (let i = 1; i <= 500; i++)
+                        ids.push(i);
+                    break;
+                case 'sections':
+                    pkField = 'SectionID';
+                    for (let i = 1; i <= 3000; i++)
+                        ids.push(i);
+                    break;
+                case 'actsections':
+                    // ActSectionAssociation is stored in Catalyst Datastore (SQL), not NoSQL.
+                    // Return empty array gracefully — the Datastore query path is in a separate method.
+                    cacheEntry.data = [];
+                    cacheEntry.timestamp = Date.now();
+                    cacheEntry.promise = null;
+                    return [];
             }
             const allItems = [];
             let batchErrors = 0;
@@ -702,7 +721,17 @@ class CloudScaleRepository {
         }
     }
     async getActSections() {
-        return this.scanAll('ActSectionAssociation');
+        // ActSectionAssociation lives in Catalyst Datastore (SQL), not NoSQL.
+        // Use ZCQL to query it, same as complainants/customedges.
+        try {
+            const zcql = this.app.zcql();
+            const res = await zcql.executeZCQLQuery('SELECT * FROM ActSectionAssociation LIMIT 5000');
+            return res.map((r) => r.ActSectionAssociation || r);
+        }
+        catch (e) {
+            console.warn('[DB] getActSections: ZCQL failed (table may not exist):', e.message);
+            return [];
+        }
     }
     async getActs() {
         return this.scanAll('Act');

@@ -15,6 +15,7 @@ router.post('/migrate-to-nosql', adminController_1.startMigration);
 router.get('/migration-status', adminController_1.getMigrationStatus);
 const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
 router.get('/dashboard-stats', async (req, res) => {
+    const startTime = Date.now();
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         // Use Promise.all to fetch cached/scanned data
@@ -23,14 +24,13 @@ router.get('/dashboard-stats', async (req, res) => {
             db.getEmployees(),
             db.getUnits()
         ]);
+        const elapsed = Date.now() - startTime;
+        console.log(`[Dashboard Stats] cases=${cases.length}, officers=${officers.length}, units=${units.length} (${elapsed}ms)`);
         const totalFirs = cases.length;
         // According to mockDb logic: solved = CaseStatusID 2, 3, or 4
         const solvedClosed = cases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
         const pendingCases = totalFirs - solvedClosed;
-        // active officers = status 'Active'. Note: DB might not have 'status', but mockDb sets it. 
-        // We can just return total officers if status is not reliably in DB.
-        // In mockDb: officers.filter(o => o.status === 'Active').length
-        // Let's check how mockDb maps it. It defaults to 'Active'. We'll just count all for now.
+        // Count all registered officers (status not reliably stored in DB)
         const activeOfficers = officers.length;
         // police stations = TypeID 1
         const policeStations = units.filter(u => u.TypeID === 1).length;
@@ -48,13 +48,15 @@ router.get('/dashboard-stats', async (req, res) => {
                 solvedClosed,
                 activeOfficers,
                 policeStations,
-                casesLight
+                casesLight,
+                _meta: { elapsed_ms: elapsed, cacheState: 'warm' }
             }
         });
     }
     catch (error) {
-        console.error('[Dashboard Stats Error]', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch dashboard stats' });
+        const elapsed = Date.now() - startTime;
+        console.error(`[Dashboard Stats Error] after ${elapsed}ms:`, error?.message || error);
+        res.status(500).json({ success: false, error: error?.message || 'Failed to fetch dashboard stats', elapsed_ms: elapsed });
     }
 });
 exports.default = router;
