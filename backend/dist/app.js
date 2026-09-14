@@ -117,6 +117,19 @@ app.get('/api/forensic', async (req, res) => {
         const catalystApp = catalyst.initialize(req);
         const datastore = catalystApp.datastore();
         const results = [];
+        app.get('/api/debug-tables', async (req, res) => {
+            try {
+                const catalyst = require('zcatalyst-sdk-node');
+                const catalystApp = catalyst.initialize(req);
+                const zcql = catalystApp.zcql();
+                // ZCQL doesn't support SHOW TABLES, we must query the schema?
+                // Catalyst NoSQL doesn't have SHOW TABLES, but Datastore might?
+                res.json({ error: 'No SHOW TABLES in ZCQL' });
+            }
+            catch (err) {
+                res.status(500).json({ error: err.message });
+            }
+        });
         async function checkRecord(tableName, keyName, keyValue) {
             try {
                 const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
@@ -124,9 +137,16 @@ app.get('/api/forensic', async (req, res) => {
                 const table = nosql.table(tableName);
                 const keyItem = new NoSQLItem().addNumber(keyName, keyValue);
                 const paged = await table.fetchItem({ keys: [keyItem] });
-                const raw = paged.get || [];
-                const itemFound = raw.length > 0 ? raw[0].item : null;
-                results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Raw: itemFound ? (typeof itemFound.toJSON === 'function' ? itemFound.toJSON() : itemFound) : null });
+                let itemFound = null;
+                if (Array.isArray(paged)) {
+                    itemFound = paged.length > 0 ? paged[0] : null;
+                    results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Type: 'Array', Raw: itemFound });
+                }
+                else {
+                    const raw = paged.get || [];
+                    itemFound = raw.length > 0 ? raw[0].item : null;
+                    results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Type: 'Object', Keys: Object.keys(paged), Raw: itemFound ? (typeof itemFound.toJSON === 'function' ? itemFound.toJSON() : itemFound) : null });
+                }
             }
             catch (err) {
                 results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: 'ERROR', Raw: err.message });
@@ -153,34 +173,24 @@ app.get('/api/forensic', async (req, res) => {
 app.post('/api/zcql', express_1.default.json(), async (req, res) => {
     try {
         const { query } = req.body;
-        if (query === 'TEST_INSERT_RAW') {
-            const catalyst = require('zcatalyst-sdk-node');
-            const catalystApp = catalyst.initialize(req);
-            const nosql = catalystApp.nosql();
-            const table = nosql.table('auditlogs');
-            const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-            const item = NoSQLItem.from({
-                AuditLogID: `raw-${Date.now()}`,
-                Timestamp: new Date().toISOString(),
-                Action: 'RAW_TEST',
-                EntityType: 'TEST',
-                EntityID: '1',
-                Description: 'Testing raw insertRow',
-                ActorID: 'admin'
-            });
-            try {
-                await table.insertRow(item);
-                return res.json({ success: true, message: 'insertRow succeeded' });
-            }
-            catch (err) {
-                return res.json({ error: err.message, stack: err.stack, details: JSON.stringify(err) });
-            }
-        }
-        if (!query) {
-            return res.status(400).json({ error: 'Missing query in request body' });
-        }
         const catalyst = require('zcatalyst-sdk-node');
         const catalystApp = catalyst.initialize(req);
+        if (query === 'TEST_FETCH') {
+            const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+            const nosql = catalystApp.nosql();
+            const table = nosql.table('employees');
+            const keys = [
+                new NoSQLItem().addNumber('EmployeeID', 30001),
+                new NoSQLItem().addNumber('EmployeeID', 99999) // Invalid
+            ];
+            try {
+                const resp = await table.fetchItem({ keys });
+                return res.json({ success: true, type: Array.isArray(resp) ? 'array' : typeof resp, keys: Object.keys(resp), resp });
+            }
+            catch (e) {
+                return res.json({ success: false, error: e.message, stack: e.stack });
+            }
+        }
         const zcql = catalystApp.zcql();
         const zcqlRes = await zcql.executeZCQLQuery(query);
         res.json(zcqlRes);
@@ -674,30 +684,33 @@ app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
         }
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const newCase = await db.createCase(caseData, actorId);
+        // Save related entities concurrently
+        const entityPromises = [];
         // Save Complainant if provided
         if (complainantData) {
             complainantData.CaseMasterID = newCaseId;
             complainantData.ComplainantID = newCaseId; // Mock ID
-            await db.addCaseEntity('Complainant', complainantData, actorId);
+            entityPromises.push(db.addCaseEntity('Complainant', complainantData, actorId));
         }
-        // Save Victim if provided
         if (victimData) {
             victimData.CaseMasterID = newCaseId;
             victimData.VictimMasterID = newCaseId; // Mock ID
-            await db.addCaseEntity('Victim', victimData, actorId);
+            entityPromises.push(db.addCaseEntity('Victim', victimData, actorId));
         }
-        // Save Accused if provided
         if (accusedData) {
             accusedData.CaseMasterID = newCaseId;
             accusedData.AccusedMasterID = newCaseId; // Mock ID
-            await db.addCaseEntity('Accused', accusedData, actorId);
+            entityPromises.push(db.addCaseEntity('Accused', accusedData, actorId));
         }
         // Save Acts if provided
         if (actsData && Array.isArray(actsData)) {
             for (const act of actsData) {
                 act.CaseMasterID = newCaseId;
-                // Not natively supported by addCaseEntity but we skip for now
+                entityPromises.push(db.addCaseEntity('ActSection', act, actorId));
             }
+        }
+        if (entityPromises.length > 0) {
+            await Promise.all(entityPromises);
         }
         (0, hotspotController_1.invalidateHotspotCache)();
         // Broadcast FIR_CREATED event

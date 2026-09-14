@@ -147,28 +147,27 @@ class CloudScaleRepository {
                     pkField = 'CaseMasterID';
                     for (let i = 100001; i <= 110500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 300150; i++)
+                    for (let i = 300001; i <= 300500; i++)
                         ids.push(i);
                     break;
                 case 'accuseds':
                     pkField = 'AccusedMasterID';
                     for (let i = 80001; i <= 90500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 300150; i++)
+                    for (let i = 300001; i <= 300500; i++)
                         ids.push(i);
                     break;
                 case 'victims':
                     pkField = 'VictimMasterID';
                     for (let i = 70001; i <= 80500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 300150; i++)
+                    for (let i = 300001; i <= 300500; i++)
                         ids.push(i);
                     break;
             }
             const allItems = [];
             let batchErrors = 0;
             const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-            // Fetch in batches of 25 (max supported by fetchItem)
             // Fetch in batches of 25 (max supported by fetchItem)
             const fetchPromises = [];
             for (let i = 0; i < ids.length; i += 25) {
@@ -188,8 +187,25 @@ class CloudScaleRepository {
                         allItems.push(...items);
                     }
                     catch (e) {
-                        batchErrors++;
-                        console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
+                        // Batch failed due to missing keys (Catalyst NoSQL throws if any key in batch is missing)
+                        // Fallback: fetch individually concurrently
+                        await Promise.all(keys.map(async (key) => {
+                            try {
+                                this.metrics.nosqlCalls++;
+                                const singleResp = await table.fetchItem({ keys: [key] });
+                                const singleRaw = singleResp;
+                                const singleItems = (singleRaw.get || []).map((d) => {
+                                    const item = d.item;
+                                    if (!item)
+                                        return null;
+                                    return typeof item.toJSON === 'function' ? item.toJSON() : item;
+                                }).filter(Boolean);
+                                allItems.push(...singleItems);
+                            }
+                            catch (err) {
+                                // Key truly missing or actual error, ignore for this single item
+                            }
+                        }));
                     }
                 });
             }
@@ -644,8 +660,8 @@ class CloudScaleRepository {
     async getActSections() {
         try {
             const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM actsections LIMIT 200");
-            return res.map((r) => r.actsections);
+            const res = await zcql.executeZCQLQuery("SELECT * FROM ActSectionAssociation LIMIT 2000");
+            return res.map((r) => r.ActSectionAssociation);
         }
         catch (e) {
             console.error('getActSections ZCQL error:', e.message);
@@ -655,11 +671,11 @@ class CloudScaleRepository {
     async getActs() {
         try {
             const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM acts LIMIT 2000");
+            const res = await zcql.executeZCQLQuery("SELECT * FROM Act LIMIT 2000");
             return res.map((r) => ({
-                ActCode: r.acts.ActCode || r.acts.actcode || r.acts.ACTCODE || '',
-                ActDescription: r.acts.ActDescription || r.acts.actdescription || r.acts.ACTDESCRIPTION || '',
-                ShortName: r.acts.ShortName || r.acts.shortname || r.acts.SHORTNAME || '',
+                ActCode: r.Act.ActCode || r.Act.actcode || r.Act.ACTCODE || '',
+                ActDescription: r.Act.ActDescription || r.Act.actdescription || r.Act.ACTDESCRIPTION || '',
+                ShortName: r.Act.ShortName || r.Act.shortname || r.Act.SHORTNAME || '',
                 Active: true
             }));
         }
@@ -671,11 +687,11 @@ class CloudScaleRepository {
     async getSections() {
         try {
             const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM sections LIMIT 2000");
+            const res = await zcql.executeZCQLQuery("SELECT * FROM Section LIMIT 2000");
             return res.map((r) => ({
-                ActCode: r.sections.ActCode || r.sections.actcode || r.sections.ACTCODE || '',
-                SectionCode: r.sections.SectionCode || r.sections.sectioncode || r.sections.SECTIONCODE || '',
-                SectionDescription: r.sections.SectionDescription || r.sections.sectiondescription || r.sections.SECTIONDESCRIPTION || '',
+                ActCode: r.Section.ActCode || r.Section.actcode || r.Section.ACTCODE || '',
+                SectionCode: r.Section.SectionCode || r.Section.sectioncode || r.Section.SECTIONCODE || '',
+                SectionDescription: r.Section.SectionDescription || r.Section.sectiondescription || r.Section.SECTIONDESCRIPTION || '',
                 Active: true
             }));
         }
@@ -1112,9 +1128,34 @@ class CloudScaleRepository {
     async addCaseEntity(entityType, entity, actorId = 'system') {
         const nosql = this.app.nosql();
         const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+        // Route proper entities to their real tables
+        if (entityType === 'Complainant') {
+            const item = NoSQLItem.from(entity);
+            await nosql.table('complainants').insertItems({ item });
+            GLOBAL_CACHE['complainants'] = { data: null, promise: null, timestamp: 0 };
+            return entity;
+        }
+        if (entityType === 'Victim') {
+            const item = NoSQLItem.from(entity);
+            await nosql.table('victims').insertItems({ item });
+            GLOBAL_CACHE['victims'] = { data: null, promise: null, timestamp: 0 };
+            return entity;
+        }
+        if (entityType === 'Accused') {
+            const item = NoSQLItem.from(entity);
+            await nosql.table('accuseds').insertItems({ item });
+            GLOBAL_CACHE['accuseds'] = { data: null, promise: null, timestamp: 0 };
+            return entity;
+        }
+        if (entityType === 'ActSection') {
+            // ActSectionAssociation is a Datastore table, not NoSQL
+            const datastore = this.app.datastore();
+            await datastore.table('ActSectionAssociation').insertRow(entity);
+            return entity;
+        }
+        // Fallback: Persist to customedges for pure Network Graph custom entities
         const crypto = require('crypto');
         const entityId = entity.EntityID || entity.PersonID || entity.VictimID || entity.ComplainantID || crypto.randomUUID();
-        // Persist to customedges to avoid unsupported table errors
         const edge = {
             EdgeID: `entity-${entityId}`,
             CaseMasterID: entity.CaseMasterID,

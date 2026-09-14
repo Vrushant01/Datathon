@@ -159,9 +159,15 @@ app.get('/api/forensic', async (req, res) => {
         const table = nosql.table(tableName);
         const keyItem = new NoSQLItem().addNumber(keyName, keyValue);
         const paged = await table.fetchItem({ keys: [keyItem] });
-        const raw = (paged as any).get || [];
-        const itemFound = raw.length > 0 ? raw[0].item : null;
-        results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Raw: itemFound ? (typeof itemFound.toJSON === 'function' ? itemFound.toJSON() : itemFound) : null });
+        let itemFound = null;
+        if (Array.isArray(paged)) {
+            itemFound = paged.length > 0 ? paged[0] : null;
+            results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Type: 'Array', Raw: itemFound });
+        } else {
+            const raw = (paged as any).get || [];
+            itemFound = raw.length > 0 ? raw[0].item : null;
+            results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: itemFound ? 'YES' : 'NO', Type: 'Object', Keys: Object.keys(paged), Raw: itemFound ? (typeof itemFound.toJSON === 'function' ? itemFound.toJSON() : itemFound) : null });
+        }
       } catch (err: any) {
         results.push({ Table: tableName, Key: `${keyName}=${keyValue}`, Found: 'ERROR', Raw: err.message });
       }
@@ -190,36 +196,28 @@ app.get('/api/forensic', async (req, res) => {
 app.post('/api/zcql', express.json(), async (req, res) => {
   try {
     const { query } = req.body;
-    if (query === 'TEST_INSERT_RAW') {
-      const catalyst = require('zcatalyst-sdk-node');
-      const catalystApp = catalyst.initialize(req);
-      const nosql = catalystApp.nosql();
-      const table = nosql.table('auditlogs');
+    const catalyst = require('zcatalyst-sdk-node');
+    const catalystApp = catalyst.initialize(req);
+
+    if (query === 'TEST_FETCH') {
       const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-      const item = NoSQLItem.from({
-        AuditLogID: `raw-${Date.now()}`,
-        Timestamp: new Date().toISOString(),
-        Action: 'RAW_TEST',
-        EntityType: 'TEST',
-        EntityID: '1',
-        Description: 'Testing raw insertRow',
-        ActorID: 'admin'
-      });
+      const nosql = catalystApp.nosql();
+      const table = nosql.table('employees');
+      
+      const keys = [
+        new NoSQLItem().addNumber('EmployeeID', 30001),
+        new NoSQLItem().addNumber('EmployeeID', 99999) // Invalid
+      ];
+      
       try {
-        await table.insertRow(item);
-        return res.json({ success: true, message: 'insertRow succeeded' });
-      } catch (err: any) {
-        return res.json({ error: err.message, stack: err.stack, details: JSON.stringify(err) });
+        const resp = await table.fetchItem({ keys });
+        return res.json({ success: true, type: Array.isArray(resp) ? 'array' : typeof resp, keys: Object.keys(resp), resp });
+      } catch (e: any) {
+        return res.json({ success: false, error: e.message, stack: e.stack });
       }
     }
     
-    if (!query) {
-      return res.status(400).json({ error: 'Missing query in request body' });
-    }
-    const catalyst = require('zcatalyst-sdk-node');
-    const catalystApp = catalyst.initialize(req);
     const zcql = catalystApp.zcql();
-    
     const zcqlRes = await zcql.executeZCQLQuery(query);
     res.json(zcqlRes);
   } catch (error: any) {

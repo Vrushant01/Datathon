@@ -141,7 +141,6 @@ export class CloudScaleRepository implements IDataRepository {
       const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
       // Fetch in batches of 25 (max supported by fetchItem)
-      // Fetch in batches of 25 (max supported by fetchItem)
       const fetchPromises: (() => Promise<void>)[] = [];
       for (let i = 0; i < ids.length; i += 25) {
         const batch = ids.slice(i, i + 25);
@@ -159,8 +158,23 @@ export class CloudScaleRepository implements IDataRepository {
             }).filter(Boolean);
             allItems.push(...items);
           } catch (e: any) {
-            batchErrors++;
-            console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
+            // Batch failed due to missing keys (Catalyst NoSQL throws if any key in batch is missing)
+            // Fallback: fetch individually concurrently
+            await Promise.all(keys.map(async (key) => {
+              try {
+                this.metrics.nosqlCalls++;
+                const singleResp = await table.fetchItem({ keys: [key] });
+                const singleRaw = singleResp as any;
+                const singleItems = (singleRaw.get || []).map((d: any) => {
+                  const item = d.item;
+                  if (!item) return null;
+                  return typeof item.toJSON === 'function' ? item.toJSON() : item;
+                }).filter(Boolean);
+                allItems.push(...singleItems);
+              } catch (err: any) {
+                // Key truly missing or actual error, ignore for this single item
+              }
+            }));
           }
         });
       }
