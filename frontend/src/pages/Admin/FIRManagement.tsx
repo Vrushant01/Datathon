@@ -491,8 +491,8 @@ export const FIRManagement: React.FC = () => {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center shrink-0">
-        <div className="flex-1 w-full relative">
+      <div className="bg-white p-4 rounded-xl border shadow-sm grid grid-cols-1 md:grid-cols-2 xl:flex xl:flex-row gap-4 items-center shrink-0">
+        <div className="flex-1 w-full relative md:col-span-2 xl:col-auto">
           <span className="absolute left-3 top-3 text-slate-400">
             <Search size={16} />
           </span>
@@ -547,16 +547,16 @@ export const FIRManagement: React.FC = () => {
       </div>
       
       {/* Date Filters Row */}
-      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center mb-6">
-         <div className="flex items-center gap-2">
-           <Calendar size={14} className="text-slate-400" />
-           <span className="text-xs font-bold text-slate-600">From:</span>
-           <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-2 border rounded-lg text-xs w-full xl:w-auto" />
+      <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col md:flex-row gap-4 items-center mb-6">
+         <div className="flex items-center gap-2 w-full md:w-auto">
+           <Calendar size={14} className="text-slate-400 shrink-0" />
+           <span className="text-xs font-bold text-slate-600 shrink-0">From:</span>
+           <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className="p-2 border rounded-lg text-xs w-full md:w-auto flex-1 md:flex-none" />
          </div>
-         <div className="flex items-center gap-2">
-           <Calendar size={14} className="text-slate-400" />
-           <span className="text-xs font-bold text-slate-600">To:</span>
-           <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-2 border rounded-lg text-xs w-full xl:w-auto" />
+         <div className="flex items-center gap-2 w-full md:w-auto">
+           <Calendar size={14} className="text-slate-400 shrink-0" />
+           <span className="text-xs font-bold text-slate-600 shrink-0">To:</span>
+           <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className="p-2 border rounded-lg text-xs w-full md:w-auto flex-1 md:flex-none" />
          </div>
          
          {(filterDistrict !== 'ALL' || filterStation !== 'ALL' || filterCrimeHead !== 'ALL' || filterStatus !== 'ALL' || filterDateFrom || filterDateTo || searchQuery) && (
@@ -570,7 +570,7 @@ export const FIRManagement: React.FC = () => {
                 setFilterDateTo('');
                 setSearchQuery('');
               }}
-              className="ml-auto text-xs font-bold text-red-500 hover:text-red-700 transition"
+              className="w-full md:w-auto md:ml-auto text-center md:text-right text-xs font-bold text-red-500 hover:text-red-700 transition mt-2 md:mt-0"
             >
               Clear All Filters
             </button>
