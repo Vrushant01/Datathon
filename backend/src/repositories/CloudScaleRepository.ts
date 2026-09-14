@@ -284,7 +284,13 @@ export class CloudScaleRepository implements IDataRepository {
         await table.insertItems({ item });
         inserted = true;
       } catch (e: any) {
-        const errorMsg = String(e.message || e).toLowerCase();
+        let errorMsg = '';
+        try {
+          errorMsg = typeof e === 'object' ? JSON.stringify(e).toLowerCase() : String(e).toLowerCase();
+        } catch {
+          errorMsg = String(e.message || e).toLowerCase();
+        }
+        
         // If the item already exists or duplicate key error, we increment and retry
         if (errorMsg.includes('exist') || errorMsg.includes('duplicate') || errorMsg.includes('already')) {
           employeeId++;
@@ -292,7 +298,8 @@ export class CloudScaleRepository implements IDataRepository {
           // slight backoff to reduce contention
           await new Promise(r => setTimeout(r, 50 + Math.random() * 50));
         } else {
-          throw e; // Throw actual network/DB errors
+          console.error("NoSQL Insert Error:", e);
+          throw new Error(`DB Insert Error: ${errorMsg}`); // Throw informative actual network/DB errors
         }
       }
     }
