@@ -8,7 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
 maplibregl.setWorkerUrl(workerUrl);
-import { Filter, Layers, Info } from 'lucide-react';
+import { Filter, Layers, Info, User, X } from 'lucide-react';
 import { getMappedGeoJsonFeature, getBoundingBox, createCirclePolygon, getDistance } from '../../utils/geoUtils';
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { API_BASE_URL } from '../../config/api';
