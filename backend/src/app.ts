@@ -676,7 +676,13 @@ app.get('/api/test-zcql', async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req) as any;
     const q = req.query.q as string;
-    const resData = await db.app.zcql().executeZCQLQuery(q);
+    const t = req.query.t as string;
+    let resData;
+    if (t) {
+      resData = await db.scanAll(t);
+    } else {
+      resData = await db.app.zcql().executeZCQLQuery(q);
+    }
     res.json(resData);
   } catch (error: any) {
     res.status(500).json({ error: typeof error === 'object' ? JSON.stringify(error) : String(error) });
