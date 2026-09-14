@@ -409,6 +409,7 @@ export const FIRManagement: React.FC = () => {
       if (filterDistrict !== 'ALL') params.append('district', filterDistrict.toString());
       if (filterStation !== 'ALL') params.append('station', filterStation.toString());
       if (filterStatus !== 'ALL') params.append('status', filterStatus.toString());
+      if (filterPersonId) params.append('personId', filterPersonId);
       
       const res = await authFetch(`${API_BASE_URL}/api/cases?${params.toString()}`);
       if (res.ok) {
@@ -425,7 +426,7 @@ export const FIRManagement: React.FC = () => {
 
   useEffect(() => {
     fetchCases();
-  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion, filterPersonId]);
 
   // SSE real-time subscriptions — use a ref to avoid stale closure
   useEffect(() => {
@@ -437,7 +438,7 @@ export const FIRManagement: React.FC = () => {
       sseClient.onReconnect(fetchRef),
     ];
     return () => handlers.forEach(unsub => unsub());
-  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion, filterPersonId]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">
@@ -468,6 +469,26 @@ export const FIRManagement: React.FC = () => {
 
       {/* Official Print Layout (Hidden unless printing) */}
       <PrintFIR firData={selectedFirDetails?.mainCase || null} />
+
+      {/* Offender Filter Indicator */}
+      {filterPersonId && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-xl flex items-center justify-between shrink-0 shadow-sm">
+          <div className="flex items-center gap-2">
+            <User size={18} className="text-yellow-600" />
+            <span className="font-bold text-sm">Showing cases for specific Offender (Person ID: {filterPersonId})</span>
+          </div>
+          <button 
+            onClick={() => {
+              setFilterPersonId('');
+              searchParams.delete('personId');
+              setSearchParams(searchParams);
+            }}
+            className="bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1"
+          >
+            <X size={14} /> Clear Offender Filter
+          </button>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col xl:flex-row gap-4 items-center shrink-0">

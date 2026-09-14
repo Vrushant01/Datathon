@@ -558,7 +558,14 @@ class CloudScaleRepository {
     }
     async getCases(filter) {
         const cases = await this.scanAll('CaseMaster');
+        let validCaseIds = null;
+        if (filter.personId) {
+            const allAccused = await this.getAllAccused();
+            validCaseIds = new Set(allAccused.filter(a => a.PersonID === filter.personId).map(a => Number(a.CaseMasterID)));
+        }
         return cases.filter(c => {
+            if (validCaseIds && !validCaseIds.has(Number(c.CaseMasterID)))
+                return false;
             if (filter.requireLocation) {
                 if (c.latitude == null || c.latitude === 0 || c.latitude === "0")
                     return false;

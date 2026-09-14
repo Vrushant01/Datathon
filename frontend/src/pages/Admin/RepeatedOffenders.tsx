@@ -18,10 +18,6 @@ export const RepeatedOffenders: React.FC = () => {
   // Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [minCases, setMinCases] = useState<number>(2);
-  const [filterDistrict, setFilterDistrict] = useState<number | 'ALL'>('ALL');
-  const [filterStation, setFilterStation] = useState<number | 'ALL'>('ALL');
-  const [filterCategory, setFilterCategory] = useState<number | 'ALL'>('ALL');
-  const [filterStatus, setFilterStatus] = useState<string | 'ALL'>('ALL');
 
   // Pagination & Summary State
   const [page, setPage] = useState(1);
@@ -50,11 +46,7 @@ export const RepeatedOffenders: React.FC = () => {
         page: page.toString(),
         pageSize: pageSize.toString(),
         minCases: minCases.toString(),
-        search: searchQuery,
-        district: filterDistrict !== 'ALL' ? filterDistrict.toString() : '',
-        station: filterStation !== 'ALL' ? filterStation.toString() : '',
-        category: filterCategory !== 'ALL' ? filterCategory.toString() : '',
-        status: filterStatus !== 'ALL' ? filterStatus : ''
+        search: searchQuery
       });
 
       const response = await authFetch(`${API_BASE_URL}/api/repeated-offenders?${params.toString()}`);
@@ -72,7 +64,7 @@ export const RepeatedOffenders: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, minCases, searchQuery, filterDistrict, filterStation, filterCategory, filterStatus]);
+  }, [page, minCases, searchQuery]);
 
   // Fetch when filters or page changes
   useEffect(() => {
@@ -85,7 +77,7 @@ export const RepeatedOffenders: React.FC = () => {
   // Reset page to 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [minCases, searchQuery, filterDistrict, filterStation, filterCategory, filterStatus]);
+  }, [minCases, searchQuery]);
 
   // Details Modal
   const [selectedOffender, setSelectedOffender] = useState<any | null>(null);
@@ -241,69 +233,10 @@ export const RepeatedOffenders: React.FC = () => {
             />
           </div>
 
-          <div className="w-32">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">District</label>
-            <select
-              value={filterDistrict}
-              onChange={(e) => setFilterDistrict(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Districts</option>
-              {districts.map(d => (
-                <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="w-40">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Station</label>
-            <select
-              value={filterStation}
-              onChange={(e) => setFilterStation(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Stations</option>
-              {stations.filter(s => filterDistrict === 'ALL' || s.DistrictID === filterDistrict).map(s => (
-                <option key={s.UnitID} value={s.UnitID}>{s.UnitName}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="w-36">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Crime Category</label>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map(c => (
-                <option key={c.CrimeHeadID} value={c.CrimeHeadID}>{c.CrimeGroupName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="w-32">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="active">Active Only</option>
-              <option value="closed">Closed Only</option>
-            </select>
-          </div>
-
           <button 
             onClick={() => {
               setSearchQuery('');
               setMinCases(2);
-              setFilterDistrict('ALL');
-              setFilterStation('ALL');
-              setFilterCategory('ALL');
-              setFilterStatus('ALL');
             }}
             className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-semibold transition"
           >
@@ -397,8 +330,8 @@ export const RepeatedOffenders: React.FC = () => {
 
       {/* Details Modal */}
       {selectedOffender && (
-        <div className="fixed inset-0 z-50 flex justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-auto flex flex-col overflow-hidden animate-fade-in-up max-h-[calc(100vh-48px)] relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden animate-fade-in-up max-h-[calc(100vh-48px)] relative">
             
             {/* Modal Header */}
             <div className="z-20 bg-ksp-navy text-white p-5 flex justify-between items-center shrink-0 border-b-4 border-ksp-gold shadow-md">

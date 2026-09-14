@@ -422,6 +422,8 @@ app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
             filter.requireLocation = true;
         if (req.query.status)
             filter.CaseStatusID = parseInt(req.query.status);
+        if (req.query.personId)
+            filter.personId = req.query.personId;
         // ── BACKEND ROLE-BASED SECURITY ──────────────────────────────────────
         // Admin: unrestricted access to all FIRs
         // Station / Analytics: only FIRs belonging to their station (unitId from JWT)

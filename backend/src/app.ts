@@ -467,6 +467,7 @@ app.get('/api/cases', requireAuth, async (req, res) => {
     if (req.query.search) filter.search = req.query.search;
     if (req.query.requireLocation === 'true') filter.requireLocation = true;
     if (req.query.status) filter.CaseStatusID = parseInt(req.query.status as string);
+    if (req.query.personId) filter.personId = req.query.personId as string;
 
     // ── BACKEND ROLE-BASED SECURITY ──────────────────────────────────────
     // Admin: unrestricted access to all FIRs

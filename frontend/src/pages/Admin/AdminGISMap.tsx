@@ -105,7 +105,16 @@ export const AdminGISMap: React.FC = () => {
   const [selectedHotspot, setSelectedHotspot] = useState<string>('ALL');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [personIdFilter, setPersonIdFilter] = useState<string | undefined>(searchParams.get('personId') || undefined);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+
+  const clearPersonIdFilter = useCallback(() => {
+    if (personIdFilter) {
+      setPersonIdFilter(undefined);
+      searchParams.delete('personId');
+      setSearchParams(searchParams);
+    }
+  }, [personIdFilter, searchParams, setSearchParams]);
 
 
 
@@ -131,7 +140,7 @@ export const AdminGISMap: React.FC = () => {
       startDate: dateFrom,
       endDate: dateTo,
       status: selectedStatus,
-      personId: searchParams.get('personId') || undefined,
+      personId: personIdFilter,
     };
     
     // getCasesForAnomaly guarantees exact sync with backend logic
@@ -143,7 +152,7 @@ export const AdminGISMap: React.FC = () => {
     }
     
     return casesSubset;
-  }, [validBaseCases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo, stations]);
+  }, [validBaseCases, selectedDistrict, selectedStation, selectedCrimeHead, selectedStatus, selectedGravity, dateFrom, dateTo, stations, personIdFilter]);
 
   const [activeHotspots, setActiveHotspots] = useState<any[]>([]);
   const [isHotspotsLoading, setIsHotspotsLoading] = useState<boolean>(false);
@@ -629,6 +638,7 @@ export const AdminGISMap: React.FC = () => {
                  // If we clicked on empty space (outside Karnataka district-fill), reset
                  setSelectedDistrict('ALL');
                  setSelectedStation('ALL');
+                 clearPersonIdFilter();
                  
                  // Force the zoom out animation in case state was already ALL but user manually panned
                  map.flyTo({ center: [76.5, 15.0], zoom: 6, duration: 1000, essential: true });
@@ -906,6 +916,7 @@ export const AdminGISMap: React.FC = () => {
                 const val = e.target.value;
                 setSelectedDistrict(val === 'ALL' ? 'ALL' : Number(val));
                 setSelectedStation('ALL'); 
+                clearPersonIdFilter();
               }}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy"
             >
@@ -921,6 +932,7 @@ export const AdminGISMap: React.FC = () => {
               onChange={(e) => {
                 const val = e.target.value;
                 setSelectedStation(val === 'ALL' ? 'ALL' : Number(val));
+                clearPersonIdFilter();
               }}
               disabled={selectedDistrict === 'ALL'}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy disabled:opacity-50"
@@ -940,6 +952,7 @@ export const AdminGISMap: React.FC = () => {
               onChange={(e) => {
                 const val = e.target.value;
                 setSelectedCrimeHead(val === 'ALL' ? 'ALL' : Number(val));
+                clearPersonIdFilter();
               }}
               className="w-full p-2 bg-slate-50 border rounded text-xs focus:ring-1 focus:ring-ksp-navy"
             >
@@ -1050,6 +1063,21 @@ export const AdminGISMap: React.FC = () => {
               <Info size={14} className="text-ksp-gold-dark" /> <span className="text-gray-500 font-medium">Mapped cases matching filter: {finalFilteredCases.length}</span>
             </div>
           </div>
+          {/* Offender Filter Indicator */}
+          {personIdFilter && (
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[10] bg-yellow-50 border border-yellow-400 text-yellow-900 px-4 py-2 rounded-xl shadow-md flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <User size={18} className="text-yellow-600" />
+                <span className="font-bold text-sm">Offender Map (Person ID: {personIdFilter})</span>
+              </div>
+              <button 
+                onClick={clearPersonIdFilter}
+                className="bg-yellow-200 hover:bg-yellow-300 text-yellow-900 px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1"
+              >
+                <X size={14} /> CLEAR
+              </button>
+            </div>
+          )}
           <div ref={mapContainerRef} className="flex-grow w-full h-full focus:outline-none outline-none" style={{ outline: 'none' }} />
         </div>
 
