@@ -3,6 +3,7 @@ import { mockDb, CaseMasterRow } from '../../../data/mockDb';
 import { useAuth } from '../../context/AuthContext';
 import { FileText, Search, X } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
+import { printFIRDocument } from '../../utils/printFIRDocument';
 
 
 export const AnalyticsFIRs: React.FC = () => {
@@ -159,7 +160,7 @@ export const AnalyticsFIRs: React.FC = () => {
               </h3>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => window.print()} 
+                  onClick={() => printFIRDocument()} 
                   className="bg-white border hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"
                 >
                   <FileText size={14} /> Print

@@ -260,56 +260,222 @@
   background-color: rgba(107, 114, 128, 0.8);
 }
 
+/* ============================================================
+   PRINT STYLESHEET — FIR DOCUMENT
+   Strategy: hide entire app, show ONLY .printable-fir-document
+   using position:fixed + full-page to avoid blank-page artifacts
+   ============================================================ */
+
 @media print {
-  /* Ensure the body and HTML don't clip content */
+
+  /* ----- Reset page geometry ----- */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm 14mm 14mm;
+  }
+
+  /* ----- Silence browser default header/footer ----- */
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ----- Step 1: collapse the entire page to nothing ----- */
   html, body {
     height: auto !important;
-    min-height: 100% !important;
+    min-height: 0 !important;
     overflow: visible !important;
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* Hide everything on the page by default */
-  body * {
-    visibility: hidden;
+  /* Hide every element on the page */
+  body > * {
+    display: none !important;
   }
 
-  /* But make the printable FIR document and all its children visible */
-  .printable-fir-document, .printable-fir-document * {
-    visibility: visible;
+  /* ----- Step 2: pull .printable-fir-document out of the tree
+     and render it as a standalone top-level block ----------- */
+  body > #root {
+    display: block !important;        /* override the display:none above */
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+    background: transparent !important;
   }
 
-  /* Detach the FIR document from all modal wrappers so it starts at the top left of the printed page */
+  /* Collapse every layer of the app shell so they take zero space */
+  body > #root > *,
+  .app-shell,
+  .fixed-header,
+  .dashboard-layout,
+  .fixed-sidebar,
+  .main-scroll-container,
+  header, nav, aside, footer,
+  [class*="sidebar"],
+  [class*="navbar"],
+  [class*="header"],
+  [class*="bottom-nav"],
+  [class*="modal-backdrop"],
+  [class*="backdrop"],
+  [class*="blur"] {
+    display: none !important;
+  }
+
+  /* ----- Step 3: make the modal container visible but flat ----- */
+  /* The FIR view modal wrapper: make it static block so the FIR flows */
+  [class*="fixed"][class*="inset-0"],
+  [class*="fixed inset"],
+  .fixed.inset-0 {
+    display: block !important;
+    position: static !important;
+    background: transparent !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Collapse the inner modal chrome (white card + header row) */
+  /* Keep only the .printable-fir-document visible */
+  [class*="fixed"][class*="inset-0"] > *,
+  [class*="fixed inset"] > * {
+    display: none !important;
+  }
+
+  /* ----- Step 4: show ONLY the FIR document ----- */
   .printable-fir-document {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    float: none !important;
+    transform: none !important;
+
+    /* Layout */
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 6mm 8mm !important;
+    box-sizing: border-box !important;
+
+    /* Clean look */
+    background: white !important;
     border: none !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
-  }
-
-  /* Remove positioning/overflow constraints from ALL elements to prevent clipping the absolute positioned FIR */
-  * {
     overflow: visible !important;
-  }
-  
-  .fixed, .relative, .absolute, .sticky {
-    position: static !important;
-    transform: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+
+    /* Typography — compact but readable */
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+    color: #000 !important;
   }
 
-  /* Hide elements that shouldn't be printed */
+  /* Make all children of the FIR document visible */
+  .printable-fir-document,
+  .printable-fir-document * {
+    visibility: visible !important;
+    overflow: visible !important;
+    color: #000 !important;
+  }
+
+  /* Override any screen-only Tailwind that adds min-height or fixed heights */
+  .printable-fir-document *,
+  .printable-fir-document *::before,
+  .printable-fir-document *::after {
+    box-sizing: border-box !important;
+    page-break-inside: auto;
+  }
+
+  /* ----- Step 5: FIR header — keep together on first page ----- */
+  .printable-fir-document > div:first-child {
+    page-break-after: avoid;
+    break-after: avoid;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ----- Step 6: Section headings — avoid widow headings ----- */
+  .printable-fir-document strong {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* ----- Step 7: Signature block — keep on same page if possible ----- */
+  .printable-fir-document > div > div:last-child {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ----- Step 8: FIR section borders & spacing — print-compact ----- */
+  .printable-fir-document .border-b,
+  .printable-fir-document [class*="border-b"] {
+    border-bottom: 1px solid #bbb !important;
+    padding-bottom: 4pt !important;
+    margin-bottom: 4pt !important;
+  }
+
+  /* Collapse all space-y-* in print */
+  .printable-fir-document .space-y-5 > * + *,
+  .printable-fir-document [class*="space-y"] > * + * {
+    margin-top: 4pt !important;
+  }
+
+  /* Collapse padding in print */
+  .printable-fir-document .pb-2\.5,
+  .printable-fir-document [class*="pb-"] {
+    padding-bottom: 4pt !important;
+  }
+  .printable-fir-document .pt-8 {
+    padding-top: 8pt !important;
+  }
+  .printable-fir-document .mb-6,
+  .printable-fir-document [class*="mb-"] {
+    margin-bottom: 4pt !important;
+  }
+  .printable-fir-document .pb-4 {
+    padding-bottom: 4pt !important;
+  }
+
+  /* Grid: keep two-column layout */
+  .printable-fir-document .grid {
+    display: grid !important;
+  }
+
+  /* Logo absolute positioning must be static in print */
+  .printable-fir-document .absolute {
+    position: static !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+  }
+
+  /* Logo sizing in print */
+  .printable-fir-document img {
+    width: 28pt !important;
+    height: 28pt !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto 2pt !important;
+  }
+
+  /* ----- Step 9: Hide screen-only controls ----- */
   .no-print {
     display: none !important;
   }
 
-  @page {
-    size: auto;
-    margin: 10mm;
+  /* Hide the modal close/print buttons */
+  button, .no-print {
+    display: none !important;
   }
+
 }
 

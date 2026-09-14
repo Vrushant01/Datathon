@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { TransparentLogo } from '../../components/TransparentLogo';
 import { FIRDocument } from '../../components/FIRDocument';
-
+import { printFIRDocument } from '../../utils/printFIRDocument';
 
 export const CaseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -498,7 +498,7 @@ export const CaseDetail: React.FC = () => {
               {/* Controls */}
               <div className="flex justify-end gap-2 border-b pb-3 no-print select-none">
                 <button 
-                  onClick={() => window.print()}
+                  onClick={() => printFIRDocument()}
                   className="bg-ksp-navy hover:bg-ksp-navy-light text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 shadow"
                 >
                   <Printer size={16} /> Print FIR Copy

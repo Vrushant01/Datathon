@@ -8,6 +8,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../config/api';
 import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
+import { printFIRDocument } from '../../utils/printFIRDocument';
 
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
 import { useLocation } from 'react-router-dom';
@@ -1203,7 +1204,7 @@ export const FIRManagement: React.FC = () => {
               </h3>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => window.print()} 
+                  onClick={() => printFIRDocument()} 
                   className="bg-white border hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"
                 >
                   <FileText size={14} /> Print
