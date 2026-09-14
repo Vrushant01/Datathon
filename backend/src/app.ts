@@ -656,7 +656,8 @@ app.get('/api/actsections', async (req, res) => {
     const data = await db.getActSections();
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to fetch actsections' });
+    const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
+    res.status(500).json({ error: msg });
   }
 });
 
@@ -666,7 +667,8 @@ app.get('/api/acts', async (req, res) => {
     const data = await db.getActs();
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to fetch acts' });
+    const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
+    res.status(500).json({ error: msg });
   }
 });
 
@@ -676,7 +678,8 @@ app.get('/api/sections', async (req, res) => {
     const data = await db.getSections();
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to fetch sections' });
+    const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
+    res.status(500).json({ error: msg });
   }
 });
 
