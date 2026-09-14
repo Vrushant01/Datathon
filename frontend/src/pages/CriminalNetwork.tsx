@@ -123,35 +123,84 @@ export const CriminalNetwork: React.FC = () => {
   // This ensures new/updated/deleted FIRs are reflected without page reload.
   // Does NOT redesign the Criminal Network persistence (customedges) architecture.
   useEffect(() => {
-    const handleFIRChange = (event: any) => {
+    const handleSSEEvent = (type: string, event: any) => {
       // Clear local graph cache so stale data isn't shown
       graphCache.current.clear();
+      
       // If a deleted FIR is currently selected, deselect it
-      if (event?.CaseMasterID && selectedFirId === Number(event.CaseMasterID)) {
+      if (type === 'DELETED' && event?.CaseMasterID && selectedFirId === Number(event.CaseMasterID)) {
         setSelectedFirId(null);
         setCurrentCaseData(null);
         setNodes([]);
         setEdges([]);
       }
-      // Re-run the current search to fetch updated case list
+
+      // Re-run the current search to fetch updated case list if searching
       if (searchQuery) {
         authFetch(`${API_BASE_URL}/api/network/search?query=${encodeURIComponent(searchQuery)}`)
           .then(r => r.json())
           .then(data => { if (Array.isArray(data)) setSearchResults(data); })
           .catch(() => {});
+      } else {
+        // Realtime insertion for the default top-30 list
+        setSearchResults(prev => {
+          let updated = [...prev];
+          
+          const isAuthorized = () => {
+             if (user?.role === 'Admin') return true;
+             if (user?.role === 'Officer') return event.PolicePersonID === user?.employeeId;
+             if (user?.role === 'Analytics') return event.PoliceStationID === user?.unitId;
+             return false;
+          };
+
+          if (type === 'DELETED') {
+             updated = updated.filter(c => c.CaseMasterID !== event.CaseMasterID);
+             // Fetch to replenish if we dropped below 30
+             setTimeout(() => {
+                authFetch(`${API_BASE_URL}/api/network/search?query=`)
+                  .then(r => r.json())
+                  .then(data => { if (Array.isArray(data)) setSearchResults(data); })
+                  .catch(() => {});
+             }, 100);
+          } else if (type === 'CREATED' || type === 'UPDATED') {
+             if (isAuthorized()) {
+                const idx = updated.findIndex(c => c.CaseMasterID === event.CaseMasterID);
+                if (idx >= 0) {
+                   updated[idx] = { ...updated[idx], ...event };
+                } else {
+                   updated.push(event);
+                }
+             } else {
+                updated = updated.filter(c => c.CaseMasterID !== event.CaseMasterID);
+             }
+          }
+          
+          // Re-sort descending by timestamp
+          updated.sort((a: any, b: any) => {
+            const dateA = a.CrimeRegisteredDateTime || a.CrimeRegisteredDate || '';
+            const dateB = b.CrimeRegisteredDateTime || b.CrimeRegisteredDate || '';
+            const timeA = dateA ? new Date(dateA).getTime() : 0;
+            const timeB = dateB ? new Date(dateB).getTime() : 0;
+            if (timeB !== timeA) return timeB - timeA;
+            return (b.CaseMasterID || 0) - (a.CaseMasterID || 0);
+          });
+          
+          // Keep only latest 30
+          return updated.slice(0, 30);
+        });
       }
     };
 
-    const unsubCreated = sseClient.subscribe('FIR_CREATED', handleFIRChange);
-    const unsubUpdated = sseClient.subscribe('FIR_UPDATED', handleFIRChange);
-    const unsubDeleted = sseClient.subscribe('FIR_DELETED', handleFIRChange);
+    const unsubCreated = sseClient.subscribe('FIR_CREATED', (e) => handleSSEEvent('CREATED', e));
+    const unsubUpdated = sseClient.subscribe('FIR_UPDATED', (e) => handleSSEEvent('UPDATED', e));
+    const unsubDeleted = sseClient.subscribe('FIR_DELETED', (e) => handleSSEEvent('DELETED', e));
 
     return () => {
       unsubCreated();
       unsubUpdated();
       unsubDeleted();
     };
-  }, [searchQuery, selectedFirId]);
+  }, [searchQuery, selectedFirId, user]);
 
   const isOfficer = user?.role === 'Officer';
   const isAnalytics = user?.role === 'Analytics';
