@@ -643,7 +643,11 @@ export const syncData = async (): Promise<void> => {
             console.warn(`[CloudScale Sync] ${route}: 403 Permission denied — skipping.`);
             return null;
           }
-          console.warn(`[CloudScale Sync] ${route}: HTTP ${res.status} — skipping.`);
+          if (res.status === 500) {
+            console.warn(`[CloudScale Sync] ${route}: HTTP 500 (Table likely missing or DB error) - skipping.`);
+            return null;
+          }
+          console.warn(`[CloudScale Sync] ${route}: HTTP ${res.status} - skipping.`);
           return null;
         }
         const data = await res.json();
@@ -685,9 +689,9 @@ export const syncData = async (): Promise<void> => {
 
     // Only overwrite a table's state if the fetch returned real data.
     // This preserves existing cached data when individual endpoints fail.
-    if (districtsRes && districtsRes.length > 0) state.districts = districtsRes;
-    if (unitsRes && unitsRes.length > 0) state.units = unitsRes;
-    if (employeesRes && employeesRes.length > 0) {
+    if (districtsRes) state.districts = districtsRes;
+    if (unitsRes) state.units = unitsRes;
+    if (employeesRes) {
       state.employees = employeesRes.map((emp: any) => {
         const existing = state.employees.find(e => e.EmployeeID === emp.EmployeeID);
         return {
@@ -697,18 +701,18 @@ export const syncData = async (): Promise<void> => {
         };
       });
     }
-    if (casesRes && casesRes.length > 0) state.cases = casesRes;
-    if (victimsRes && victimsRes.length > 0) state.victims = victimsRes;
-    if (accusedRes && accusedRes.length > 0) state.accused = accusedRes;
-    if (complainantsRes && complainantsRes.length > 0) state.complainants = complainantsRes;
-    if (actSectionsRes && actSectionsRes.length > 0) state.actSections = actSectionsRes;
-    if (actsRes && actsRes.length > 0) state.acts = actsRes;
-    if (sectionsRes && sectionsRes.length > 0) state.sections = sectionsRes;
-    if (customEdgesRes && customEdgesRes.length > 0) state.customEdges = customEdgesRes;
+    if (casesRes) state.cases = casesRes;
+    if (victimsRes) state.victims = victimsRes;
+    if (accusedRes) state.accused = accusedRes;
+    if (complainantsRes) state.complainants = complainantsRes;
+    if (actSectionsRes) state.actSections = actSectionsRes;
+    if (actsRes) state.acts = actsRes;
+    if (sectionsRes) state.sections = sectionsRes;
+    if (customEdgesRes) state.customEdges = customEdgesRes;
 
-    const totalLoaded = [districtsRes, unitsRes, employeesRes, casesRes, victimsRes, accusedRes, complainantsRes, actSectionsRes, actsRes, sectionsRes]
-      .filter(r => r && r.length > 0).length;
-    const totalSkipped = 10 - totalLoaded;
+    const totalLoaded = [districtsRes, unitsRes, employeesRes, casesRes, victimsRes, accusedRes, complainantsRes, actSectionsRes, actsRes, sectionsRes, customEdgesRes]
+      .filter(r => r !== null).length;
+    const totalSkipped = 11 - totalLoaded;
 
     saveDbState(state);
 

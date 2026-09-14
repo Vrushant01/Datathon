@@ -160,6 +160,9 @@ export class CloudScaleRepository implements IDataRepository {
           } catch (e: any) {
             if (e && e.message && e.message.includes('No such Item')) {
               // Genuninely no records found for these keys, ignore
+            } else if (e && e.message && e.message.includes('No such resource')) {
+              // Table does not exist - throw to abort
+              throw e;
             } else {
               batchErrors++;
               console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
@@ -668,35 +671,15 @@ export class CloudScaleRepository implements IDataRepository {
   }
 
   async getActSections(): Promise<any[]> {
-    const zcql = this.app.zcql();
-    const res = await zcql.executeZCQLQuery("SELECT * FROM ActSection LIMIT 2000");
-    return res.map((r: any) => ({
-      ActCode: r.ActSection.ActCode || r.ActSection.actcode || r.ActSection.ACTCODE || '',
-      SectionCode: r.ActSection.SectionCode || r.ActSection.sectioncode || r.ActSection.SECTIONCODE || '',
-      Active: true
-    }));
+    return this.scanAll('ActSectionAssociation');
   }
 
   async getActs(): Promise<any[]> {
-    const zcql = this.app.zcql();
-    const res = await zcql.executeZCQLQuery("SELECT * FROM Act LIMIT 2000");
-    return res.map((r: any) => ({
-      ActCode: r.Act.ActCode || r.Act.actcode || r.Act.ACTCODE || '',
-      ActDescription: r.Act.ActDescription || r.Act.actdescription || r.Act.ACTDESCRIPTION || '',
-      ShortName: r.Act.ShortName || r.Act.shortname || r.Act.SHORTNAME || '',
-      Active: true
-    }));
+    return this.scanAll('Act');
   }
 
   async getSections(): Promise<any[]> {
-    const zcql = this.app.zcql();
-    const res = await zcql.executeZCQLQuery("SELECT * FROM Section LIMIT 2000");
-    return res.map((r: any) => ({
-      ActCode: r.Section.ActCode || r.Section.actcode || r.Section.ACTCODE || '',
-      SectionCode: r.Section.SectionCode || r.Section.sectioncode || r.Section.SECTIONCODE || '',
-      SectionDescription: r.Section.SectionDescription || r.Section.sectiondescription || r.Section.SECTIONDESCRIPTION || '',
-      Active: true
-    }));
+    return this.scanAll('Section');
   }
 
   async getRepeatOffenders(): Promise<any[]> {
@@ -1183,7 +1166,11 @@ export class CloudScaleRepository implements IDataRepository {
     if (entityType === 'ActSection') {
       // ActSectionAssociation is a Datastore table, not NoSQL
       const datastore = this.app.datastore();
-      await datastore.table('ActSectionAssociation').insertRow(entity);
+      try {
+        await datastore.table('ActSectionAssociation').insertRow(entity);
+      } catch (err: any) {
+        throw new Error(`Failed to insert ActSectionAssociation: ${err.message || 'Table does not exist'}`);
+      }
       return entity;
     }
 

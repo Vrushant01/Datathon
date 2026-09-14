@@ -55,14 +55,17 @@ class SSEClient {
       this.eventSource = null;
       
       // Auto-reconnect with exponential backoff (max 30s)
-      if (!this.reconnectTimeout) {
-        const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-        this.reconnectAttempts++;
-        this.reconnectTimeout = setTimeout(() => {
-          this.reconnectTimeout = null;
-          this.connect();
-        }, backoff);
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
       }
+      const backoff = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+      this.reconnectAttempts++;
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnectTimeout = null;
+        if (!this.isConnected && !this.eventSource) {
+          this.connect();
+        }
+      }, backoff);
     };
 
     // Register all known event types so browser fires named events correctly

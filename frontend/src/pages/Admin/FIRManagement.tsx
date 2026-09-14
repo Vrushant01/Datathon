@@ -314,7 +314,16 @@ export const FIRManagement: React.FC = () => {
         body: JSON.stringify(casePayload)
       });
       
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      if (!res.ok) {
+        let errMessage = `HTTP error ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.message || errData.error) errMessage = errData.message || errData.error;
+        } catch (e) {
+          // Ignore json parse error
+        }
+        throw new Error(errMessage);
+      }
 
       showNotification('success', 'FIR Case Registered officially and assigned.');
       setModalOpen(false);
