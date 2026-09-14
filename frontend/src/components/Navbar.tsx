@@ -68,16 +68,16 @@ Data Source: Live CloudScale Database`);
     <header className="w-full bg-ksp-navy text-white shadow-md border-b-4 border-ksp-gold select-none">
       {/* Top Banner - Official Government Branding */}
       {!isAuthOrLanding && (
-        <div className="bg-ksp-navy-dark text-xs px-4 py-1.5 flex flex-wrap justify-between items-center border-b border-white/10 text-slate-300 font-medium select-none min-w-0 gap-y-1">
-          <div className="flex flex-wrap items-center gap-4 min-w-0">
+        <div className="bg-ksp-navy-dark px-2 sm:px-4 py-1.5 flex flex-wrap justify-between items-center border-b border-white/10 text-slate-300 font-medium select-none min-w-0 gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 min-w-0 text-[9px] sm:text-xs">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
               {t('banner.gov')}
             </span>
-            <span className="hidden md:inline">|</span>
-            <span className="hidden md:inline">{t('banner.portal_name')}</span>
+            <span className="text-white/30 hidden xs:inline">|</span>
+            <span>{t('banner.portal_name')}</span>
           </div>
-          <div className="flex flex-wrap gap-3 items-center min-w-0">
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center min-w-0 justify-end">
             <span 
               onClick={showDbDetails}
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase tracking-wider cursor-pointer transition select-none ${
@@ -136,7 +136,7 @@ Data Source: Live CloudScale Database`);
       )}
 
       {/* Main Header Bar */}
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div className="w-full px-2 sm:px-4 py-2 sm:py-3 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
         <Link 
           to={
             isAuthenticated && user
@@ -147,63 +147,63 @@ Data Source: Live CloudScale Database`);
                   : '/officer-portal'
               : '/'
           } 
-          className="flex items-center gap-3 group"
+          className="flex items-center gap-2 sm:gap-3 group w-full sm:w-auto justify-center sm:justify-start"
         >
           <TransparentLogo 
             src="/ksp-logo-new.png" 
             alt="KSP Logo" 
-            className="h-12 w-12 object-contain group-hover:scale-105 transition"
+            className="h-10 w-10 sm:h-12 sm:w-12 object-contain group-hover:scale-105 transition shrink-0"
           />
-          <div className="leading-tight">
-            <h1 className="text-lg md:text-xl font-bold tracking-tight text-white m-0">
+          <div className="leading-tight text-center sm:text-left min-w-0">
+            <h1 className="text-sm sm:text-lg md:text-xl font-bold tracking-tight text-white m-0 truncate">
               {t('banner.dept_name')}
             </h1>
-            <p className="text-xs md:text-sm font-semibold text-ksp-gold m-0">
+            <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-ksp-gold m-0 truncate">
               {t('banner.dept_sub')}
             </p>
           </div>
         </Link>
 
         {/* Portal indicators & Navigation */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
           {isAuthenticated && user ? (
-            <div className="flex items-center gap-3">
+            <>
               {/* Notification Badge */}
-              <div className="relative cursor-pointer p-1.5 rounded-full hover:bg-white/10 transition" onClick={() => {
+              <div className="relative cursor-pointer p-1.5 rounded-full hover:bg-white/10 transition shrink-0" onClick={() => {
                 if (role === 'Admin') navigate('/admin-portal/notifications');
                 else if (role === 'Analytics') navigate('/analytics-portal/notifications');
                 else navigate('/officer-portal/notifications');
               }}>
-                <Bell size={20} className="text-slate-200" />
+                <Bell size={18} className="text-slate-200 sm:w-5 sm:h-5" />
                 {getUnreadNotifications() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full text-[10px] w-5 h-5 flex items-center justify-center font-bold border-2 border-ksp-navy">
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full text-[9px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold border-2 border-ksp-navy">
                     {getUnreadNotifications()}
                   </span>
                 )}
               </div>
 
               {/* User Profile Badge */}
-              <div className="hidden md:flex flex-col text-right">
-                <span className="text-sm font-bold flex items-center gap-1.5 justify-end">
-                  <Shield size={14} className="text-ksp-gold" />
-                  {user.firstName}
+              <div className="flex flex-col text-left sm:text-right min-w-0 flex-1 sm:flex-initial overflow-hidden">
+                <span className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-1.5 justify-start sm:justify-end truncate">
+                  <Shield size={12} className="text-ksp-gold shrink-0 sm:w-3.5 sm:h-3.5" />
+                  <span className="truncate">{user.firstName}</span>
                 </span>
-                <span className="text-xs text-slate-300">
+                <span className="text-[9px] sm:text-xs text-slate-300 truncate">
                   {user.role === 'Admin' ? t('banner.admin') : `${user.kgid || t('banner.officer')} • ${user.stationName || 'KSP'}`}
                 </span>
               </div>
 
-              <div className="h-8 w-[1px] bg-white/20 hidden md:block"></div>
+              <div className="h-6 sm:h-8 w-[1px] bg-white/20 hidden xs:block"></div>
 
               {/* Logout button */}
               <button 
                 onClick={handleLogout}
-                className="bg-red-700/60 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 border border-red-500/25 transition shadow-sm"
+                className="bg-red-700/60 hover:bg-red-700 text-white px-2.5 py-1.5 sm:px-3 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 border border-red-500/25 transition shadow-sm shrink-0"
               >
-                <LogOut size={16} />
-                <span className="hidden sm:inline">{t('banner.logout')}</span>
+                <LogOut size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{t('banner.logout')}</span>
               </button>
-            </div>
+            </>
           ) : null}
         </div>
       </div>
