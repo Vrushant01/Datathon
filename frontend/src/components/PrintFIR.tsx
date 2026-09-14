@@ -20,7 +20,7 @@ export const PrintFIR: React.FC<PrintFIRProps> = ({ firData }) => {
         <div><span className="font-bold">1. District:</span> {firData.CaseMasterID /* placeholder for real join */}</div>
         <div><span className="font-bold">P.S.:</span> {firData.PoliceStationID}</div>
         <div><span className="font-bold">Year:</span> {new Date(firData.CrimeRegisteredDate).getFullYear()}</div>
-        <div><span className="font-bold">FIR No.:</span> {firData.FIRNo || firData.CaseNo}</div>
+        <div><span className="font-bold">FIR No.:</span> {(firData as any).FIRNo || firData.CaseNo}</div>
         <div><span className="font-bold">Date:</span> {firData.CrimeRegisteredDate}</div>
       </div>
 

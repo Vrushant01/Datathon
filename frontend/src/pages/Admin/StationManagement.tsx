@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { mockDb, UnitRow } from '../../../data/mockDb';
+import { mockDb, UnitRow, DistrictRow } from '../../../data/mockDb';
 import { useMockDb } from '../../hooks/useMockDb';
+import { sseClient } from '../../utils/SSEClient';
 import { authFetch } from '../../utils/authFetch';
 import { API_BASE_URL } from '../../config/api';
 import { useLanguage } from '../../context/LanguageContext';
@@ -161,26 +162,29 @@ export const StationManagement: React.FC = () => {
   // SSE real-time subscriptions — re-subscribe when filters change to avoid stale closure
   useEffect(() => {
     const fetchRef = () => fetchStations();
-    import('../../utils/SSEClient').then(({ sseClient }) => {
-      const handleStationCreated = (station: any) => {
-        setServerStations(prev => {
-          if (filterDistrict !== 'ALL' && station.DistrictID !== filterDistrict) {
-            return prev;
-          }
-          if (prev.some(s => s.UnitID === station.UnitID)) return prev;
-          return [station, ...prev].slice(0, 30);
-        });
-        setTotalStations(prev => prev + 1);
-      };
+    const handleStationCreated = (station: any) => {
+      setServerStations(prev => {
+        if (filterDistrict !== 'ALL' && station.DistrictID !== filterDistrict) {
+          return prev; // Ignore if it doesn't match filter
+        }
+        if (!prev.find(s => s.UnitID === station.UnitID)) {
+          const updated = [station, ...prev];
+          // Keep maximum 30 if pagination/limit is applied
+          if (updated.length > 30) return updated.slice(0, 30);
+          return updated;
+        }
+        return prev;
+      });
+      setTotalStations(prev => prev + 1);
+    };
 
-      const handlers = [
-        sseClient.subscribe('STATION_CREATED', handleStationCreated),
-        sseClient.subscribe('STATION_UPDATED', fetchRef),
-        sseClient.subscribe('STATION_DELETED', fetchRef),
-        sseClient.onReconnect(fetchRef),
-      ];
-      return () => handlers.forEach(unsub => unsub());
-    });
+    const handlers = [
+      sseClient.subscribe('STATION_CREATED', handleStationCreated),
+      sseClient.subscribe('STATION_UPDATED', fetchRef),
+      sseClient.subscribe('STATION_DELETED', fetchRef),
+      sseClient.onReconnect(fetchRef),
+    ];
+    return () => handlers.forEach(unsub => unsub());
   }, [page, searchQuery, filterDistrict]);
 
   return (
@@ -401,7 +405,7 @@ export const StationManagement: React.FC = () => {
             
             <form onSubmit={(e) => {
               e.preventDefault();
-              const stationName = stations.find(s => s.UnitID === notifyStationId)?.UnitName || 'Station';
+              const stationName = serverStations.find((s: any) => s.UnitID === notifyStationId)?.UnitName || 'Station';
               mockDb.createNotification(
                 'AI Intelligence Order', 
                 `[Target: ${stationName}]\nReason: ${notifyProblem}\nInstructions: ${notifyInstructions}`
@@ -419,7 +423,7 @@ export const StationManagement: React.FC = () => {
                   onChange={(e) => setNotifyStationId(Number(e.target.value))}
                   className="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-slate-300 focus:ring-1 focus:ring-ksp-navy"
                 >
-                  {stations.map(st => <option key={st.UnitID} value={st.UnitID}>{st.UnitName}</option>)}
+                  {serverStations.map((st: any) => <option key={st.UnitID} value={st.UnitID}>{st.UnitName}</option>)}
                 </select>
               </div>
 

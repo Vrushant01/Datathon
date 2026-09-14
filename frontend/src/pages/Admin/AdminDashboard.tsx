@@ -6,6 +6,7 @@ import { useMockDb } from '../../hooks/useMockDb';
 import { useLanguage } from '../../context/LanguageContext';
 import { getAIDashboard } from '../../services/aiService';
 import { authFetch } from '../../utils/authFetch';
+import { sseClient } from '../../utils/SSEClient';
 import { API_BASE_URL } from '../../config/api';
 import { 
   FileText, CheckCircle, Clock, AlertTriangle, Shield, MapPin, 
@@ -48,27 +49,25 @@ export const AdminDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    import('../../utils/SSEClient').then(({ sseClient }) => {
-      const refetch = () => {
-        authFetch(`${API_BASE_URL}/api/admin/dashboard-stats`)
-          .then(r => r.json())
-          .then(data => { if (data.success) setStats(data.data); })
-          .catch(() => {});
-      };
-      const handlers = [
-        sseClient.subscribe('FIR_CREATED', refetch),
-        sseClient.subscribe('FIR_UPDATED', refetch),
-        sseClient.subscribe('FIR_DELETED', refetch),
-        sseClient.subscribe('OFFICER_CREATED', refetch),
-        sseClient.subscribe('OFFICER_UPDATED', refetch),
-        sseClient.subscribe('OFFICER_DELETED', refetch),
-        sseClient.subscribe('STATION_CREATED', refetch),
-        sseClient.subscribe('STATION_UPDATED', refetch),
-        sseClient.subscribe('STATION_DELETED', refetch),
-        sseClient.onReconnect(refetch),
-      ];
-      return () => handlers.forEach(unsub => unsub());
-    });
+    const refetch = () => {
+      authFetch(`${API_BASE_URL}/api/admin/dashboard-stats`)
+        .then(r => r.json())
+        .then(data => { if (data.success) setStats(data.data); })
+        .catch(() => {});
+    };
+    const handlers = [
+      sseClient.subscribe('FIR_CREATED', refetch),
+      sseClient.subscribe('FIR_UPDATED', refetch),
+      sseClient.subscribe('FIR_DELETED', refetch),
+      sseClient.subscribe('OFFICER_CREATED', refetch),
+      sseClient.subscribe('OFFICER_UPDATED', refetch),
+      sseClient.subscribe('OFFICER_DELETED', refetch),
+      sseClient.subscribe('STATION_CREATED', refetch),
+      sseClient.subscribe('STATION_UPDATED', refetch),
+      sseClient.subscribe('STATION_DELETED', refetch),
+      sseClient.onReconnect(refetch),
+    ];
+    return () => handlers.forEach(unsub => unsub());
   }, []);
 
 

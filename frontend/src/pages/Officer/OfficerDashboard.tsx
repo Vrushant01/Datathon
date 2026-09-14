@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { authFetch } from '../../utils/authFetch';
 import { API_BASE_URL } from '../../config/api';
+import { sseClient } from '../../utils/SSEClient';
 import { 
   FileText, Clock, CheckCircle2, ChevronRight, 
   MapPin, Shield, ShieldCheck, Activity 
@@ -35,17 +36,15 @@ export const OfficerDashboard: React.FC = () => {
 
   // SSE real-time subscriptions — refresh when FIRs change
   useEffect(() => {
-    import('../../utils/SSEClient').then(({ sseClient }) => {
-      const handlers = [
-        sseClient.subscribe('FIR_CREATED', () => fetchCases()),
-        sseClient.subscribe('FIR_UPDATED', () => fetchCases()),
-        sseClient.subscribe('FIR_DELETED', () => fetchCases()),
-        sseClient.subscribe('ASSIGNMENT_UPDATED', () => fetchCases()),
-        sseClient.onReconnect(() => fetchCases()),
-      ];
-      return () => handlers.forEach(unsub => unsub());
-    });
-  }, []);
+    const handlers = [
+      sseClient.subscribe('FIR_CREATED', () => fetchCases()),
+      sseClient.subscribe('FIR_UPDATED', () => fetchCases()),
+      sseClient.subscribe('FIR_DELETED', () => fetchCases()),
+      sseClient.subscribe('ASSIGNMENT_UPDATED', () => fetchCases()),
+      sseClient.onReconnect(() => fetchCases()),
+    ];
+    return () => handlers.forEach(unsub => unsub());
+  }, [user]);
   
   // Statistics derived from server data
   const totalAssigned = assignedCases.length;

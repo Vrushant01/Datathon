@@ -2,6 +2,7 @@ import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { mockDb } from '../../../data/mockDb';
+import { sseClient } from '../../utils/SSEClient';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -42,21 +43,19 @@ export const AdminGISMap: React.FC = () => {
         .then(data => setCases(Array.isArray(data) ? data : (data.data || [])))
         .catch(() => {});
     };
-    import('../../utils/SSEClient').then(({ sseClient }) => {
-      const handlers = [
-        sseClient.subscribe('FIR_CREATED', refetchCases),
-        sseClient.subscribe('FIR_UPDATED', refetchCases),
-        sseClient.subscribe('FIR_DELETED', refetchCases),
-        sseClient.subscribe('STATION_CREATED', (station: any) => {
-          mockDb.injectUnit(station);
-          refetchCases();
-        }),
-        sseClient.subscribe('STATION_UPDATED', refetchCases),
-        sseClient.subscribe('STATION_DELETED', refetchCases),
-        sseClient.onReconnect(refetchCases),
-      ];
-      return () => handlers.forEach(unsub => unsub());
-    });
+    const handlers = [
+      sseClient.subscribe('FIR_CREATED', refetchCases),
+      sseClient.subscribe('FIR_UPDATED', refetchCases),
+      sseClient.subscribe('FIR_DELETED', refetchCases),
+      sseClient.subscribe('STATION_CREATED', (station: any) => {
+        mockDb.injectUnit(station);
+        refetchCases();
+      }),
+      sseClient.subscribe('STATION_UPDATED', refetchCases),
+      sseClient.subscribe('STATION_DELETED', refetchCases),
+      sseClient.onReconnect(refetchCases),
+    ];
+    return () => handlers.forEach(unsub => unsub());
   }, []);
 
 

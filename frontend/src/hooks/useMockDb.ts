@@ -8,7 +8,7 @@ export const useMockDb = () => {
     const unsubscribe = subscribeDb(() => {
       setVersion(v => v + 1);
     });
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   return version;

@@ -1,8 +1,9 @@
 import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { mockDb, CaseMasterRow, EmployeeRow } from '../../../data/mockDb';
+import { mockDb, CaseMasterRow, EmployeeRow, DistrictRow, UnitRow, ActRow, SectionRow } from '../../../data/mockDb';
 import { useMockDb } from '../../hooks/useMockDb';
+import { sseClient } from '../../utils/SSEClient';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../config/api';
 import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
@@ -429,16 +430,14 @@ export const FIRManagement: React.FC = () => {
   // SSE real-time subscriptions — use a ref to avoid stale closure
   useEffect(() => {
     const fetchRef = () => fetchCases();
-    import('../../utils/SSEClient').then(({ sseClient }) => {
-      const handlers = [
-        sseClient.subscribe('FIR_CREATED', fetchRef),
-        sseClient.subscribe('FIR_UPDATED', fetchRef),
-        sseClient.subscribe('FIR_DELETED', fetchRef),
-        sseClient.onReconnect(fetchRef),
-      ];
-      return () => handlers.forEach(unsub => unsub());
-    });
-  }, [page, searchQuery, filterDistrict, filterStation, filterStatus]);
+    const handlers = [
+      sseClient.subscribe('FIR_CREATED', fetchRef),
+      sseClient.subscribe('FIR_UPDATED', fetchRef),
+      sseClient.subscribe('FIR_DELETED', fetchRef),
+      sseClient.onReconnect(fetchRef),
+    ];
+    return () => handlers.forEach(unsub => unsub());
+  }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion]);
 
   return (
     <div className="space-y-4 select-none h-full flex flex-col min-h-0">

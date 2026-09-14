@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { mockDb, EmployeeRow, UnitRow, DistrictRow } from '../../../data/mockDb';
 import { useMockDb } from '../../hooks/useMockDb';
+import { sseClient } from '../../utils/SSEClient';
 import { authFetch } from '../../utils/authFetch';
 import { API_BASE_URL } from '../../config/api';
 import { useLanguage } from '../../context/LanguageContext';
@@ -284,15 +285,13 @@ export const OfficerManagement: React.FC = () => {
   // SSE real-time subscriptions — re-subscribe when filters change to avoid stale closure
   useEffect(() => {
     const fetchRef = () => fetchEmployees();
-    import('../../utils/SSEClient').then(({ sseClient }) => {
-      const handlers = [
-        sseClient.subscribe('OFFICER_CREATED', fetchRef),
-        sseClient.subscribe('OFFICER_UPDATED', fetchRef),
-        sseClient.subscribe('OFFICER_DELETED', fetchRef),
-        sseClient.onReconnect(fetchRef),
-      ];
-      return () => handlers.forEach(unsub => unsub());
-    });
+    const handlers = [
+      sseClient.subscribe('OFFICER_CREATED', fetchRef),
+      sseClient.subscribe('OFFICER_UPDATED', fetchRef),
+      sseClient.subscribe('OFFICER_DELETED', fetchRef),
+      sseClient.onReconnect(fetchRef),
+    ];
+    return () => handlers.forEach(unsub => unsub());
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus]);
 
   return (

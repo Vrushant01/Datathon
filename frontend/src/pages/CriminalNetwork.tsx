@@ -306,6 +306,7 @@ export const CriminalNetwork: React.FC = () => {
       try {
         const updateData = payload?.data ?? payload;
         const caseMasterId = updateData?.CaseMasterID ?? updateData?.caseMasterId;
+        // @ts-ignore
         const entityId = updateData?.EntityID ?? updateData?.id;
 
         if (!caseMasterId || !entityId) return;
@@ -343,6 +344,7 @@ export const CriminalNetwork: React.FC = () => {
       try {
         const delData = payload?.data ?? payload;
         const caseMasterId = delData?.CaseMasterID ?? delData?.caseMasterId;
+        // @ts-ignore
         const deletedId = delData?.id ?? delData?.EntityID;
 
         if (!caseMasterId || !deletedId) return;
@@ -457,12 +459,12 @@ export const CriminalNetwork: React.FC = () => {
     })));
   }, [setEdges]);
 
-  const onNodeDragStop = useCallback(async (event: React.MouseEvent, node: Node) => {
+  const onNodeDragStop = useCallback(async (event: any, node: Node) => {
     if (!isCaseEditable(selectedFirId!)) return;
     if (node.type !== 'custom' || node.data.type === 'case' || node.data.type === 'accused' || node.data.type === 'victim') return;
 
     try {
-      const entityId = node.data.databaseEntityId || node.data.rawData?.EntityID;
+      const entityId = node.data.databaseEntityId || (node.data.rawData as any)?.EntityID;
       if (!entityId) return;
 
       await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${entityId}`, {
@@ -471,7 +473,7 @@ export const CriminalNetwork: React.FC = () => {
         body: JSON.stringify({
           type: node.data.type,
           value: node.data.label,
-          description: node.data.rawData?.description || '',
+          description: (node.data.rawData as any)?.description || '',
           position: node.position
         })
       });

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../../config/api';
 import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -112,7 +113,7 @@ export const CaseDetail: React.FC = () => {
   // Action: Update Status
   const handleStatusChange = async (newStatusId: number) => {
     try {
-      showNotification('info', 'Updating status...');
+      // showNotification('info', 'Updating status...');
       const response = await authFetch(`${API_BASE_URL}/api/cases/${caseId}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
