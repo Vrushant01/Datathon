@@ -346,6 +346,17 @@ app.get('/api/units', async (req, res) => {
   app.post('/api/employees', requireAuth, async (req, res) => {
     try {
       const db = RepositoryFactory.getRepository(req);
+      
+      // Validation: Ensure Police Station belongs to District
+      const units = await (db as any).getUnits();
+      const targetUnit = units.find((u: any) => Number(u.UnitID) === Number(req.body.UnitID));
+      if (!targetUnit) {
+        return res.status(400).json({ error: 'Invalid PoliceStationID / UnitID provided.' });
+      }
+      if (Number(targetUnit.DistrictID) !== Number(req.body.DistrictID)) {
+        return res.status(400).json({ error: `Validation Error: The selected Police Station (UnitID ${req.body.UnitID}) does not belong to the selected District (DistrictID ${req.body.DistrictID}).` });
+      }
+
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       const newEmployee = await (db as any).createEmployee(req.body, actorId);
       invalidateHotspotCache();
@@ -373,6 +384,17 @@ app.get('/api/units', async (req, res) => {
   app.put('/api/employees/:id', requireAuth, async (req, res) => {
     try {
       const db = RepositoryFactory.getRepository(req);
+      
+      // Validation: Ensure Police Station belongs to District
+      const units = await (db as any).getUnits();
+      const targetUnit = units.find((u: any) => Number(u.UnitID) === Number(req.body.UnitID));
+      if (!targetUnit) {
+        return res.status(400).json({ error: 'Invalid PoliceStationID / UnitID provided.' });
+      }
+      if (Number(targetUnit.DistrictID) !== Number(req.body.DistrictID)) {
+        return res.status(400).json({ error: `Validation Error: The selected Police Station (UnitID ${req.body.UnitID}) does not belong to the selected District (DistrictID ${req.body.DistrictID}).` });
+      }
+
       const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
       const updated = await (db as any).updateEmployee(Number(req.params.id), req.body, actorId);
       invalidateHotspotCache();

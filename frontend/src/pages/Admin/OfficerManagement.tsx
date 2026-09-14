@@ -42,8 +42,8 @@ export const OfficerManagement: React.FC = () => {
   const [kgid, setKgid] = useState('');
   const [rankId, setRankId] = useState(1);
   const [designationId, setDesignationId] = useState(101);
-  const [unitId, setUnitId] = useState(2001);
-  const [districtId, setDistrictId] = useState(1001);
+  const [unitId, setUnitId] = useState<number | ''>('');
+  const [districtId, setDistrictId] = useState<number | ''>('');
   const [dob, setDob] = useState('1990-01-01');
   const [appointmentDate, setAppointmentDate] = useState('2015-01-01');
   const [email, setEmail] = useState('');
@@ -127,8 +127,8 @@ export const OfficerManagement: React.FC = () => {
 
     setRankId(ranks[0]?.RankID || 1);
     setDesignationId(designations[0]?.DesignationID || 101);
-    setUnitId(units[0]?.UnitID || 2001);
-    setDistrictId(districts[0]?.DistrictID || 1001);
+    setUnitId('');
+    setDistrictId('');
     setDob('1990-01-01');
     setAppointmentDate('2015-01-01');
     setEmail('');
@@ -159,8 +159,8 @@ export const OfficerManagement: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName || !kgid || !email) {
-      showNotification('error', 'Please fill in Name, KGID and Email.');
+    if (!firstName || !kgid || !email || !unitId || !districtId) {
+      showNotification('error', 'Please fill all required fields (Name, KGID, District, Station, and Email).');
       return;
     }
 
@@ -554,23 +554,39 @@ export const OfficerManagement: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Assigned District</label>
+                  <select 
+                    value={districtId}
+                    onChange={(e) => {
+                      setDistrictId(Number(e.target.value));
+                      setUnitId('');
+                    }}
+                    className="w-full p-2 bg-slate-50 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-ksp-navy"
+                  >
+                    <option value="" disabled>Select district first</option>
+                    {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
+                  </select>
+                </div>
+                <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Assigned Police Station</label>
                   <select 
                     value={unitId}
                     onChange={(e) => setUnitId(Number(e.target.value))}
-                    className="w-full p-2 bg-slate-50 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-ksp-navy"
+                    disabled={!districtId || units.filter(u => u.DistrictID === districtId).length === 0}
+                    className="w-full p-2 bg-slate-50 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-ksp-navy disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {units.map(u => <option key={u.UnitID} value={u.UnitID}>{u.UnitName}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block mb-1">Assigned District</label>
-                  <select 
-                    value={districtId}
-                    onChange={(e) => setDistrictId(Number(e.target.value))}
-                    className="w-full p-2 bg-slate-50 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-ksp-navy"
-                  >
-                    {districts.map(d => <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>)}
+                    {!districtId ? (
+                      <option value="" disabled>Select district first</option>
+                    ) : units.filter(u => u.DistrictID === districtId).length === 0 ? (
+                      <option value="" disabled>No police stations available</option>
+                    ) : (
+                      <>
+                        <option value="" disabled>Select a police station</option>
+                        {units.filter(u => u.DistrictID === districtId).map(u => (
+                          <option key={u.UnitID} value={u.UnitID}>{u.UnitName}</option>
+                        ))}
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
