@@ -47,7 +47,7 @@ export const AnalyticsLayout: React.FC = () => {
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50 select-none w-full">
       
       {/* Tablet/Mobile Header - App Style */}
-      <div className="xl:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow flex-shrink-0 border-b border-ksp-gold/20">
+      <div className="md:hidden w-full bg-ksp-navy text-white px-4 py-3 flex items-center justify-between shadow flex-shrink-0 border-b border-ksp-gold/20">
         <div className="flex flex-col">
           <span className="font-extrabold text-[10px] uppercase tracking-wide text-ksp-gold flex items-center gap-1.5"><BarChart3 size={12}/> Analytics Portal</span>
           <span className="font-semibold text-sm">{currentPageLabel === 'Network' ? 'Network Analysis' : currentPageLabel}</span>
@@ -57,7 +57,7 @@ export const AnalyticsLayout: React.FC = () => {
         </div>
       </div>
 
-      <header className="fixed-header hidden xl:block z-40">
+      <header className="fixed-header hidden md:block z-40">
         <Navbar />
       </header>
 

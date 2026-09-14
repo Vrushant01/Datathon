@@ -492,10 +492,10 @@ export const AnalyticsGISMap: React.FC = () => {
         </p>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0">
         
         {/* Filter Card */}
-        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col gap-3 lg:w-72 shrink-0 h-fit overflow-y-auto max-h-[40vh] lg:max-h-none">
+        <div className="bg-white p-4 rounded-xl border shadow-sm flex flex-col gap-3 md:w-72 lg:w-80 shrink-0 h-fit overflow-y-auto max-h-[40vh] md:max-h-[calc(100vh-160px)]">
           <span className="text-xs text-gray-500 font-medium">Mapped cases matching filter: {finalFilteredCases.length}</span>
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
             <Filter size={14} className="text-ksp-gold-dark" /> Station GIS Filters
@@ -575,7 +575,7 @@ export const AnalyticsGISMap: React.FC = () => {
         </div>
 
         {/* Map Container */}
-        <div className="flex-1 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[400px] lg:min-h-0 relative z-0">
+        <div className="flex-1 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[400px] lg:min-h-0 relative z-0 min-w-0">
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full focus:outline-none outline-none" style={{ outline: 'none' }} />
         </div>
 

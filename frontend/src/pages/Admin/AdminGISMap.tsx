@@ -901,9 +901,9 @@ export const AdminGISMap: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-grow">
+      <div className="flex flex-col md:flex-row gap-6 flex-grow min-h-[600px] min-w-0">
         
-        <div className="bg-white p-5 rounded-xl border shadow-sm space-y-4 lg:col-span-1 h-fit">
+        <div className="md:w-[280px] lg:w-[320px] shrink-0 bg-white p-5 rounded-xl border shadow-sm space-y-4 h-fit max-h-[80vh] md:max-h-[calc(100vh-160px)] overflow-y-auto">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2 mb-2">
             <Filter size={14} className="text-ksp-gold-dark" /> GIS Layers & Filters
           </h3>
@@ -1057,7 +1057,7 @@ export const AdminGISMap: React.FC = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-3 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[500px] relative flex flex-col">
+        <div className="flex-1 min-w-0 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[500px] relative flex flex-col">
           <div className="flex items-center justify-between p-2 bg-slate-50 border-b text-[10px] text-slate-400 font-semibold select-none z-10 relative">
             <div className="flex items-center gap-1.5">
               <Info size={14} className="text-ksp-gold-dark" /> <span className="text-gray-500 font-medium">Mapped cases matching filter: {finalFilteredCases.length}</span>
