@@ -1,6 +1,6 @@
 import { authFetch } from '../../utils/authFetch';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { mockDb } from '../../../data/mockDb';
 import { sseClient } from '../../utils/SSEClient';
 import * as maplibregl from 'maplibre-gl';
@@ -16,7 +16,7 @@ import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 
 export const AdminGISMap: React.FC = () => {
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Natively load GIS cases from backend instead of relying on mockDb cache
   const [cases, setCases] = useState<any[]>([]);
