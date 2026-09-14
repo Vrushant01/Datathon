@@ -5,7 +5,7 @@ import { mockDb, CaseMasterRow, EmployeeRow } from '../../../data/mockDb';
 import { useMockDb } from '../../hooks/useMockDb';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../config/api';
-import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck, Printer } from 'lucide-react';
+import { FileText, Search, Plus, Trash2, Edit2, ArrowLeftRight, Check, X, AlertTriangle, MapPin, User, Calendar, ShieldCheck } from 'lucide-react';
 import { FIRDocument } from '../../components/FIRDocument';
 import { PrintFIR } from '../../components/PrintFIR';
 import { getCasesForAnomaly } from '../../utils/anomalyFilters';
@@ -619,16 +619,6 @@ export const FIRManagement: React.FC = () => {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2 justify-center">
-                      <button 
-                        title="Print FIR"
-                        onClick={() => {
-                          setSelectedFirDetails(mockDb.getCaseDetails(c.CaseMasterID));
-                          setTimeout(() => window.print(), 100);
-                        }}
-                        className="p-1.5 text-slate-500 hover:text-ksp-navy hover:bg-slate-100 border rounded transition"
-                      >
-                        <Printer size={14} />
-                      </button>
                       <button 
                         onClick={() => {
                           setSelectedFirDetails(mockDb.getCaseDetails(c.CaseMasterID));
