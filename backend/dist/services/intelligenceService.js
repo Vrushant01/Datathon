@@ -20,7 +20,7 @@ function toDayIndex(raw) {
 }
 const getVerifiedIntelligenceContext = async (req, dimensions) => {
     const repo = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-    const allCases = await repo.getAllCasesForAnalytics();
+    const allCases = await repo.getAllCases();
     // 1. Correlate Cases
     let affectedCases = [];
     if (dimensions.type === 'ANOMALY') {

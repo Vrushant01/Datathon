@@ -44,7 +44,7 @@ import fixDistrictsRoute from './routes/fixDistrictsRoute';
 import testIndexRoute from './routes/testIndexRoute';
 import fixDataBugsRoute from './routes/fixDataBugsRoute';
 import verifySeedRoute from './routes/verifySeedRoute';
-import analyticsRoutes from './routes/analyticsRoutes';
+import analyticsRoutes, { invalidateAnalyticsCache } from './routes/analyticsRoutes';
 import networkRoutes from './routes/networkRoutes';
 import eventsRoute from './routes/eventsRoute';
 import { sseService } from './services/sseService';
@@ -836,6 +836,7 @@ app.post('/api/cases', requireAuth, async (req, res) => {
     }
 
     invalidateHotspotCache();
+    invalidateAnalyticsCache();
     
     // Broadcast FIR_CREATED event
     sseService.broadcast('FIR_CREATED', newCase, { stationId: caseData.PoliceStationID, officerId: caseData.PolicePersonID });
@@ -854,6 +855,7 @@ app.put('/api/cases/:id', requireAuth, async (req, res) => {
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
     const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
     invalidateHotspotCache();
+    invalidateAnalyticsCache();
     sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
     res.json(updatedCase);
   } catch (error: any) {
@@ -872,6 +874,7 @@ app.patch('/api/cases/:id', requireAuth, async (req, res) => {
     const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
     const updatedCase = await (db as any).updateCase(caseId, req.body, actorId);
     invalidateHotspotCache();
+    invalidateAnalyticsCache();
     sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
     res.json(updatedCase);
   } catch (error: any) {
@@ -904,6 +907,7 @@ app.delete('/api/cases/:id', requireAuth, requireRole('Admin'), async (req, res)
 
     await db.deleteCase(caseId, actorId);
     invalidateHotspotCache();
+    invalidateAnalyticsCache();
 
     // Broadcast FIR_DELETED — SSE service will route to authorized clients only
     sseService.broadcast('FIR_DELETED', { id: caseId, CaseMasterID: caseId }, { stationId, officerId });

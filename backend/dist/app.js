@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -39,7 +72,7 @@ const fixDistrictsRoute_1 = __importDefault(require("./routes/fixDistrictsRoute"
 const testIndexRoute_1 = __importDefault(require("./routes/testIndexRoute"));
 const fixDataBugsRoute_1 = __importDefault(require("./routes/fixDataBugsRoute"));
 const verifySeedRoute_1 = __importDefault(require("./routes/verifySeedRoute"));
-const analyticsRoutes_1 = __importDefault(require("./routes/analyticsRoutes"));
+const analyticsRoutes_1 = __importStar(require("./routes/analyticsRoutes"));
 const networkRoutes_1 = __importDefault(require("./routes/networkRoutes"));
 const eventsRoute_1 = __importDefault(require("./routes/eventsRoute"));
 const sseService_1 = require("./services/sseService");
@@ -776,6 +809,7 @@ app.post('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
             await Promise.all(entityPromises);
         }
         (0, hotspotController_1.invalidateHotspotCache)();
+        (0, analyticsRoutes_1.invalidateAnalyticsCache)();
         // Broadcast FIR_CREATED event
         sseService_1.sseService.broadcast('FIR_CREATED', newCase, { stationId: caseData.PoliceStationID, officerId: caseData.PolicePersonID });
         res.status(201).json(newCase);
@@ -792,6 +826,7 @@ app.put('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updatedCase = await db.updateCase(caseId, req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        (0, analyticsRoutes_1.invalidateAnalyticsCache)();
         sseService_1.sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
         res.json(updatedCase);
     }
@@ -810,6 +845,7 @@ app.patch('/api/cases/:id', authMiddleware_1.requireAuth, async (req, res) => {
         const actorId = req.body.userEmail || req.headers['x-user-email'] || 'system';
         const updatedCase = await db.updateCase(caseId, req.body, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        (0, analyticsRoutes_1.invalidateAnalyticsCache)();
         sseService_1.sseService.broadcast('FIR_UPDATED', updatedCase, { stationId: updatedCase?.PoliceStationID, officerId: updatedCase?.PolicePersonID });
         res.json(updatedCase);
     }
@@ -838,6 +874,7 @@ app.delete('/api/cases/:id', authMiddleware_1.requireAuth, (0, authMiddleware_1.
         const officerId = existingCase.PolicePersonID;
         await db.deleteCase(caseId, actorId);
         (0, hotspotController_1.invalidateHotspotCache)();
+        (0, analyticsRoutes_1.invalidateAnalyticsCache)();
         // Broadcast FIR_DELETED — SSE service will route to authorized clients only
         sseService_1.sseService.broadcast('FIR_DELETED', { id: caseId, CaseMasterID: caseId }, { stationId, officerId });
         res.json({ success: true, deletedId: caseId });

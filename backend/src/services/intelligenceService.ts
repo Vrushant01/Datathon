@@ -24,7 +24,7 @@ export interface IntelligenceDimensions {
 
 export const getVerifiedIntelligenceContext = async (req: Request, dimensions: IntelligenceDimensions) => {
   const repo = RepositoryFactory.getRepository(req);
-  const allCases = await repo.getAllCasesForAnalytics();
+  const allCases = await repo.getAllCases();
 
   // 1. Correlate Cases
   let affectedCases: any[] = [];

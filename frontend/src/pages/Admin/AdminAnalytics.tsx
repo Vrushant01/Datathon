@@ -2,6 +2,7 @@ import React from 'react';
 import { mockDb } from '../../../data/mockDb';
 import { useLanguage } from '../../context/LanguageContext';
 import { authFetch } from '../../utils/authFetch';
+import { sseClient } from '../../utils/SSEClient';
 import { API_BASE_URL } from '../../config/api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
@@ -23,8 +24,27 @@ export const AdminAnalytics: React.FC = () => {
   const [topCrimeAreas, setTopCrimeAreas] = React.useState<{location: string, count: number}[]>([]);
   const [usesDemoData, setUsesDemoData] = React.useState<boolean>(false);
   const [loadingGraph1, setLoadingGraph1] = React.useState<boolean>(false);
+  const [refreshCounter, setRefreshCounter] = React.useState(0);
 
   const graph1Cache = React.useRef<Record<string, any>>({});
+
+  React.useEffect(() => {
+    const handleRefresh = () => {
+      // Clear local caches so fresh backend data is fetched
+      graph1Cache.current = {};
+      setRefreshCounter(c => c + 1);
+    };
+
+    const unsubCreated = sseClient.subscribe('FIR_CREATED', handleRefresh);
+    const unsubUpdated = sseClient.subscribe('FIR_UPDATED', handleRefresh);
+    const unsubDeleted = sseClient.subscribe('FIR_DELETED', handleRefresh);
+
+    return () => {
+      unsubCreated();
+      unsubUpdated();
+      unsubDeleted();
+    };
+  }, []);
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -59,7 +79,7 @@ export const AdminAnalytics: React.FC = () => {
     return () => {
       controller.abort();
     };
-  }, [selectedDistrict, selectedStation]);
+  }, [selectedDistrict, selectedStation, refreshCounter]);
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -84,7 +104,7 @@ export const AdminAnalytics: React.FC = () => {
     return () => {
       controller.abort();
     };
-  }, [selectedDistrict, selectedStation]);
+  }, [selectedDistrict, selectedStation, refreshCounter]);
 
   const districts = mockDb.getDistricts();
   const stations = mockDb.getUnits().filter(u => u.TypeID === 1);
@@ -96,7 +116,7 @@ export const AdminAnalytics: React.FC = () => {
 
   const [dashboardData, setDashboardData] = React.useState<any>({
     totalCases: 0, solvedCases: 0, activeCases: 0, solvedRate: '0.0',
-    chart1Data: [], categoryData: [], victimAgeData: [], accusedAgeData: [], officerData: []
+    chart1Data: [], categoryData: [], victimAgeData: [], accusedAgeData: [], officerData: [], historicalTrendData: []
   });
   const [loadingDashboard, setLoadingDashboard] = React.useState<boolean>(false);
 
@@ -119,24 +139,13 @@ export const AdminAnalytics: React.FC = () => {
       });
       
     return () => controller.abort();
-  }, [selectedDistrict, selectedStation]);
+  }, [selectedDistrict, selectedStation, refreshCounter]);
 
-  const { totalCases, solvedCases, activeCases, solvedRate, chart1Data, categoryData, victimAgeData, accusedAgeData, officerData } = dashboardData;
+  const { totalCases, solvedCases, activeCases, solvedRate, chart1Data, categoryData, victimAgeData, accusedAgeData, officerData, historicalTrendData } = dashboardData;
 
   // 6. Socio-Economic Correlation Data (Now fetched from backend API)
 
-  // 7. Risk Typology Forecast (Q3/Q4 2026 projection)
-  const predictiveRiskData = React.useMemo(() => {
-    const base = Math.max(10, totalCases / 15);
-    return [
-      { month: 'May 2026', Cyber: Math.round(base * 0.2), Property: Math.round(base * 0.4), Body: Math.round(base * 0.3) },
-      { month: 'Jun 2026', Cyber: Math.round(base * 0.25), Property: Math.round(base * 0.45), Body: Math.round(base * 0.35) },
-      { month: 'Jul 2026', Cyber: Math.round(base * 0.3), Property: Math.round(base * 0.5), Body: Math.round(base * 0.38) },
-      { month: 'Aug 2026 (F)', Cyber: Math.round(base * 0.4), Property: Math.round(base * 0.55), Body: Math.round(base * 0.42) },
-      { month: 'Sep 2026 (F)', Cyber: Math.round(base * 0.55), Property: Math.round(base * 0.65), Body: Math.round(base * 0.45) },
-      { month: 'Oct 2026 (F)', Cyber: Math.round(base * 0.7), Property: Math.round(base * 0.75), Body: Math.round(base * 0.5) }
-    ];
-  }, [totalCases]);
+
 
 
 
@@ -369,22 +378,22 @@ export const AdminAnalytics: React.FC = () => {
           )}
         </div>
 
-        {/* Chart 6: Risk Forecasting area chart (Matches Screenshot 2) */}
+        {/* Chart 6: Historical Registration Trend area chart */}
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col">
           <h3 className="text-sm font-extrabold text-ksp-navy mb-4 flex items-center gap-2">
-            <Brain size={14} className="text-purple-600" /> Risk Typology Forecast
+            <Brain size={14} className="text-purple-600" /> Historical Registration Trend
           </h3>
           <div className="h-64 w-full text-xs">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={predictiveRiskData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={historicalTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="month" />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Area type="monotone" dataKey="Cyber" name="Cyber Risk (Proj)" stroke="#06B6D4" fill="#06B6D4" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="Property" name="Property Crime (Proj)" stroke="#F97316" fill="#F97316" fillOpacity={0.1} />
-                <Area type="monotone" dataKey="Body" name="Body Offences (Proj)" stroke="#EF4444" fill="#EF4444" fillOpacity={0.05} />
+                <Area type="monotone" dataKey="Cyber" name="Cyber Crimes" stroke="#06B6D4" fill="#06B6D4" fillOpacity={0.15} />
+                <Area type="monotone" dataKey="Property" name="Property Crimes" stroke="#F97316" fill="#F97316" fillOpacity={0.1} />
+                <Area type="monotone" dataKey="Body" name="Body Offences" stroke="#EF4444" fill="#EF4444" fillOpacity={0.05} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

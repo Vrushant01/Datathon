@@ -9,7 +9,7 @@ const recommendationEngine_1 = require("./ai/recommendationEngine");
 const districtIntelligence_1 = require("./ai/districtIntelligence");
 const getDashboardData = async (db) => {
     // 1. Fetch recent cases
-    const cases = await db.getAllCasesForAnalytics();
+    const cases = await db.getAllCases();
     const points = cases.map((c) => ({
         id: c.CaseMasterID,
         latitude: Number(c.latitude),

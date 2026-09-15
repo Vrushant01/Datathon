@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.invalidateAnalyticsCache = void 0;
 const express_1 = __importDefault(require("express"));
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
@@ -223,15 +224,15 @@ router.get('/dashboard', authMiddleware_1.requireAuth, async (req, res) => {
         }
         // Get all data
         const [cases, victims, accused, officers] = await Promise.all([
-            db.getAllCasesForAnalytics(),
+            db.getAllCases(),
             db.getAllVictims(),
             db.getAllAccused(),
             db.getEmployees()
         ]);
         // Apply filters
-        const filteredCases = cases.filter(c => {
+        const filteredCases = cases.filter((c) => {
             if (targetDistrictId !== 'ALL') {
-                const station = units.find(s => s.UnitID === c.PoliceStationID);
+                const station = units.find((s) => s.UnitID === c.PoliceStationID);
                 if (station?.DistrictID !== targetDistrictId)
                     return false;
             }
@@ -241,61 +242,84 @@ router.get('/dashboard', authMiddleware_1.requireAuth, async (req, res) => {
             return true;
         });
         const totalCases = filteredCases.length;
-        const solvedCases = filteredCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
+        const solvedCases = filteredCases.filter((c) => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;
         // 1. Crime by District / Station (Graph 1)
         let chart1Data = [];
         if (targetDistrictId === 'ALL') {
-            chart1Data = districts.map(d => {
-                const districtStations = units.filter(s => s.DistrictID === d.DistrictID);
-                const caseCount = filteredCases.filter(c => districtStations.some(s => s.UnitID === c.PoliceStationID)).length;
+            chart1Data = districts.map((d) => {
+                const districtStations = units.filter((s) => s.DistrictID === d.DistrictID);
+                const caseCount = filteredCases.filter((c) => districtStations.some((s) => s.UnitID === c.PoliceStationID)).length;
                 return { name: String(d.DistrictName || '').replace(' City', '').replace(' Rural', ''), Cases: caseCount };
-            }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
+            }).filter((item) => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
         }
         else if (targetStationId === 'ALL') {
-            const districtStations = units.filter(s => s.DistrictID === targetDistrictId);
-            chart1Data = districtStations.map(s => {
-                const caseCount = filteredCases.filter(c => c.PoliceStationID === s.UnitID).length;
+            const districtStations = units.filter((s) => s.DistrictID === targetDistrictId);
+            chart1Data = districtStations.map((s) => {
+                const caseCount = filteredCases.filter((c) => c.PoliceStationID === s.UnitID).length;
                 return { name: String(s.UnitName || '').replace(' PS', ''), Cases: caseCount };
-            }).filter(item => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
+            }).filter((item) => item.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 10);
         }
         else {
-            const s = units.find(s => s.UnitID === targetStationId);
+            const s = units.find((s) => s.UnitID === targetStationId);
             chart1Data = s ? [{ name: String(s.UnitName || '').replace(' PS', ''), Cases: totalCases }] : [];
         }
         // 2. Crime Categories
-        const categoryData = CRIME_HEADS.map(ch => {
-            const caseCount = filteredCases.filter(c => c.CrimeMajorHeadID === ch.CrimeHeadID).length;
+        const categoryData = CRIME_HEADS.map((ch) => {
+            const caseCount = filteredCases.filter((c) => c.CrimeMajorHeadID === ch.CrimeHeadID).length;
             return { name: String(ch.CrimeGroupName || '').split(' ').slice(-2).join(' '), Cases: caseCount };
-        }).filter(c => c.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 8);
+        }).filter((c) => c.Cases > 0).sort((a, b) => b.Cases - a.Cases).slice(0, 8);
         // 3. Victim Age Demographics
         const victimAgeData = [
-            { name: 'Under 18', Count: victims.filter(v => v.AgeYear < 18 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
-            { name: '18 - 30', Count: victims.filter(v => v.AgeYear >= 18 && v.AgeYear <= 30 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
-            { name: '31 - 50', Count: victims.filter(v => v.AgeYear > 30 && v.AgeYear <= 50 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length },
-            { name: 'Over 50', Count: victims.filter(v => v.AgeYear > 50 && filteredCases.some(c => c.CaseMasterID === v.CaseMasterID)).length }
-        ].filter(v => v.Count > 0);
+            { name: 'Under 18', Count: victims.filter((v) => v.AgeYear < 18 && filteredCases.some((c) => c.CaseMasterID === v.CaseMasterID)).length },
+            { name: '18 - 30', Count: victims.filter((v) => v.AgeYear >= 18 && v.AgeYear <= 30 && filteredCases.some((c) => c.CaseMasterID === v.CaseMasterID)).length },
+            { name: '31 - 50', Count: victims.filter((v) => v.AgeYear > 30 && v.AgeYear <= 50 && filteredCases.some((c) => c.CaseMasterID === v.CaseMasterID)).length },
+            { name: 'Over 50', Count: victims.filter((v) => v.AgeYear > 50 && filteredCases.some((c) => c.CaseMasterID === v.CaseMasterID)).length }
+        ].filter((v) => v.Count > 0);
         // 4. Accused Age Demographics
         const accusedAgeData = [
-            { name: 'Under 18', Count: accused.filter(a => a.AgeYear < 18 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
-            { name: '18 - 30', Count: accused.filter(a => a.AgeYear >= 18 && a.AgeYear <= 30 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
-            { name: '31 - 50', Count: accused.filter(a => a.AgeYear > 30 && a.AgeYear <= 50 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length },
-            { name: 'Over 50', Count: accused.filter(a => a.AgeYear > 50 && filteredCases.some(c => c.CaseMasterID === a.CaseMasterID)).length }
-        ].filter(a => a.Count > 0);
+            { name: 'Under 18', Count: accused.filter((a) => a.AgeYear < 18 && filteredCases.some((c) => c.CaseMasterID === a.CaseMasterID)).length },
+            { name: '18 - 30', Count: accused.filter((a) => a.AgeYear >= 18 && a.AgeYear <= 30 && filteredCases.some((c) => c.CaseMasterID === a.CaseMasterID)).length },
+            { name: '31 - 50', Count: accused.filter((a) => a.AgeYear > 30 && a.AgeYear <= 50 && filteredCases.some((c) => c.CaseMasterID === a.CaseMasterID)).length },
+            { name: 'Over 50', Count: accused.filter((a) => a.AgeYear > 50 && filteredCases.some((c) => c.CaseMasterID === a.CaseMasterID)).length }
+        ].filter((a) => a.Count > 0);
         // 5. Officer Case Load
-        const officerData = officers.map(o => {
-            const assignedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID).length;
-            const solvedCount = filteredCases.filter(c => c.PolicePersonID === o.EmployeeID && (c.CaseStatusID === 2 || c.CaseStatusID === 3)).length;
+        const officerData = officers.map((o) => {
+            const assignedCount = filteredCases.filter((c) => c.PolicePersonID === o.EmployeeID).length;
+            const solvedCount = filteredCases.filter((c) => c.PolicePersonID === o.EmployeeID && (c.CaseStatusID === 2 || c.CaseStatusID === 3)).length;
             return {
                 uid: o.KGID || String(o.EmployeeID), kgid: o.KGID || 'N/A', fullName: String(o.FirstName || ''),
                 name: String(o.FirstName || '').split(' ')[0], Assigned: assignedCount, Solved: solvedCount
             };
-        }).filter(o => o.Assigned > 0).sort((a, b) => b.Assigned - a.Assigned).slice(0, 10);
+        }).filter((o) => o.Assigned > 0).sort((a, b) => b.Assigned - a.Assigned).slice(0, 10);
+        // 6. Historical Registration Trend
+        const monthlyCounts = new Map();
+        filteredCases.forEach((c) => {
+            const d = new Date(c.CrimeRegisteredDate);
+            if (isNaN(d.getTime()))
+                return;
+            const monthStr = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+            if (!monthlyCounts.has(monthStr)) {
+                monthlyCounts.set(monthStr, { Cyber: 0, Property: 0, Body: 0, total: 0 });
+            }
+            const counts = monthlyCounts.get(monthStr);
+            counts.total++;
+            if (c.CrimeMajorHeadID === 500)
+                counts.Cyber++;
+            else if (c.CrimeMajorHeadID === 200)
+                counts.Property++;
+            else if (c.CrimeMajorHeadID === 100)
+                counts.Body++;
+        });
+        const sortedMonths = Array.from(monthlyCounts.keys()).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+        const historicalTrendData = sortedMonths.map(m => {
+            return { month: m, Cyber: monthlyCounts.get(m).Cyber, Property: monthlyCounts.get(m).Property, Body: monthlyCounts.get(m).Body };
+        });
         const t1 = Date.now();
         console.log(`[API] /api/analytics/dashboard took ${t1 - t0}ms`);
         const result = {
             totalCases, solvedCases, activeCases: totalCases - solvedCases,
             solvedRate: totalCases > 0 ? ((solvedCases / totalCases) * 100).toFixed(1) : '0.0',
-            chart1Data, categoryData, victimAgeData, accusedAgeData, officerData
+            chart1Data, categoryData, victimAgeData, accusedAgeData, officerData, historicalTrendData
         };
         globalDashboardCache[cacheKey] = { data: result, timestamp: t0 };
         res.json(result);
@@ -304,4 +328,9 @@ router.get('/dashboard', authMiddleware_1.requireAuth, async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+const invalidateAnalyticsCache = () => {
+    globalDashboardCache = {};
+    globalDistrictCache = null;
+};
+exports.invalidateAnalyticsCache = invalidateAnalyticsCache;
 exports.default = router;

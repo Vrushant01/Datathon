@@ -12,7 +12,7 @@ export interface IDataRepository {
   // Cases & Filtering
   getCases(filter: any): Promise<any[]>;
   getCaseById(caseId: number): Promise<any | null>;
-  getAllCasesForAnalytics(): Promise<any[]>;
+  getAllCases(): Promise<any[]>;
   createCase(caseData: any): Promise<any>;
   
   // Relationships

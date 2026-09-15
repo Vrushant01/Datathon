@@ -8,7 +8,7 @@ import { getDistrictIntelligence } from './ai/districtIntelligence';
 
 export const getDashboardData = async (db: IDataRepository) => {
   // 1. Fetch recent cases
-  const cases = await db.getAllCasesForAnalytics();
+  const cases = await db.getAllCases();
 
   const points = cases.map((c: any) => ({
     id: c.CaseMasterID,
