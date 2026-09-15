@@ -6,15 +6,19 @@ class SSEService {
     connectClient(req, res) {
         // Headers for SSE
         res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
         res.setHeader('Connection', 'keep-alive');
-        // Flush headers immediately
+        // Disable proxy/Nginx response buffering so events are streamed immediately
+        res.setHeader('X-Accel-Buffering', 'no');
+        // Flush headers immediately so the browser recognises this as an event stream
         res.flushHeaders();
+        // Write an initial SSE comment to flush the response buffer through any intermediary
+        // (some reverse proxies buffer until the first byte is received)
+        res.write(': connected\n\n');
         // Extract user context from auth middleware
         const user = req.user;
         const role = user?.role || 'Guest';
-        const stationId = user?.employee_id ? null : null; // Actually need to map this if necessary, but we'll extract it below
-        const clientId = Date.now().toString() + Math.random().toString();
+        const clientId = Date.now().toString() + Math.random().toString(36).slice(2);
         const client = {
             id: clientId,
             res,
@@ -24,15 +28,24 @@ class SSEService {
         };
         this.clients.push(client);
         console.log(`[SSE] Client connected: ${clientId} (${role})`);
-        // Send initial connection success
+        // Send initial connection success event
         this.sendEventToClient(client, 'CONNECTED', { message: 'SSE Connection Established', time: new Date().toISOString() });
-        // Keep-alive heartbeat (every 15s) to prevent idle timeouts from load balancers
+        // Keep-alive heartbeat (every 25s) — must be shorter than any proxy idle timeout.
+        // Uses a named HEARTBEAT event so it is a real HTTP data chunk (not just a comment)
+        // ensuring the proxy does not close an "idle" connection.
         const heartbeat = setInterval(() => {
-            this.sendEventToClient(client, 'HEARTBEAT', { time: Date.now() });
-            if (typeof client.res.flush === 'function') {
-                client.res.flush();
+            try {
+                this.sendEventToClient(client, 'HEARTBEAT', { time: Date.now() });
+                if (typeof client.res.flush === 'function') {
+                    client.res.flush();
+                }
             }
-        }, 15000);
+            catch (err) {
+                // The client response stream is closed — clean up
+                clearInterval(heartbeat);
+                this.clients = this.clients.filter(c => c.id !== clientId);
+            }
+        }, 25000);
         // Handle client disconnect
         req.on('close', () => {
             clearInterval(heartbeat);
@@ -41,8 +54,13 @@ class SSEService {
         });
     }
     sendEventToClient(client, eventType, data) {
-        client.res.write(`event: ${eventType}\n`);
-        client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+        try {
+            client.res.write(`event: ${eventType}\n`);
+            client.res.write(`data: ${JSON.stringify(data)}\n\n`);
+        }
+        catch (err) {
+            // Silently ignore — client already disconnected; heartbeat interval will clean up
+        }
     }
     /**
      * Broadcast an event to all connected clients that are authorized to receive it.
