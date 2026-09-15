@@ -374,8 +374,8 @@ router.delete('/cases/:caseId/entities/:entityId', authMiddleware_1.requireAuth,
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const userEmail = req.user?.email || 'system';
         await db.deleteCaseEntity(caseId, entityId, userEmail);
-        sseService_1.sseService.broadcast('CASE_ENTITY_DELETED', { CaseMasterID: caseId, id: entityId });
-        res.json({ success: true, id: entityId });
+        sseService_1.sseService.broadcast('CASE_ENTITY_DELETED', { CaseMasterID: caseId, EntityID: entityId, id: entityId });
+        res.json({ success: true, EntityID: entityId });
     }
     catch (e) {
         res.status(500).json({ error: e.message });

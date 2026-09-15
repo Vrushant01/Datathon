@@ -389,8 +389,8 @@ router.delete('/cases/:caseId/entities/:entityId', requireAuth, async (req, res)
         const userEmail = (req as any).user?.email || 'system';
         await (db as any).deleteCaseEntity(caseId, entityId, userEmail);
 
-        sseService.broadcast('CASE_ENTITY_DELETED', { CaseMasterID: caseId, id: entityId });
-        res.json({ success: true, id: entityId });
+        sseService.broadcast('CASE_ENTITY_DELETED', { CaseMasterID: caseId, EntityID: entityId, id: entityId });
+        res.json({ success: true, EntityID: entityId });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }

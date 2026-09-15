@@ -61,6 +61,10 @@ export const CriminalNetwork: React.FC = () => {
   
   // Local cache for graph trace
   const graphCache = useRef<Map<number, { nodes: Node[], edges: Edge[], caseData: any }>>(new Map());
+  
+  // Tracks EntityIDs that were mutated locally (optimistic) so SSE echoes are deduped.
+  // Format: Set of EntityID strings that the *local client* just committed.
+  const pendingMutations = useRef<Set<string>>(new Set());
 
   // Initialize search query if coming from another page
   useEffect(() => {
@@ -255,6 +259,8 @@ export const CriminalNetwork: React.FC = () => {
 
     const handleEntityCreated = (event: any) => {
       if (Number(event.CaseMasterID) !== selectedFirId) return;
+      // Skip echo of our own optimistic mutation — already applied locally
+      if (pendingMutations.current.has(String(event.EntityID))) return;
       const entityNodeId = `entity-${event.EntityID}`;
       
       setNodes(prev => {
@@ -309,6 +315,8 @@ export const CriminalNetwork: React.FC = () => {
 
     const handleEntityUpdated = (event: any) => {
       if (Number(event.CaseMasterID) !== selectedFirId) return;
+      // Skip echo of our own optimistic mutation — already applied locally
+      if (pendingMutations.current.has(String(event.EntityID || event.id || event.EntityId))) return;
       const entityNodeId = `entity-${event.EntityID || event.id || event.EntityId}`;
       setNodes(prev => prev.map(n => {
         if (n.id === entityNodeId) {
@@ -345,6 +353,8 @@ export const CriminalNetwork: React.FC = () => {
 
     const handleEntityDeleted = (event: any) => {
       if (Number(event.CaseMasterID) !== selectedFirId) return;
+      // Skip echo of our own optimistic mutation — already applied locally
+      if (pendingMutations.current.has(String(event.id || event.EntityID))) return;
       const entityNodeId = `entity-${event.id || event.EntityID}`;
       
       setNodes(prev => {
@@ -517,83 +527,122 @@ export const CriminalNetwork: React.FC = () => {
       return;
     }
 
-    try {
-      let payload = { type: newEntityType, value: newEntityValue, description: newEntityDesc };
-      if (newEntityType === 'accused') {
-          // Send age and gender in description for backend persistence if needed
-          payload.description = `Age: ${newSuspectAge}, Gender: ${newSuspectGender === 1 ? 'Male' : (newSuspectGender === 2 ? 'Female' : 'Other')}`;
+    let payload = { type: newEntityType, value: newEntityValue, description: newEntityDesc };
+    if (newEntityType === 'accused') {
+      payload.description = `Age: ${newSuspectAge}, Gender: ${newSuspectGender === 1 ? 'Male' : (newSuspectGender === 2 ? 'Female' : 'Other')}`;
+    }
+
+    // ── OPTIMISTIC UI ─────────────────────────────────────────────────────────
+    // Generate a temporary client-side ID so the node appears instantly.
+    // When the real EntityID comes back from the backend we swap it in-place.
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const tempNodeId = `entity-${tempId}`;
+    const tempEdgeId = `e-case-${selectedFirId}-${tempNodeId}`;
+
+    const tempNode: Node = {
+      id: tempNodeId,
+      type: 'custom',
+      position: { x: 400 + Math.random() * 200 - 100, y: 300 + Math.random() * 200 - 100 },
+      data: {
+        label: payload.value,
+        color: getNodeColor(payload.type, false),
+        symbol: getNodeSymbol(payload.type),
+        type: payload.type,
+        databaseEntityId: null, // will be replaced on server response
+        rawData: { ...payload, EntityID: tempId, CaseMasterID: selectedFirId, _optimistic: true }
       }
-      
+    };
+
+    let relationLabel = 'Associated';
+    if (payload.type === 'Vehicle') relationLabel = 'Transported In';
+    if (payload.type === 'Phone') relationLabel = 'Calls From';
+    if (payload.type === 'Bank') relationLabel = 'Wire Transfer';
+    if (payload.type === 'Location') relationLabel = 'Frequents';
+    if (payload.type === 'Weapon') relationLabel = 'Used In Crime';
+    if (payload.type === 'Evidence') relationLabel = 'Seized';
+
+    const tempEdge: Edge = {
+      id: tempEdgeId,
+      source: `fir:${selectedFirId}`,
+      target: tempNodeId,
+      type: 'straight',
+      label: relationLabel,
+      animated: true,
+      style: { stroke: getNodeColor(payload.type, false), strokeWidth: 1.5, opacity: 0.6 },
+      labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
+      labelBgStyle: { fill: '#0f172a' }
+    };
+
+    // Show node immediately — feels instant to the user
+    setNodes(prev => [...prev, tempNode]);
+    setEdges(prev => [...prev, tempEdge]);
+    setNewEntityValue('');
+    setNewEntityDesc('');
+    // ─────────────────────────────────────────────────────────────────────────
+
+    try {
+      const t0 = Date.now();
       const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to save entity');
       }
 
       const newEntity = await res.json();
-      showNotification('success', `Node added successfully`);
-      
-      setNewEntityValue('');
-      setNewEntityDesc('');
-      
-      // Update local graph immediately
-      const entityNodeId = `entity-${newEntity.EntityID}`;
-      setNodes(prev => {
-        if (prev.find(n => n.id === entityNodeId)) return prev;
-        const newNode: Node = {
-          id: entityNodeId,
-          type: 'custom',
-          position: { x: 400 + Math.random() * 100 - 50, y: 300 + Math.random() * 100 - 50 },
+      const elapsed = Date.now() - t0;
+      console.debug(`[CriminalNetwork] CREATE entity DB round-trip: ${elapsed}ms`);
+
+      const realNodeId = `entity-${newEntity.EntityID}`;
+      const realEdgeId = `e-case-${selectedFirId}-${realNodeId}`;
+
+      // Mark this EntityID so the SSE echo from our own action is ignored
+      pendingMutations.current.add(String(newEntity.EntityID));
+      setTimeout(() => pendingMutations.current.delete(String(newEntity.EntityID)), 5000);
+
+      // Reconcile: swap the temp node/edge for the real persisted ones
+      setNodes(prev => prev.map(n => {
+        if (n.id !== tempNodeId) return n;
+        const realNode: Node = {
+          ...n,
+          id: realNodeId,
           data: {
+            ...n.data,
             label: newEntity.value,
-            color: getNodeColor(newEntity.type, false),
-            symbol: getNodeSymbol(newEntity.type),
-            type: newEntity.type,
             databaseEntityId: newEntity.EntityID,
             rawData: newEntity
           }
         };
         if (graphCache.current.has(selectedFirId)) {
-          graphCache.current.get(selectedFirId)!.nodes.push(newNode);
+          const cache = graphCache.current.get(selectedFirId)!;
+          cache.nodes = cache.nodes.filter(cn => cn.id !== tempNodeId);
+          cache.nodes.push(realNode);
         }
-        return [...prev, newNode];
-      });
+        return realNode;
+      }));
 
-      setEdges(prev => {
-        const edgeId = `e-case-${selectedFirId}-${entityNodeId}`;
-        if (prev.find(edge => edge.id === edgeId)) return prev;
-        let relationLabel = 'Associated';
-        if (newEntity.type === 'Vehicle') relationLabel = 'Transported In';
-        if (newEntity.type === 'Phone') relationLabel = 'Calls From';
-        if (newEntity.type === 'Bank') relationLabel = 'Wire Transfer';
-        if (newEntity.type === 'Location') relationLabel = 'Frequents';
-        if (newEntity.type === 'Weapon') relationLabel = 'Used In Crime';
-        if (newEntity.type === 'Evidence') relationLabel = 'Seized';
-
-        const newEdge: Edge = {
-          id: edgeId,
-          source: `fir:${selectedFirId}`,
-          target: entityNodeId,
-          type: 'straight',
-          label: relationLabel,
-          animated: true,
-          style: { stroke: getNodeColor(newEntity.type, false), strokeWidth: 1.5, opacity: 0.6 },
-          labelStyle: { fill: '#94A3B8', fontWeight: 700, fontSize: 11 },
-          labelBgStyle: { fill: '#0f172a' }
-        };
+      setEdges(prev => prev.map(e => {
+        if (e.id !== tempEdgeId) return e;
+        const realEdge: Edge = { ...e, id: realEdgeId, target: realNodeId };
         if (graphCache.current.has(selectedFirId)) {
-          graphCache.current.get(selectedFirId)!.edges.push(newEdge);
+          const cache = graphCache.current.get(selectedFirId)!;
+          cache.edges = cache.edges.filter(ce => ce.id !== tempEdgeId);
+          cache.edges.push(realEdge);
         }
-        return [...prev, newEdge];
-      });
+        return realEdge;
+      }));
+
+      showNotification('success', 'Node saved to database');
 
     } catch (e: any) {
-      showNotification('error', e.message || 'Failed to add entity');
+      // ── ROLLBACK on failure ───────────────────────────────────────────────
+      setNodes(prev => prev.filter(n => n.id !== tempNodeId));
+      setEdges(prev => prev.filter(ed => ed.id !== tempEdgeId));
+      showNotification('error', e.message || 'Failed to add entity — change rolled back');
     }
   };
 
@@ -606,8 +655,24 @@ export const CriminalNetwork: React.FC = () => {
       return;
     }
 
+    const entityId = selectedNodeData.rawData.EntityID;
+    const entityNodeId = `entity-${entityId}`;
+
+    // ── OPTIMISTIC UI ─────────────────────────────────────────────────────────
+    const prevNodeData = { ...selectedNodeData };
+    const optimisticLabel = editNodeValue;
+
+    setNodes(prev => prev.map(n => {
+      if (n.id !== entityNodeId) return n;
+      return { ...n, data: { ...n.data, label: optimisticLabel } };
+    }));
+    setSelectedNodeData((prev: any) => ({ ...prev, label: optimisticLabel }));
+    setIsEditingNode(false);
+    // ─────────────────────────────────────────────────────────────────────────
+
     try {
-      const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${selectedNodeData.rawData.EntityID}`, {
+      const t0 = Date.now();
+      const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${entityId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -618,35 +683,38 @@ export const CriminalNetwork: React.FC = () => {
       });
 
       if (!res.ok) throw new Error('Failed to update entity');
-      
-      const updatedEntity = await res.json();
-      showNotification('success', 'Node updated successfully');
-      setIsEditingNode(false);
-      
-      // Update local graph immediately
-      const entityNodeId = `entity-${updatedEntity.EntityID}`;
-      setNodes(prev => prev.map(n => {
-        if (n.id === entityNodeId) {
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              label: updatedEntity.value,
-              rawData: updatedEntity
-            }
-          };
-        }
-        return n;
-      }));
 
-      setSelectedNodeData({
-        ...selectedNodeData,
-        label: updatedEntity.value,
-        rawData: updatedEntity
-      });
+      const updatedEntity = await res.json();
+      const elapsed = Date.now() - t0;
+      console.debug(`[CriminalNetwork] UPDATE entity DB round-trip: ${elapsed}ms`);
+
+      // Mark so our own SSE echo is ignored
+      pendingMutations.current.add(String(entityId));
+      setTimeout(() => pendingMutations.current.delete(String(entityId)), 5000);
+
+      // Reconcile with authoritative DB response
+      setNodes(prev => prev.map(n => {
+        if (n.id !== entityNodeId) return n;
+        const updated = { ...n, data: { ...n.data, label: updatedEntity.value, rawData: updatedEntity } };
+        if (graphCache.current.has(selectedFirId!)) {
+          const cache = graphCache.current.get(selectedFirId!)!;
+          const idx = cache.nodes.findIndex(cn => cn.id === entityNodeId);
+          if (idx >= 0) cache.nodes[idx] = updated;
+        }
+        return updated;
+      }));
+      setSelectedNodeData((prev: any) => ({ ...prev, label: updatedEntity.value, rawData: updatedEntity }));
+      showNotification('success', 'Node updated');
 
     } catch (e: any) {
-      showNotification('error', e.message || 'Update failed');
+      // ── ROLLBACK ─────────────────────────────────────────────────────────
+      setNodes(prev => prev.map(n => {
+        if (n.id !== entityNodeId) return n;
+        return { ...n, data: { ...n.data, label: prevNodeData.label } };
+      }));
+      setSelectedNodeData(prevNodeData);
+      setIsEditingNode(true);
+      showNotification('error', e.message || 'Update failed — rolled back');
     }
   };
 
@@ -658,29 +726,75 @@ export const CriminalNetwork: React.FC = () => {
       return;
     }
 
-    if (window.confirm("Remove this association node from the case file?")) {
-      try {
-        const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${entityId}`, {
-          method: 'DELETE'
-        });
-        
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Delete failed');
-        }
-        
-        showNotification('success', 'Association node deleted.');
-        setSelectedNodeData(null);
-        
-        // Update local graph immediately
-        const entityNodeId = `entity-${entityId}`;
-        setNodes(prev => prev.filter(n => n.id !== entityNodeId));
-        setEdges(prev => prev.filter(e => e.source !== entityNodeId && e.target !== entityNodeId));
-        
-      } catch (error: any) {
-        console.error('Delete entity error:', error);
-        showNotification('error', error.message || 'Failed to delete association node.');
+    if (!window.confirm("Remove this association node from the case file?")) return;
+
+    const entityNodeId = `entity-${entityId}`;
+
+    // ── OPTIMISTIC UI ─────────────────────────────────────────────────────────
+    // Capture snapshot for rollback before removing
+    let removedNode: Node | undefined;
+    let removedEdges: Edge[] = [];
+
+    setNodes(prev => {
+      removedNode = prev.find(n => n.id === entityNodeId);
+      const filtered = prev.filter(n => n.id !== entityNodeId);
+      if (graphCache.current.has(selectedFirId)) {
+        graphCache.current.get(selectedFirId)!.nodes = filtered;
       }
+      return filtered;
+    });
+    setEdges(prev => {
+      removedEdges = prev.filter(ed => ed.source === entityNodeId || ed.target === entityNodeId);
+      const filtered = prev.filter(ed => ed.source !== entityNodeId && ed.target !== entityNodeId);
+      if (graphCache.current.has(selectedFirId)) {
+        graphCache.current.get(selectedFirId)!.edges = filtered;
+      }
+      return filtered;
+    });
+    setSelectedNodeData(null);
+    // ─────────────────────────────────────────────────────────────────────────
+
+    try {
+      const t0 = Date.now();
+      const res = await authFetch(`${API_BASE_URL}/api/network/cases/${selectedFirId}/entities/${entityId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Delete failed');
+      }
+
+      const elapsed = Date.now() - t0;
+      console.debug(`[CriminalNetwork] DELETE entity DB round-trip: ${elapsed}ms`);
+
+      // Mark so our own SSE echo is ignored
+      pendingMutations.current.add(String(entityId));
+      setTimeout(() => pendingMutations.current.delete(String(entityId)), 5000);
+
+      showNotification('success', 'Association node deleted');
+
+    } catch (error: any) {
+      // ── ROLLBACK ─────────────────────────────────────────────────────────
+      if (removedNode) {
+        setNodes(prev => {
+          const restored = [...prev, removedNode!];
+          if (graphCache.current.has(selectedFirId!)) {
+            graphCache.current.get(selectedFirId!)!.nodes = restored;
+          }
+          return restored;
+        });
+      }
+      if (removedEdges.length > 0) {
+        setEdges(prev => {
+          const restored = [...prev, ...removedEdges];
+          if (graphCache.current.has(selectedFirId!)) {
+            graphCache.current.get(selectedFirId!)!.edges = restored;
+          }
+          return restored;
+        });
+      }
+      showNotification('error', error.message || 'Delete failed — rolled back');
     }
   };
 
