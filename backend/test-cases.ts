@@ -1,0 +1,1 @@
+import { CloudScaleRepository } from './src/repositories/CloudScaleRepository'; async function main() { const db = new CloudScaleRepository(); const adminCases = await db.getCases({}); const analyticsCases = await db.getAllCases(); console.log('Admin: ' + adminCases.length); console.log('Analytics: ' + analyticsCases.length); } main();

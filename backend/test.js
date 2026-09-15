@@ -1,2 +1,1 @@
-const catalyst = require('zcatalyst-sdk-node');
-console.log(Object.keys(catalyst.app().nosql().table('test')));
+const { CloudScaleRepository } = require('./dist/repositories/CloudScaleRepository'); async function run() { const db = new CloudScaleRepository({}); const cases1 = await db.getCases({}); const cases2 = await db.getAllCases(); console.log('Admin:', cases1.length); console.log('Analytics:', cases2.length); } run().catch(console.error);

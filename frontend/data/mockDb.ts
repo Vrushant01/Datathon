@@ -626,9 +626,9 @@ export const syncData = async (): Promise<void> => {
       return; // exit gracefully instead of throwing
     }
 
-    // Health check succeeded - mark as LIVE immediately
+    // Health check succeeded - mark as LIVE immediately and database as ready
     console.log('[DB] LIVE');
-    setDbStatus('connected', null, false);
+    setDbStatus('connected', null, true);
 
     // 2. Fetch data using allSettled so individual endpoint failures don't wipe all data.
     // If a table returns 500 (e.g. Catalyst cold-start), we skip it and keep existing state.
@@ -716,10 +716,8 @@ export const syncData = async (): Promise<void> => {
 
     saveDbState(state);
 
-    // Mark as loaded if at least cases came through (core dashboard metric).
-    // Even partial data is better than showing all zeros.
-    const dataLoaded = (casesRes !== null && casesRes.length > 0) || totalLoaded > 0;
-    setDbStatus('connected', null, dataLoaded);
+    // Status was already set to true after health check, just update status
+    setDbStatus('connected', null, true);
     console.log(`[CloudScale Sync] Complete. ${totalLoaded} tables loaded, ${totalSkipped} skipped.`);
   } catch (err: any) {
     const errorMsg = err.message || 'Sync failed';

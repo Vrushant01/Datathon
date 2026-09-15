@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '../config/api';
 
 type Listener = (data: any) => void;
-export type SSEStatus = 'connected' | 'connecting' | 'reconnecting' | 'disconnected';
+export type SSEStatus = 'connected' | 'connecting' | 'reconnecting' | 'disconnected' | 'initializing';
 
 // All known DATABASE event types.
 // HEARTBEAT is intentionally absent — it is silently consumed without reaching application listeners.
@@ -22,7 +22,7 @@ class SSEClient {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private stabilityTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
-  private status: SSEStatus = 'disconnected';
+  private status: SSEStatus = 'initializing';
   // Guard: prevent a second EventSource from being created while one is being set up
   private isConnecting = false;
 
@@ -197,6 +197,7 @@ class SSEClient {
    * Cleanly destroy the connection. Called on logout or app teardown.
    */
   public disconnect() {
+    const wasActive = this.status === 'connected' || this.status === 'connecting' || this.status === 'reconnecting';
     if (this.eventSource) {
       this.eventSource.close();
       this.eventSource = null;
@@ -212,7 +213,9 @@ class SSEClient {
     }
     this.reconnectAttempts = 0;
     this.setStatus('disconnected');
-    console.log('[SSE] Disconnected');
+    if (wasActive) {
+      console.log('[SSE] Disconnected');
+    }
   }
 
   /**

@@ -26,6 +26,10 @@ router.get('/dashboard-stats', async (req, res) => {
         ]);
         const elapsed = Date.now() - startTime;
         console.log(`[Dashboard Stats] cases=${cases.length}, officers=${officers.length}, units=${units.length} (${elapsed}ms)`);
+        // Safeguard: If the db is entirely empty on these core tables, it's a cold-start timeout, not a true zero.
+        if (cases.length === 0 && units.length === 0) {
+            return res.status(503).json({ success: false, error: 'Database is warming up. Please wait a moment and try again.' });
+        }
         const totalFirs = cases.length;
         // According to mockDb logic: solved = CaseStatusID 2, 3, or 4
         const solvedClosed = cases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length;

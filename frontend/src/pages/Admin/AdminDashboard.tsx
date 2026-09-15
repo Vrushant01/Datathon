@@ -25,10 +25,14 @@ export const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<'24H' | '7D' | '30D' | 'ALL'>('ALL');
+  
+  const { dataLoaded } = useDbConnection();
 
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
+    if (!dataLoaded) return;
+
     let mounted = true;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -45,6 +49,10 @@ export const AdminDashboard: React.FC = () => {
         }
         const data = await res.json();
         if (mounted && data.success) {
+          // Safeguard against backend returning zeros on cold start failures
+          if (data.data.totalFirs === 0 && data.data.policeStations === 0) {
+             throw new Error('Database loading, please wait...');
+          }
           setStats(data.data);
         }
       } catch (err: any) {
@@ -59,7 +67,7 @@ export const AdminDashboard: React.FC = () => {
       mounted = false;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, []);
+  }, [dataLoaded]);
 
   useEffect(() => {
     const refetch = () => {

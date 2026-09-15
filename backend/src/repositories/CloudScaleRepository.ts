@@ -593,13 +593,6 @@ export class CloudScaleRepository implements IDataRepository {
     return await this.scanAll('CaseMaster');
   }
 
-  async getAllCasesForAnalytics(): Promise<any[]> {
-    const cases = await this.scanAll('CaseMaster');
-    const valid = cases.filter(c => c.latitude != null && c.latitude !== 0 && c.longitude != null && c.longitude !== 0);
-    valid.sort((a, b) => new Date(b.CrimeRegisteredDate).getTime() - new Date(a.CrimeRegisteredDate).getTime());
-    return valid.slice(0, 5000);
-  }
-
   async getAccusedByCase(caseId: number): Promise<any[]> {
     const all = await this.scanAll('Accused');
     return all.filter(a => Number(a.CaseMasterID) === caseId);
