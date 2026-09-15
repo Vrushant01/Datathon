@@ -289,7 +289,6 @@ export const OfficerManagement: React.FC = () => {
       sseClient.subscribe('OFFICER_CREATED', fetchRef),
       sseClient.subscribe('OFFICER_UPDATED', fetchRef),
       sseClient.subscribe('OFFICER_DELETED', fetchRef),
-      sseClient.onReconnect(fetchRef),
     ];
     return () => handlers.forEach(unsub => unsub());
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus]);

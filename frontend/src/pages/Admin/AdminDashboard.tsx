@@ -26,11 +26,15 @@ export const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<'24H' | '7D' | '30D' | 'ALL'>('ALL');
 
+  const isFetchingRef = useRef(false);
+
   useEffect(() => {
     let mounted = true;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const fetchStats = async (isRetry = false) => {
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
       try {
         if (!isRetry) setIsLoading(true);
         setError(null);
@@ -47,6 +51,7 @@ export const AdminDashboard: React.FC = () => {
         if (mounted) setError(err.message);
       } finally {
         if (mounted) setIsLoading(false);
+        isFetchingRef.current = false;
       }
     };
     fetchStats();
@@ -72,8 +77,7 @@ export const AdminDashboard: React.FC = () => {
       sseClient.subscribe('OFFICER_DELETED', refetch),
       sseClient.subscribe('STATION_CREATED', refetch),
       sseClient.subscribe('STATION_UPDATED', refetch),
-      sseClient.subscribe('STATION_DELETED', refetch),
-      sseClient.onReconnect(refetch),
+      sseClient.subscribe('STATION_DELETED', refetch)
     ];
     return () => handlers.forEach(unsub => unsub());
   }, []);

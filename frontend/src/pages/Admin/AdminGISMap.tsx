@@ -53,7 +53,6 @@ export const AdminGISMap: React.FC = () => {
       }),
       sseClient.subscribe('STATION_UPDATED', refetchCases),
       sseClient.subscribe('STATION_DELETED', refetchCases),
-      sseClient.onReconnect(refetchCases),
     ];
     return () => handlers.forEach(unsub => unsub());
   }, []);

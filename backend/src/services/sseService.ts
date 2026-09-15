@@ -42,7 +42,7 @@ class SSEService {
 
         // Keep-alive heartbeat (every 15s) to prevent idle timeouts from load balancers
         const heartbeat = setInterval(() => {
-            client.res.write(': heartbeat\n\n');
+            this.sendEventToClient(client, 'HEARTBEAT', { time: Date.now() });
             if (typeof (client.res as any).flush === 'function') {
                 (client.res as any).flush();
             }

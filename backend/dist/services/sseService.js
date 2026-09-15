@@ -28,7 +28,7 @@ class SSEService {
         this.sendEventToClient(client, 'CONNECTED', { message: 'SSE Connection Established', time: new Date().toISOString() });
         // Keep-alive heartbeat (every 15s) to prevent idle timeouts from load balancers
         const heartbeat = setInterval(() => {
-            client.res.write(': heartbeat\n\n');
+            this.sendEventToClient(client, 'HEARTBEAT', { time: Date.now() });
             if (typeof client.res.flush === 'function') {
                 client.res.flush();
             }

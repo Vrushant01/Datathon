@@ -182,7 +182,6 @@ export const StationManagement: React.FC = () => {
       sseClient.subscribe('STATION_CREATED', handleStationCreated),
       sseClient.subscribe('STATION_UPDATED', fetchRef),
       sseClient.subscribe('STATION_DELETED', fetchRef),
-      sseClient.onReconnect(fetchRef),
     ];
     return () => handlers.forEach(unsub => unsub());
   }, [page, searchQuery, filterDistrict]);

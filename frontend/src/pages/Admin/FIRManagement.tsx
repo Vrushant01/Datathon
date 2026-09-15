@@ -453,7 +453,6 @@ export const FIRManagement: React.FC = () => {
       sseClient.subscribe('FIR_CREATED', fetchRef),
       sseClient.subscribe('FIR_UPDATED', fetchRef),
       sseClient.subscribe('FIR_DELETED', fetchRef),
-      sseClient.onReconnect(fetchRef),
     ];
     return () => handlers.forEach(unsub => unsub());
   }, [page, searchQuery, filterDistrict, filterStation, filterStatus, dbVersion, filterPersonId]);
