@@ -112,6 +112,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Delay the sync until the authenticated user/token is ready
         await syncData();
         
+        // Connect SSE after successful login and sync
+        import('../utils/SSEClient').then(({ sseClient }) => sseClient.connect());
+        
         return { success: true, message: data.message };
       } else {
         return { success: false, message: data.message || 'Authentication failed' };
@@ -134,6 +137,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('ksp_auth_user');
     sessionStorage.clear();
     setUser(null);
+    
+    // Disconnect SSE on logout
+    import('../utils/SSEClient').then(({ sseClient }) => sseClient.disconnect());
   };
 
   return (

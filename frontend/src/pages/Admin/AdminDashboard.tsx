@@ -42,12 +42,6 @@ export const AdminDashboard: React.FC = () => {
         const data = await res.json();
         if (mounted && data.success) {
           setStats(data.data);
-          // If backend returned all zeros (cold-start cache miss), auto-retry in 10s
-          const d = data.data;
-          if (d.totalFirs === 0 && d.activeOfficers === 0 && d.policeStations === 0) {
-            console.warn('[Dashboard] All stats are 0 — likely cold-start cache miss. Will retry in 10s...');
-            retryTimer = setTimeout(() => { if (mounted) fetchStats(true); }, 10000);
-          }
         }
       } catch (err: any) {
         if (mounted) setError(err.message);
