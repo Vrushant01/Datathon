@@ -197,6 +197,9 @@ export class CloudScaleRepository implements IDataRepository {
       }
       if (batchErrors > 0) {
         console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
+        if (allItems.length === 0) {
+          throw new Error(`CloudScale fetch failure: ${actualTableName} returned no data and had batch errors.`);
+        }
       }
 
       // Fetch dynamically created records sequentially since NoSQL ZCQL is unreliable for NoSQL tables
