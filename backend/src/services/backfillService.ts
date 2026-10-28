@@ -569,13 +569,13 @@ export async function rollbackBackfill(catalystApp: any, batchId: string = 'seed
     console.log(`[Rollback] Deleting ${ids.length} items from ${tableName}...`);
     for (let i = 0; i < ids.length; i += 25) {
       const batch = ids.slice(i, i + 25);
-      const keys = batch.map(id => new NoSQLItem().addNumber(pkField, id));
+      const deletePayload = batch.map(id => ({ keys: new NoSQLItem().addNumber(pkField, id) }));
       try {
-        await table.deleteItems({ keys });
+        await table.deleteItems(...deletePayload);
       } catch (err: any) {
         console.warn(`[Rollback] Delete batch warning on ${tableName}:`, err?.message);
-        for (const k of keys) {
-          try { await table.deleteItems({ key: k }); } catch (_) {}
+        for (const item of deletePayload) {
+          try { await table.deleteItems(item); } catch (_) {}
         }
       }
     }
