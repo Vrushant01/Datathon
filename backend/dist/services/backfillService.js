@@ -476,7 +476,7 @@ async function rollbackBackfill(catalystApp, batchId = 'seed-2026-10-29', idsOve
             console.log(`[Rollback] No log file found. Inspecting repository for seeded items (batch: ${batchId})...`);
             const cases = await db.getCases();
             const seeded = cases.filter((c) => Number(c.CaseMasterID) >= 300501 &&
-                (c.SeedBatchId === batchId || c.IsSeeded || (c.RegistrationDate && c.RegistrationDate >= '2026-09-16')));
+                (c.SeedBatchId === batchId || c.IsSeeded || ((c.CrimeRegisteredDate || c.RegistrationDate) && (c.CrimeRegisteredDate || c.RegistrationDate) >= '2026-09-16')));
             caseMasterIds = seeded.map((c) => Number(c.CaseMasterID));
             const accused = await db.getAccused();
             const seededAccused = accused.filter((a) => Number(a.AccusedMasterID) >= 300501 && (a.SeedBatchId === batchId || a.IsSeeded || caseMasterIds.includes(Number(a.CaseMasterID))));

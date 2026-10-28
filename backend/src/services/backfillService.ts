@@ -582,7 +582,7 @@ export async function rollbackBackfill(catalystApp: any, batchId: string = 'seed
       const cases = await db.getCases();
       const seeded = cases.filter((c: any) =>
         Number(c.CaseMasterID) >= 300501 &&
-        (c.SeedBatchId === batchId || c.IsSeeded || (c.RegistrationDate && c.RegistrationDate >= '2026-09-16'))
+        (c.SeedBatchId === batchId || c.IsSeeded || ((c.CrimeRegisteredDate || c.RegistrationDate) && (c.CrimeRegisteredDate || c.RegistrationDate) >= '2026-09-16'))
       );
       caseMasterIds = seeded.map((c: any) => Number(c.CaseMasterID));
 
