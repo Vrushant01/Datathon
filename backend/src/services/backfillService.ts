@@ -101,7 +101,7 @@ function getDaysBetween(startStr: string, endStr: string): string[] {
   return dates;
 }
 
-// Seedable pseudo-random number generator for reproducible, deterministic dry-runs
+// Seedable pseudo-random number generator for reproducible, deterministic runs
 let seed = 424242;
 function prng() {
   const x = Math.sin(seed++) * 10000;
@@ -140,7 +140,6 @@ export async function analyzeExistingData(db: IDataRepository): Promise<Backfill
   const preGapDailyRate = Number((preGapCases.length / preGapDays).toFixed(2));
   const hardCapDailyRate = Math.round(preGapDailyRate * 1.6);
 
-  // Exact dates
   const validDates = cases
     .map((c: any) => c.CrimeRegisteredDate?.slice(0, 10))
     .filter((d: string) => d && d.length === 10)
@@ -149,7 +148,6 @@ export async function analyzeExistingData(db: IDataRepository): Promise<Backfill
   const minDate = validDates[0];
   const maxDate = validDates[validDates.length - 1];
 
-  // Max IDs
   const caseIds = cases.map((c: any) => Number(c.CaseMasterID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
   const accusedIds = accused.map((a: any) => Number(a.AccusedMasterID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
   const victimIds = victims.map((v: any) => Number(v.VictimMasterID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
@@ -180,7 +178,6 @@ export async function analyzeExistingData(db: IDataRepository): Promise<Backfill
 }
 
 export async function createBackfillPlan(db: IDataRepository, batchId: string = 'seed-2026-10-29'): Promise<BackfillPlan> {
-  // Reset PRNG seed for deterministic output
   seed = 424242;
 
   const [existingCases, units, employees, existingAccused] = await Promise.all([
@@ -193,24 +190,20 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
   const analysis = await analyzeExistingData(db);
   const baselineRate = analysis.preGap3MonthsDailyRate; // ~20.53
 
-  // Existing daily counts map
   const existingDayCounts: Record<string, number> = {};
   existingCases.forEach((c: any) => {
     const dStr = (c.CrimeRegisteredDate || '').slice(0, 10);
     if (dStr) existingDayCounts[dStr] = (existingDayCounts[dStr] || 0) + 1;
   });
 
-  // Gap days: 2026-09-16 to 2026-10-30
   const gapDates = getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
 
-  // Reused PersonID pool (~36% target)
   const existingPersonIds = existingAccused.map((a: any) => a.PersonID).filter(Boolean);
   const uniquePersonIds = Array.from(new Set(existingPersonIds));
   const personCountMap: Record<string, number> = {};
   existingPersonIds.forEach((p: string) => { personCountMap[p] = (personCountMap[p] || 0) + 1; });
   const repeatPersonsPool = Object.keys(personCountMap).filter(p => personCountMap[p] >= 2);
 
-  // Group officers by UnitID
   const employeesByUnit: Record<number, number[]> = {};
   employees.forEach((emp: any) => {
     const uid = Number(emp.UnitID);
@@ -220,7 +213,6 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
   const allEmpIds = employees.map((e: any) => Number(e.EmployeeID)).filter(Boolean);
   const validUnits = units.filter((u: any) => u.Active !== false);
 
-  // Safe starting IDs beyond ALL existing ranges
   let nextCaseId = 300501;
   let nextAccusedId = 300501;
   let nextVictimId = 300501;
@@ -243,7 +235,6 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
     if (targetCount > analysis.hardCapDailyRate) targetCount = analysis.hardCapDailyRate;
     if (targetCount < 14) targetCount = 14 + (targetCount % 4);
 
-    // Precise weighting for today (hours up to current time) and tomorrow (full day)
     if (dateStr === '2026-10-29') {
       targetCount = Math.round(baselineRate * dowWeight); // 21
     } else if (dateStr === '2026-10-30') {
@@ -274,7 +265,7 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
         }
       }
 
-      // CaseStatusID (keep overall pending share between 47% and 51%)
+      // CaseStatusID (keep overall pending share between 47% and 51%, matching dashboard definition)
       let statusId = 1;
       const rStatus = prng();
       if (isRecent7) {
@@ -288,10 +279,20 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
       if (statusId === 1 || statusId === 5) underInvestigationCount++;
       else solvedClosedCount++;
 
-      // Time spread across 24h
-      const hour = Math.floor(prng() * 24);
-      const min = Math.floor(prng() * 60);
-      const sec = Math.floor(prng() * 60);
+      // Time spread: For 2026-10-29, strictly cap times up to current time (<= 03:52 AM)
+      let hour = Math.floor(prng() * 24);
+      let min = Math.floor(prng() * 60);
+      let sec = Math.floor(prng() * 60);
+
+      if (dateStr === '2026-10-29') {
+        const curHour = 3;
+        const curMin = 50;
+        hour = Math.floor(prng() * (curHour + 1));
+        if (hour === curHour) {
+          min = Math.floor(prng() * curMin);
+        }
+      }
+
       const registeredDateTime = `${dateStr}T${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 
       // Station & Officer
@@ -399,12 +400,11 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
 
   const diffStr = (val: number) => `${(((val - baselineRate) / baselineRate) * 100).toFixed(1)}%`;
 
-  // Post-backfill overall pending share
+  // Post-backfill overall pending share (Dashboard definition: Status 1 & 5 vs Status 2, 3, 4)
   const allCasesPost = [...existingCases, ...generatedCases];
   const pendingCount = allCasesPost.filter((c: any) => c.CaseStatusID === 1 || c.CaseStatusID === 5).length;
   const pendingSharePct = Number(((pendingCount / allCasesPost.length) * 100).toFixed(2));
 
-  // Reused PersonID percentage
   const seededPersons = generatedAccused.map(a => a.PersonID);
   const reusedCount = seededPersons.filter(p => uniquePersonIds.includes(p)).length;
   const reusedPct = Number(((reusedCount / generatedAccused.length) * 100).toFixed(1));
@@ -443,35 +443,88 @@ export async function executeBackfillPlan(plan: BackfillPlan, catalystApp: any):
   const nosql = catalystApp.nosql();
   const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
-  const insertTableBatches = async (tableName: string, records: any[]) => {
+  // Insert concurrency <= 4 as requested
+  const CONCURRENCY = 3;
+
+  const insertTableBatches = async (tableName: string, pkField: string, records: any[]) => {
+    if (!records || records.length === 0) return;
     const table = nosql.table(tableName);
-    console.log(`[Backfill] Inserting ${records.length} items into ${tableName}...`);
-    for (let i = 0; i < records.length; i += 25) {
-      const batch = records.slice(i, i + 25);
-      const items = batch.map(r => NoSQLItem.from(r));
-      try {
-        await table.insertItems({ items });
-      } catch (err: any) {
-        console.error(`[Backfill Error] Failed batch on ${tableName} (offset ${i}):`, err?.message || err);
-        for (const item of items) {
+    console.log(`[Backfill] Processing ${records.length} items for ${tableName}...`);
+
+    const batches: any[][] = [];
+    for (let i = 0; i < records.length; i += 20) {
+      batches.push(records.slice(i, i + 20));
+    }
+
+    let batchIdx = 0;
+    const workers = Array.from({ length: Math.min(CONCURRENCY, batches.length) }, async () => {
+      while (batchIdx < batches.length) {
+        const currentBatch = batches[batchIdx++];
+        const batchKeys = currentBatch.map(r => new NoSQLItem().addNumber(pkField, r[pkField]));
+
+        // Check if items already exist in the database (Resumed run / skip existing rows)
+        let existingIds = new Set<number>();
+        try {
+          const fetchResp: any = await table.fetchItem({ keys: batchKeys });
+          const found = (fetchResp?.get || []).map((d: any) => typeof d.item?.toJSON === 'function' ? d.item.toJSON() : d.item).filter(Boolean);
+          found.forEach((item: any) => {
+            const rawId = item[pkField] || item[tableName]?.[pkField];
+            if (rawId) existingIds.add(Number(rawId));
+          });
+        } catch (_) {
+          // If fetch fails, proceed to attempt insert
+        }
+
+        const itemsToInsert = currentBatch.filter(r => !existingIds.has(Number(r[pkField])));
+        if (itemsToInsert.length === 0) {
+          console.log(`[Backfill] Skipped batch of ${currentBatch.length} items for ${tableName} (already exist).`);
+          continue;
+        }
+
+        // Insert new items with exponential backoff retry loop
+        let attempts = 0;
+        let success = false;
+        while (!success && attempts < 4) {
+          attempts++;
           try {
-            await table.insertItems({ item });
-          } catch (e: any) {
-            console.warn(`[Backfill] Single item insert failed:`, e?.message);
+            const nosqlItems = itemsToInsert.map(r => NoSQLItem.from(r));
+            await table.insertItems({ items: nosqlItems });
+            success = true;
+          } catch (err: any) {
+            console.warn(`[Backfill Warning] Batch insert failed on ${tableName} (attempt ${attempts}):`, err?.message || err);
+            if (attempts < 4) {
+              await new Promise(res => setTimeout(res, 150 * Math.pow(2, attempts - 1)));
+            } else {
+              // Fallback to one-by-one to insert non-duplicate rows safely
+              for (const record of itemsToInsert) {
+                try {
+                  await table.insertItems({ item: NoSQLItem.from(record) });
+                } catch (singleErr: any) {
+                  if (singleErr?.message && (singleErr.message.includes('already exists') || singleErr.message.includes('Duplicate'))) {
+                    // Item already exists, skip
+                  } else {
+                    console.error(`[Backfill Error] Single item ${record[pkField]} failed:`, singleErr?.message || singleErr);
+                  }
+                }
+              }
+            }
           }
         }
       }
-    }
+    });
+
+    await Promise.all(workers);
     console.log(`[Backfill] Completed ${tableName}.`);
   };
 
-  await insertTableBatches('casemasters', plan.generatedCases);
-  await insertTableBatches('complainants', plan.generatedComplainants);
-  await insertTableBatches('accuseds', plan.generatedAccused);
-  await insertTableBatches('victims', plan.generatedVictims);
+  await insertTableBatches('casemasters', 'CaseMasterID', plan.generatedCases);
+  await insertTableBatches('accuseds', 'AccusedMasterID', plan.generatedAccused);
+  await insertTableBatches('victims', 'VictimMasterID', plan.generatedVictims);
+  await insertTableBatches('complainants', 'ComplainantID', plan.generatedComplainants);
 
-  // Write seed_log.json for rollback & auditability
-  const logFile = path.resolve(process.cwd(), 'seed_log.json');
+  // Write seed_log for rollback & auditability
+  const logFile = path.resolve(process.cwd(), `seed_log_${plan.batchId}.json`);
+  const mainLogFile = path.resolve(process.cwd(), 'seed_log.json');
   const logPayload = {
     batchId: plan.batchId,
     executedAt: new Date().toISOString(),
@@ -482,7 +535,8 @@ export async function executeBackfillPlan(plan: BackfillPlan, catalystApp: any):
   };
 
   fs.writeFileSync(logFile, JSON.stringify(logPayload, null, 2), 'utf8');
-  console.log(`[Backfill] Wrote seed log to ${logFile}`);
+  fs.writeFileSync(mainLogFile, JSON.stringify(logPayload, null, 2), 'utf8');
+  console.log(`[Backfill] Wrote seed log to ${logFile} and ${mainLogFile}`);
 
   return {
     insertedCases: plan.generatedCases.length,
@@ -496,17 +550,21 @@ export async function rollbackBackfill(catalystApp: any, batchId: string = 'seed
   const nosql = catalystApp.nosql();
   const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
 
-  const logFile = path.resolve(process.cwd(), 'seed_log.json');
-  if (!fs.existsSync(logFile)) {
-    throw new Error('Rollback log seed_log.json not found.');
+  const batchLogFile = path.resolve(process.cwd(), `seed_log_${batchId}.json`);
+  const mainLogFile = path.resolve(process.cwd(), 'seed_log.json');
+  const logPath = fs.existsSync(batchLogFile) ? batchLogFile : mainLogFile;
+
+  if (!fs.existsSync(logPath)) {
+    throw new Error(`Rollback log file not found for batch ${batchId}.`);
   }
 
-  const log = JSON.parse(fs.readFileSync(logFile, 'utf8'));
+  const log = JSON.parse(fs.readFileSync(logPath, 'utf8'));
   if (log.batchId !== batchId) {
     throw new Error(`Batch ID mismatch: requested ${batchId}, log has ${log.batchId}`);
   }
 
   const deleteTableBatches = async (tableName: string, pkField: string, ids: number[]) => {
+    if (!ids || ids.length === 0) return;
     const table = nosql.table(tableName);
     console.log(`[Rollback] Deleting ${ids.length} items from ${tableName}...`);
     for (let i = 0; i < ids.length; i += 25) {
@@ -516,6 +574,9 @@ export async function rollbackBackfill(catalystApp: any, batchId: string = 'seed
         await table.deleteItems({ keys });
       } catch (err: any) {
         console.warn(`[Rollback] Delete batch warning on ${tableName}:`, err?.message);
+        for (const k of keys) {
+          try { await table.deleteItems({ key: k }); } catch (_) {}
+        }
       }
     }
   };

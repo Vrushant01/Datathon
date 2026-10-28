@@ -2,7 +2,7 @@ import express from 'express';
 import { authMiddleware, requireRole } from '../middleware/authMiddleware';
 import { startMigration, getMigrationStatus } from '../controllers/adminController';
 import { RepositoryFactory } from '../repositories/RepositoryFactory';
-import { createBackfillPlan, executeBackfillPlan } from '../services/backfillService';
+import { createBackfillPlan, executeBackfillPlan, rollbackBackfill } from '../services/backfillService';
 import { runReconciliation } from '../services/reconcileService';
 import { getCatalystApp, invalidateAllCache } from '../repositories/CloudScaleRepository';
 import { invalidateAnalyticsCache } from './analyticsRoutes';
@@ -171,7 +171,7 @@ router.get('/backfill/plan', async (req, res) => {
 router.post('/backfill/execute', async (req, res) => {
   const startTime = Date.now();
   try {
-    const { batchId = 'seed-2026-10-29', confirmed } = req.body;
+    const { batchId = 'seed-2026-10-29', confirmed, singleDay } = req.body;
     if (!confirmed) {
       return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
     }
@@ -179,22 +179,69 @@ router.post('/backfill/execute', async (req, res) => {
     const catalystApp = getCatalystApp(req);
     const db = RepositoryFactory.getRepository(req);
 
-    console.log(`[Backfill Execute] Starting execution for batch: ${batchId}...`);
-    const plan = await createBackfillPlan(db, batchId);
+    console.log(`[Backfill Execute] Starting execution for batch: ${batchId} (singleDay: ${singleDay || 'all'})...`);
+    let plan = await createBackfillPlan(db, batchId);
+
+    if (singleDay) {
+      plan.dailySchedule = plan.dailySchedule.filter(d => d.date === singleDay);
+      plan.generatedCases = plan.generatedCases.filter(c => c.CrimeRegisteredDate.startsWith(singleDay));
+      const caseIdSet = new Set(plan.generatedCases.map(c => c.CaseMasterID));
+      plan.generatedAccused = plan.generatedAccused.filter(a => caseIdSet.has(a.CaseMasterID));
+      plan.generatedVictims = plan.generatedVictims.filter(v => caseIdSet.has(v.CaseMasterID));
+      plan.generatedComplainants = plan.generatedComplainants.filter(comp => caseIdSet.has(comp.CaseMasterID));
+      plan.totalPlannedCases = plan.generatedCases.length;
+      plan.totalPlannedAccused = plan.generatedAccused.length;
+      plan.totalPlannedVictims = plan.generatedVictims.length;
+      plan.totalPlannedComplainants = plan.generatedComplainants.length;
+      plan.batchId = batchId;
+    }
+
     const result = await executeBackfillPlan(plan, catalystApp);
 
     // Invalidate caches so the new cases immediately reflect in queries and dashboard stats
     invalidateAllCache();
+    invalidateAnalyticsCache();
 
     const elapsed = Date.now() - startTime;
     res.json({
       success: true,
-      message: 'Backfill completed successfully without touching existing records.',
+      message: `Backfill batch ${batchId} completed successfully.`,
       elapsed_ms: elapsed,
       result
     });
   } catch (err: any) {
     console.error('[Backfill Execute Error]:', err);
+    res.status(500).json({ success: false, error: err.message, details: err.message });
+  }
+});
+
+/**
+ * Step D: Rollback Backfill for a given SeedBatchId
+ */
+router.post('/backfill/rollback', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { batchId = 'seed-2026-10-29', confirmed } = req.body;
+    if (!confirmed) {
+      return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
+    }
+
+    const catalystApp = getCatalystApp(req);
+    console.log(`[Backfill Rollback] Starting rollback for batch: ${batchId}...`);
+    const result = await rollbackBackfill(catalystApp, batchId);
+
+    invalidateAllCache();
+    invalidateAnalyticsCache();
+
+    const elapsed = Date.now() - startTime;
+    res.json({
+      success: true,
+      message: `Rollback completed successfully for batch ${batchId}.`,
+      elapsed_ms: elapsed,
+      result
+    });
+  } catch (err: any) {
+    console.error('[Backfill Rollback Error]:', err);
     res.status(500).json({ success: false, error: err.message, details: err.message });
   }
 });
