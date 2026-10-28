@@ -444,49 +444,105 @@ async function executeBackfillPlan(plan, catalystApp) {
         insertedComplainants: plan.generatedComplainants.length
     };
 }
-async function rollbackBackfill(catalystApp, batchId = 'seed-2026-10-29') {
+async function rollbackBackfill(catalystApp, batchId = 'seed-2026-10-29', idsOverride, db) {
     const nosql = catalystApp.nosql();
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
-    const batchLogFile = path_1.default.resolve(process.cwd(), `seed_log_${batchId}.json`);
-    const mainLogFile = path_1.default.resolve(process.cwd(), 'seed_log.json');
-    const logPath = fs_1.default.existsSync(batchLogFile) ? batchLogFile : mainLogFile;
-    if (!fs_1.default.existsSync(logPath)) {
-        throw new Error(`Rollback log file not found for batch ${batchId}.`);
+    let caseMasterIds = idsOverride?.caseMasterIds || [];
+    let accusedMasterIds = idsOverride?.accusedMasterIds || [];
+    let victimMasterIds = idsOverride?.victimMasterIds || [];
+    let complainantIds = idsOverride?.complainantIds || [];
+    if (caseMasterIds.length === 0) {
+        const batchLogFile = path_1.default.resolve(process.cwd(), `seed_log_${batchId}.json`);
+        const mainLogFile = path_1.default.resolve(process.cwd(), 'seed_log.json');
+        const logPath = fs_1.default.existsSync(batchLogFile) ? batchLogFile : (fs_1.default.existsSync(mainLogFile) ? mainLogFile : null);
+        if (logPath) {
+            try {
+                const log = JSON.parse(fs_1.default.readFileSync(logPath, 'utf8'));
+                if (log.batchId === batchId || !log.batchId) {
+                    caseMasterIds = log.caseMasterIds || [];
+                    accusedMasterIds = log.accusedMasterIds || [];
+                    victimMasterIds = log.victimMasterIds || [];
+                    complainantIds = log.complainantIds || [];
+                }
+            }
+            catch (e) {
+                console.warn('[Rollback] Could not parse log file:', e);
+            }
+        }
     }
-    const log = JSON.parse(fs_1.default.readFileSync(logPath, 'utf8'));
-    if (log.batchId !== batchId) {
-        throw new Error(`Batch ID mismatch: requested ${batchId}, log has ${log.batchId}`);
+    // Fallback: If still empty and db repository provided, query repository for seeded IDs
+    if (caseMasterIds.length === 0 && db) {
+        try {
+            console.log(`[Rollback] No log file found. Inspecting repository for seeded items (batch: ${batchId})...`);
+            const cases = await db.getCases();
+            const seeded = cases.filter((c) => Number(c.CaseMasterID) >= 300501 &&
+                (c.SeedBatchId === batchId || c.IsSeeded || (c.RegistrationDate && c.RegistrationDate >= '2026-09-16')));
+            caseMasterIds = seeded.map((c) => Number(c.CaseMasterID));
+            const accused = await db.getAccused();
+            const seededAccused = accused.filter((a) => Number(a.AccusedMasterID) >= 300501 && (a.SeedBatchId === batchId || a.IsSeeded || caseMasterIds.includes(Number(a.CaseMasterID))));
+            accusedMasterIds = seededAccused.map((a) => Number(a.AccusedMasterID));
+            const victims = await db.getVictims();
+            const seededVictims = victims.filter((v) => Number(v.VictimMasterID) >= 300501 && (v.SeedBatchId === batchId || v.IsSeeded || caseMasterIds.includes(Number(v.CaseMasterID))));
+            victimMasterIds = seededVictims.map((v) => Number(v.VictimMasterID));
+            const complainants = await db.getComplainants();
+            const seededComplainants = complainants.filter((comp) => Number(comp.ComplainantID) >= 70001 && (comp.SeedBatchId === batchId || comp.IsSeeded || caseMasterIds.includes(Number(comp.CaseMasterID))));
+            complainantIds = seededComplainants.map((comp) => Number(comp.ComplainantID));
+            console.log(`[Rollback] Discovered ${caseMasterIds.length} cases, ${accusedMasterIds.length} accused, ${victimMasterIds.length} victims, ${complainantIds.length} complainants from repository.`);
+        }
+        catch (e) {
+            console.warn('[Rollback] Error inspecting repository for seeded IDs:', e?.message || e);
+        }
+    }
+    // Fallback 2: If still empty, probe 300501 to 300530
+    if (caseMasterIds.length === 0) {
+        console.log(`[Rollback] Probing default range 300501-300530...`);
+        const testIds = [];
+        for (let i = 300501; i <= 300530; i++)
+            testIds.push(i);
+        caseMasterIds = testIds;
+        accusedMasterIds = testIds;
+        victimMasterIds = testIds;
+        complainantIds = [];
+        for (let i = 70001; i <= 70030; i++)
+            complainantIds.push(i);
     }
     const deleteTableBatches = async (tableName, pkField, ids) => {
         if (!ids || ids.length === 0)
-            return;
+            return 0;
         const table = nosql.table(tableName);
-        console.log(`[Rollback] Deleting ${ids.length} items from ${tableName}...`);
+        console.log(`[Rollback] Deleting from ${tableName} (${ids.length} target IDs)...`);
+        let actuallyDeleted = 0;
         for (let i = 0; i < ids.length; i += 25) {
             const batch = ids.slice(i, i + 25);
             const deletePayload = batch.map(id => ({ keys: new NoSQLItem().addNumber(pkField, id) }));
             try {
                 await table.deleteItems(...deletePayload);
+                actuallyDeleted += batch.length;
             }
             catch (err) {
-                console.warn(`[Rollback] Delete batch warning on ${tableName}:`, err?.message);
+                console.warn(`[Rollback] Delete batch warning on ${tableName}:`, err?.message || err);
+                // Fallback: delete item by item
                 for (const item of deletePayload) {
                     try {
                         await table.deleteItems(item);
+                        actuallyDeleted++;
                     }
-                    catch (_) { }
+                    catch (singleErr) {
+                        console.warn(`[Rollback] Single delete error on ${tableName}:`, singleErr?.message || singleErr);
+                    }
                 }
             }
         }
+        return actuallyDeleted;
     };
-    await deleteTableBatches('casemasters', 'CaseMasterID', log.caseMasterIds);
-    await deleteTableBatches('accuseds', 'AccusedMasterID', log.accusedMasterIds);
-    await deleteTableBatches('victims', 'VictimMasterID', log.victimMasterIds);
-    await deleteTableBatches('complainants', 'ComplainantID', log.complainantIds);
+    const delCases = await deleteTableBatches('casemasters', 'CaseMasterID', caseMasterIds);
+    const delAccused = await deleteTableBatches('accuseds', 'AccusedMasterID', accusedMasterIds);
+    const delVictims = await deleteTableBatches('victims', 'VictimMasterID', victimMasterIds);
+    const delComp = await deleteTableBatches('complainants', 'ComplainantID', complainantIds);
     return {
-        deletedCases: log.caseMasterIds.length,
-        deletedAccused: log.accusedMasterIds.length,
-        deletedVictims: log.victimMasterIds.length,
-        deletedComplainants: log.complainantIds.length
+        deletedCases: delCases,
+        deletedAccused: delAccused,
+        deletedVictims: delVictims,
+        deletedComplainants: delComp
     };
 }

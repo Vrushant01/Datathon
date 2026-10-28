@@ -190,13 +190,14 @@ router.post('/backfill/execute', async (req, res) => {
 router.post('/backfill/rollback', async (req, res) => {
     const startTime = Date.now();
     try {
-        const { batchId = 'seed-2026-10-29', confirmed } = req.body;
+        const { batchId = 'seed-2026-10-29', confirmed, idsOverride } = req.body;
         if (!confirmed) {
             return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
         }
         const catalystApp = (0, CloudScaleRepository_1.getCatalystApp)(req);
+        const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         console.log(`[Backfill Rollback] Starting rollback for batch: ${batchId}...`);
-        const result = await (0, backfillService_1.rollbackBackfill)(catalystApp, batchId);
+        const result = await (0, backfillService_1.rollbackBackfill)(catalystApp, batchId, idsOverride, db);
         (0, CloudScaleRepository_1.invalidateAllCache)();
         (0, analyticsRoutes_1.invalidateAnalyticsCache)();
         const elapsed = Date.now() - startTime;
