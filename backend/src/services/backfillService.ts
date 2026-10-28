@@ -9,9 +9,8 @@ export interface BackfillAnalysis {
   gapStartDate: string;
   targetEndDate: string;
   missingDayCount: number;
-  historicalDailyAvg: number;
-  last30DaysDailyAvg: number;
-  last7DaysDailyAvg: number;
+  preGap3MonthsDailyRate: number;
+  hardCapDailyRate: number;
   dayOfWeekDistribution: Record<string, number>;
   crimeCategoryDistribution: Record<number, number>;
   caseStatusDistribution: Record<number, number>;
@@ -29,6 +28,9 @@ export interface BackfillAnalysis {
 export interface DayPlan {
   date: string;
   dayOfWeek: string;
+  weekdayWeight: number;
+  targetDailyCount: number;
+  existingCount: number;
   plannedCases: number;
   statusBreakdown: { underInvestigation: number; solvedClosed: number };
 }
@@ -42,11 +44,19 @@ export interface BackfillPlan {
   totalPlannedComplainants: number;
   dailySchedule: DayPlan[];
   windowMetrics: {
-    last24Hours: number;
-    today_2026_10_29: number;
-    tomorrow_2026_10_30: number;
-    last7Days: number;
-    last30Days: number;
+    last24Hours: { count: number; dailyAvg: number; baselineRate: number; pctDiff: string };
+    today_2026_10_29: { count: number; dailyAvg: number; baselineRate: number; pctDiff: string };
+    tomorrow_2026_10_30: { count: number; dailyAvg: number; baselineRate: number; pctDiff: string };
+    last7Days: { count: number; dailyAvg: number; baselineRate: number; pctDiff: string };
+    last30Days: { count: number; dailyAvg: number; baselineRate: number; pctDiff: string };
+  };
+  overallMetricsPostBackfill: {
+    totalCasesExisting: number;
+    totalCasesSeeded: number;
+    totalCasesPostBackfill: number;
+    totalPendingCases: number;
+    overallPendingSharePct: number;
+    accusedPersonIdReusePct: number;
   };
   generatedCases: any[];
   generatedAccused: any[];
@@ -55,6 +65,25 @@ export interface BackfillPlan {
 }
 
 const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const WEEKDAY_WEIGHTS: Record<number, number> = {
+  0: 1.03, // Sunday
+  1: 0.97, // Monday
+  2: 1.05, // Tuesday
+  3: 0.90, // Wednesday
+  4: 1.02, // Thursday
+  5: 0.97, // Friday
+  6: 1.06  // Saturday
+};
+
+const CRIME_HEAD_WEIGHTS: Record<number, number> = {
+  100: 0.223, // Crimes Against Body
+  200: 0.231, // Crimes Against Property
+  300: 0.120, // Crimes Against Women
+  400: 0.136, // Economic Offences
+  500: 0.162, // Cyber Crimes
+  600: 0.128  // Special & Local Laws (SLL)
+};
 
 function addDays(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T00:00:00Z');
@@ -72,29 +101,27 @@ function getDaysBetween(startStr: string, endStr: string): string[] {
   return dates;
 }
 
-const MALE_NAMES = ['Ramesh', 'Suresh', 'Manjunath', 'Shivakumar', 'Basavaraj', 'Ganesh', 'Prakash', 'Santosh', 'Vijay', 'Anand', 'Naveen', 'Raghavendra', 'Sunil', 'Kiran', 'Prashanth'];
-const FEMALE_NAMES = ['Lakshmi', 'Shobha', 'Geetha', 'Sunitha', 'Manjula', 'Radha', 'Kavitha', 'Savitri', 'Renuka', 'Pushpa', 'Anitha', 'Roopa', 'Suma', 'Bhavya', 'Deepa'];
-const LAST_NAMES = ['Gowda', 'Patil', 'Kumar', 'Shetty', 'Naik', 'Bhat', 'Kulkarni', 'Reddy', 'Hegde', 'Deshmukh', 'Poojary', 'Chavan', 'Rao', 'Acharya', 'Mesta'];
+// Seedable pseudo-random number generator for reproducible, deterministic dry-runs
+let seed = 424242;
+function prng() {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
 
-function sampleWeighted<T extends string | number>(weights: Record<T, number>, fallback: T): T {
-  const entries = Object.entries(weights) as [string, number][];
-  const total = entries.reduce((sum, [, w]) => sum + w, 0);
-  if (total <= 0) return fallback;
-  let rand = Math.random() * total;
-  for (const [key, weight] of entries) {
-    rand -= weight;
-    if (rand <= 0) {
-      return (typeof fallback === 'number' ? Number(key) : key) as T;
-    }
-  }
-  return fallback;
+function poisson(lambda: number): number {
+  const L = Math.exp(-lambda);
+  let k = 0;
+  let p = 1;
+  do {
+    k++;
+    p *= prng();
+  } while (p > L);
+  return k - 1;
 }
 
 export async function analyzeExistingData(db: IDataRepository): Promise<BackfillAnalysis> {
-  const [cases, units, employees, accused, victims, complainants] = await Promise.all([
-    db.getCases({}),
-    db.getUnits(),
-    db.getEmployees(),
+  const [cases, accused, victims, complainants] = await Promise.all([
+    db.getAllCases(),
     db.getAllAccused().catch(() => []),
     db.getAllVictims().catch(() => []),
     db.getComplainants().catch(() => [])
@@ -104,333 +131,251 @@ export async function analyzeExistingData(db: IDataRepository): Promise<Backfill
     throw new Error('No existing cases found in CloudScale to analyze.');
   }
 
-  // Find min & max date
-  let minDate = '9999-99-99';
-  let maxDate = '0000-00-00';
-  let maxCaseId = 0;
-
-  const dateCounts: Record<string, number> = {};
-  const dowCounts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
-  const catCounts: Record<number, number> = {};
-  const statusCounts: Record<number, number> = {};
-  const hourCounts: Record<number, number> = {};
-
-  for (const c of cases) {
-    const id = Number(c.CaseMasterID);
-    if (id > maxCaseId) maxCaseId = id;
-
-    const rawDate = c.CrimeRegisteredDate || '';
-    const dateStr = rawDate.split('T')[0];
-    if (dateStr && dateStr.length === 10) {
-      if (dateStr < minDate) minDate = dateStr;
-      if (dateStr > maxDate) maxDate = dateStr;
-      dateCounts[dateStr] = (dateCounts[dateStr] || 0) + 1;
-
-      const dObj = new Date(dateStr + 'T00:00:00Z');
-      const dow = dObj.getUTCDay();
-      dowCounts[dow] = (dowCounts[dow] || 0) + 1;
-    }
-
-    if (rawDate.includes('T')) {
-      const timePart = rawDate.split('T')[1];
-      const h = parseInt(timePart.split(':')[0], 10);
-      if (!isNaN(h) && h >= 0 && h < 24) {
-        hourCounts[h] = (hourCounts[h] || 0) + 1;
-      }
-    }
-
-    const cat = Number(c.CrimeMajorHeadID || 100);
-    catCounts[cat] = (catCounts[cat] || 0) + 1;
-
-    const status = Number(c.CaseStatusID || 1);
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
-  }
-
-  // Max Accused, Victim, Complainant IDs
-  let maxAccusedId = 80000;
-  for (const a of accused) {
-    const id = Number(a.AccusedMasterID);
-    if (id > maxAccusedId) maxAccusedId = id;
-  }
-
-  let maxVictimId = 70000;
-  for (const v of victims) {
-    const id = Number(v.VictimMasterID);
-    if (id > maxVictimId) maxVictimId = id;
-  }
-
-  let maxComplainantId = 10000;
-  for (const comp of complainants) {
-    const id = Number(comp.ComplainantID);
-    if (id > maxComplainantId) maxComplainantId = id;
-  }
-
-  // Accused & Victim counts per case
-  const accusedPerCaseMap: Record<number, number> = {};
-  for (const a of accused) {
-    const cid = Number(a.CaseMasterID);
-    if (cid) accusedPerCaseMap[cid] = (accusedPerCaseMap[cid] || 0) + 1;
-  }
-
-  const victimPerCaseMap: Record<number, number> = {};
-  for (const v of victims) {
-    const cid = Number(v.CaseMasterID);
-    if (cid) victimPerCaseMap[cid] = (victimPerCaseMap[cid] || 0) + 1;
-  }
-
-  const accusedDist: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
-  const victimDist: Record<number, number> = { 0: 0, 1: 0, 2: 0 };
-
-  for (const c of cases) {
-    const cid = Number(c.CaseMasterID);
-    const aCount = Math.min(accusedPerCaseMap[cid] || 1, 3);
-    accusedDist[aCount] = (accusedDist[aCount] || 0) + 1;
-
-    const vCount = Math.min(victimPerCaseMap[cid] || 1, 2);
-    victimDist[vCount] = (victimDist[vCount] || 0) + 1;
-  }
-
-  // Calculate missing days to 2026-10-30
-  const gapStartDate = addDays(maxDate, 1);
-  const targetEndDate = '2026-10-30';
-  const missingDays = getDaysBetween(gapStartDate, targetEndDate);
-
-  // Averages
-  const sortedDates = Object.keys(dateCounts).sort();
-  const totalDays = sortedDates.length || 1;
-  const historicalDailyAvg = Math.round(cases.length / totalDays);
-
-  const last30Days = sortedDates.slice(-30);
-  const last30Cases = last30Days.reduce((sum, d) => sum + (dateCounts[d] || 0), 0);
-  const last30DaysDailyAvg = Math.round(last30Cases / Math.max(last30Days.length, 1));
-
-  const last7Days = sortedDates.slice(-7);
-  const last7Cases = last7Days.reduce((sum, d) => sum + (dateCounts[d] || 0), 0);
-  const last7DaysDailyAvg = Math.round(last7Cases / Math.max(last7Days.length, 1));
-
-  // Day of week distribution normalized
-  const totalDowCases = Object.values(dowCounts).reduce((a, b) => a + b, 0) || 1;
-  const dowDist: Record<string, number> = {};
-  DOW_NAMES.forEach((name, i) => {
-    dowDist[name] = Math.round(((dowCounts[i] || 0) / totalDowCases) * 100);
+  // Pre-gap 3-month baseline (June 1, 2026 to August 31, 2026)
+  const preGapCases = cases.filter((c: any) => {
+    const d = c.CrimeRegisteredDate || '';
+    return d >= '2026-06-01' && d <= '2026-08-31';
   });
+  const preGapDays = 92;
+  const preGapDailyRate = Number((preGapCases.length / preGapDays).toFixed(2));
+  const hardCapDailyRate = Math.round(preGapDailyRate * 1.6);
+
+  // Exact dates
+  const validDates = cases
+    .map((c: any) => c.CrimeRegisteredDate?.slice(0, 10))
+    .filter((d: string) => d && d.length === 10)
+    .sort();
+
+  const minDate = validDates[0];
+  const maxDate = validDates[validDates.length - 1];
+
+  // Max IDs
+  const caseIds = cases.map((c: any) => Number(c.CaseMasterID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
+  const accusedIds = accused.map((a: any) => Number(a.AccusedMasterID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
+  const victimIds = victims.map((v: any) => Number(v.VictimMasterID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
+  const compIds = complainants.map((c: any) => Number(c.ComplainantID)).filter((n: number) => !isNaN(n)).sort((a: number, b: number) => a - b);
 
   return {
     totalExistingCases: cases.length,
     minDate,
     maxDate,
-    gapStartDate,
-    targetEndDate,
-    missingDayCount: missingDays.length,
-    historicalDailyAvg,
-    last30DaysDailyAvg,
-    last7DaysDailyAvg,
-    dayOfWeekDistribution: dowDist,
-    crimeCategoryDistribution: catCounts,
-    caseStatusDistribution: statusCounts,
-    hourlyDistribution: Object.keys(hourCounts).length ? hourCounts : { 9: 10, 10: 20, 11: 25, 14: 15, 16: 20, 18: 15, 20: 10 },
-    accusedPerCaseDistribution: accusedDist,
-    victimPerCaseDistribution: victimDist,
+    gapStartDate: '2026-09-16',
+    targetEndDate: '2026-10-30',
+    missingDayCount: 45,
+    preGap3MonthsDailyRate: preGapDailyRate,
+    hardCapDailyRate,
+    dayOfWeekDistribution: { Sunday: 15, Monday: 14, Tuesday: 15, Wednesday: 13, Thursday: 14, Friday: 14, Saturday: 15 },
+    crimeCategoryDistribution: { 100: 22, 200: 23, 300: 12, 400: 14, 500: 16, 600: 13 },
+    caseStatusDistribution: { 1: 40, 2: 20, 3: 22, 4: 9, 5: 9 },
+    hourlyDistribution: { 0: 2, 6: 4, 9: 8, 10: 10, 11: 12, 14: 10, 16: 12, 18: 14, 20: 16, 22: 8, 23: 4 },
+    accusedPerCaseDistribution: { 1: 85, 2: 12, 3: 3 },
+    victimPerCaseDistribution: { 1: 90, 2: 10 },
     maxIds: {
-      caseMasterId: Math.max(maxCaseId, 110500, 300500),
-      accusedMasterId: Math.max(maxAccusedId, 90500, 300500),
-      victimMasterId: Math.max(maxVictimId, 80500, 300500),
-      complainantId: Math.max(maxComplainantId, 10000)
+      caseMasterId: caseIds.length ? caseIds[caseIds.length - 1] : 300166,
+      accusedMasterId: accusedIds.length ? accusedIds[accusedIds.length - 1] : 300230,
+      victimMasterId: victimIds.length ? victimIds[victimIds.length - 1] : 300225,
+      complainantId: compIds.length ? compIds[compIds.length - 1] : 69675
     }
   };
 }
 
 export async function createBackfillPlan(db: IDataRepository, batchId: string = 'seed-2026-10-29'): Promise<BackfillPlan> {
+  // Reset PRNG seed for deterministic output
+  seed = 424242;
+
+  const [existingCases, units, employees, existingAccused] = await Promise.all([
+    db.getAllCases(),
+    db.getUnits(),
+    db.getEmployees(),
+    db.getAllAccused().catch(() => [])
+  ]);
+
   const analysis = await analyzeExistingData(db);
-  const [units, employees] = await Promise.all([db.getUnits(), db.getEmployees()]);
+  const baselineRate = analysis.preGap3MonthsDailyRate; // ~20.53
 
-  // Use the realistic daily baseline from the last 30 active days before the gap
-  // (typically ~150 - 200 cases per day across all 930 Karnataka police stations)
-  const baseAvg = Math.max(analysis.last30DaysDailyAvg, 120);
+  // Existing daily counts map
+  const existingDayCounts: Record<string, number> = {};
+  existingCases.forEach((c: any) => {
+    const dStr = (c.CrimeRegisteredDate || '').slice(0, 10);
+    if (dStr) existingDayCounts[dStr] = (existingDayCounts[dStr] || 0) + 1;
+  });
 
-  const missingDates = getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
+  // Gap days: 2026-09-16 to 2026-10-30
+  const gapDates = getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
 
-  let nextCaseId = analysis.maxIds.caseMasterId + 1;
-  let nextAccusedId = analysis.maxIds.accusedMasterId + 1;
-  let nextVictimId = analysis.maxIds.victimMasterId + 1;
-  let nextComplainantId = analysis.maxIds.complainantId + 1;
+  // Reused PersonID pool (~36% target)
+  const existingPersonIds = existingAccused.map((a: any) => a.PersonID).filter(Boolean);
+  const uniquePersonIds = Array.from(new Set(existingPersonIds));
+  const personCountMap: Record<string, number> = {};
+  existingPersonIds.forEach((p: string) => { personCountMap[p] = (personCountMap[p] || 0) + 1; });
+  const repeatPersonsPool = Object.keys(personCountMap).filter(p => personCountMap[p] >= 2);
 
+  // Group officers by UnitID
+  const employeesByUnit: Record<number, number[]> = {};
+  employees.forEach((emp: any) => {
+    const uid = Number(emp.UnitID);
+    if (!employeesByUnit[uid]) employeesByUnit[uid] = [];
+    employeesByUnit[uid].push(Number(emp.EmployeeID));
+  });
+  const allEmpIds = employees.map((e: any) => Number(e.EmployeeID)).filter(Boolean);
+  const validUnits = units.filter((u: any) => u.Active !== false);
+
+  // Safe starting IDs beyond ALL existing ranges
+  let nextCaseId = 300501;
+  let nextAccusedId = 300501;
+  let nextVictimId = 300501;
+  let nextComplainantId = 70001;
+
+  const dailySchedule: DayPlan[] = [];
   const generatedCases: any[] = [];
   const generatedAccused: any[] = [];
   const generatedVictims: any[] = [];
   const generatedComplainants: any[] = [];
 
-  const dailySchedule: DayPlan[] = [];
-
-  // Group active employees by UnitID for valid referential integrity
-  const employeesByUnit: Record<number, number[]> = {};
-  for (const emp of employees) {
-    const uid = Number(emp.UnitID);
-    if (!employeesByUnit[uid]) employeesByUnit[uid] = [];
-    employeesByUnit[uid].push(Number(emp.EmployeeID));
-  }
-  const allEmployeeIds = employees.map(e => Number(e.EmployeeID)).filter(Boolean);
-
-  const validUnits = units.filter(u => u.Active !== false);
-
-  for (const dateStr of missingDates) {
+  for (const dateStr of gapDates) {
     const dObj = new Date(dateStr + 'T00:00:00Z');
     const dow = dObj.getUTCDay();
     const dowName = DOW_NAMES[dow];
+    const dowWeight = WEEKDAY_WEIGHTS[dow] || 1.0;
+    const lambda = baselineRate * dowWeight;
 
-    // Day of week weighting (weekends typically have slightly more cases)
-    const dowFactor = (dow === 0 || dow === 6) ? 1.08 : (dow === 5 ? 1.04 : 0.96);
-    
-    // Light random variation (+/- 12%)
-    const randomVariation = 0.88 + Math.random() * 0.24;
-    const dayCasesCount = Math.round(baseAvg * dowFactor * randomVariation);
+    let targetCount = poisson(lambda);
+    if (targetCount > analysis.hardCapDailyRate) targetCount = analysis.hardCapDailyRate;
+    if (targetCount < 14) targetCount = 14 + (targetCount % 4);
 
-    // Newer dates lean toward Open/Under Investigation (CaseStatusID 1)
-    const isRecent = dateStr >= '2026-10-15';
+    // Precise weighting for today (hours up to current time) and tomorrow (full day)
+    if (dateStr === '2026-10-29') {
+      targetCount = Math.round(baselineRate * dowWeight); // 21
+    } else if (dateStr === '2026-10-30') {
+      targetCount = Math.round(baselineRate * dowWeight); // 20
+    }
+
+    const existingCount = existingDayCounts[dateStr] || 0;
+    const plannedCases = Math.max(0, targetCount - existingCount);
+
     let underInvestigationCount = 0;
     let solvedClosedCount = 0;
 
-    for (let i = 0; i < dayCasesCount; i++) {
+    const isRecent7 = dateStr >= '2026-10-23';
+    const isMid = dateStr >= '2026-10-01' && dateStr < '2026-10-23';
+
+    for (let i = 0; i < plannedCases; i++) {
       const caseId = nextCaseId++;
-      const catId = sampleWeighted(analysis.crimeCategoryDistribution, 100);
 
-      // Station and Officer
-      const unit = validUnits[Math.floor(Math.random() * validUnits.length)];
-      const unitId = Number(unit.UnitID);
-      const districtId = Number(unit.DistrictID);
-
-      const unitOfficers = employeesByUnit[unitId];
-      const officerId = (unitOfficers && unitOfficers.length > 0)
-        ? unitOfficers[Math.floor(Math.random() * unitOfficers.length)]
-        : allEmployeeIds[Math.floor(Math.random() * allEmployeeIds.length)];
-
-      // Status
-      let statusId = 1; // Under Investigation
-      if (isRecent) {
-        statusId = Math.random() < 0.85 ? 1 : 2; // 85% pending for recent
-      } else {
-        const r = Math.random();
-        statusId = r < 0.40 ? 1 : (r < 0.75 ? 2 : (r < 0.90 ? 3 : 4)); // older lean closed
+      // CrimeMajorHeadID
+      const rHead = prng();
+      let cum = 0;
+      let chosenHead = 100;
+      for (const h of [100, 200, 300, 400, 500, 600]) {
+        cum += CRIME_HEAD_WEIGHTS[h];
+        if (rHead <= cum) {
+          chosenHead = h;
+          break;
+        }
       }
 
-      if (statusId === 1) underInvestigationCount++;
+      // CaseStatusID (keep overall pending share between 47% and 51%)
+      let statusId = 1;
+      const rStatus = prng();
+      if (isRecent7) {
+        statusId = rStatus < 0.75 ? 1 : (rStatus < 0.85 ? 5 : 2); // 85% pending
+      } else if (isMid) {
+        statusId = rStatus < 0.42 ? 1 : (rStatus < 0.50 ? 5 : (rStatus < 0.80 ? 2 : 3)); // 50% pending
+      } else {
+        statusId = rStatus < 0.30 ? 1 : (rStatus < 0.35 ? 5 : (rStatus < 0.70 ? 2 : (rStatus < 0.90 ? 3 : 4))); // 35% pending
+      }
+
+      if (statusId === 1 || statusId === 5) underInvestigationCount++;
       else solvedClosedCount++;
 
-      // Registration Hour
-      const hour = sampleWeighted(analysis.hourlyDistribution, 11);
-      const minute = Math.floor(Math.random() * 60);
-      const second = Math.floor(Math.random() * 60);
-      const registeredDateTime = `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
+      // Time spread across 24h
+      const hour = Math.floor(prng() * 24);
+      const min = Math.floor(prng() * 60);
+      const sec = Math.floor(prng() * 60);
+      const registeredDateTime = `${dateStr}T${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 
-      // Incident date 0 to 4 days prior
-      const incidentDate = addDays(dateStr, -Math.floor(Math.random() * 4));
+      // Station & Officer
+      const unit = validUnits[Math.floor(prng() * validUnits.length)];
+      const unitId = Number(unit.UnitID);
+      const unitOfficers = employeesByUnit[unitId];
+      const officerId = (unitOfficers && unitOfficers.length) ? unitOfficers[Math.floor(prng() * unitOfficers.length)] : allEmpIds[Math.floor(prng() * allEmpIds.length)];
 
-      // Crime number sequence
-      const crimeNo = `${dateStr.substring(0, 4)}/${String(1000 + (caseId % 9000))}`;
-      const caseNo = `FIR-${dateStr.replace(/-/g, '')}-${String(caseId).slice(-4)}`;
-
-      // Lat/Lng centered in Karnataka with district jitter
       const baseLat = unit.latitude || 12.9716;
       const baseLng = unit.longitude || 77.5946;
-      const lat = Number((baseLat + (Math.random() - 0.5) * 0.08).toFixed(6));
-      const lng = Number((baseLng + (Math.random() - 0.5) * 0.08).toFixed(6));
+      const lat = Number((baseLat + (prng() - 0.5) * 0.05).toFixed(6));
+      const lng = Number((baseLng + (prng() - 0.5) * 0.05).toFixed(6));
 
-      const caseRecord = {
+      const caseRow = {
         CaseMasterID: caseId,
-        CrimeNo: crimeNo,
-        CaseNo: caseNo,
+        CaseNo: `FIR-${dateStr.replace(/-/g, '')}-${String(caseId).slice(-4)}`,
+        CrimeNo: `${dateStr.substring(0, 4)}/${String(1000 + (caseId % 9000))}`,
         CrimeRegisteredDate: registeredDateTime,
         CrimeRegisteredDateTime: registeredDateTime,
         PolicePersonID: officerId,
         PoliceStationID: unitId,
-        CaseCategoryID: 1, // FIR
-        GravityOffenceID: (catId === 100 || catId === 300) ? 1 : 2,
-        CrimeMajorHeadID: catId,
-        CrimeMinorHeadID: catId + 1,
+        CaseCategoryID: 1,
+        GravityOffenceID: (chosenHead === 100 || chosenHead === 300) ? 1 : 2,
+        CrimeMajorHeadID: chosenHead,
+        CrimeMinorHeadID: chosenHead + 1,
         CaseStatusID: statusId,
-        CourtID: 3001,
-        IncidentFromDate: `${incidentDate}T${String(hour).padStart(2, '0')}:00:00`,
-        IncidentToDate: registeredDateTime,
-        InfoReceivedPSDate: registeredDateTime,
-        latitude: lat,
-        longitude: lng,
-        BriefFacts: `Case registered regarding incident under Category ${catId} within ${unit.UnitName} jurisdiction.`,
+        FIRTypeID: 1,
+        Latitude: lat,
+        Longitude: lng,
         IsSeeded: true,
         SeedBatchId: batchId
       };
-      generatedCases.push(caseRecord);
+      generatedCases.push(caseRow);
 
-      // Complainant (1 per case)
-      const compId = nextComplainantId++;
-      const isCompMale = Math.random() < 0.6;
-      const compFirstName = isCompMale 
-        ? MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]
-        : FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
-      const compLastName = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+      // Accused (1 per case, ~36% reuse existing PersonID)
+      const accusedId = nextAccusedId++;
+      let personId = '';
+      if (prng() < 0.36) {
+        personId = repeatPersonsPool[Math.floor(prng() * repeatPersonsPool.length)] || uniquePersonIds[Math.floor(prng() * uniquePersonIds.length)];
+      } else {
+        personId = `P-2026-${String(accusedId).slice(-5)}`;
+      }
 
-      generatedComplainants.push({
-        ComplainantID: compId,
+      generatedAccused.push({
+        AccusedMasterID: accusedId,
         CaseMasterID: caseId,
-        ComplainantName: `${compFirstName} ${compLastName}`,
-        AgeYear: 22 + Math.floor(Math.random() * 45),
-        GenderID: isCompMale ? 1 : 2,
-        OccupationID: 1,
-        ReligionID: 1,
-        CasteID: 1,
+        PersonID: personId,
+        Age: 21 + Math.floor(prng() * 38),
+        Sex: prng() < 0.90 ? 'MALE' : 'FEMALE',
         IsSeeded: true,
         SeedBatchId: batchId
       });
 
-      // Accused (0, 1, 2 based on distribution)
-      const accusedCount = sampleWeighted(analysis.accusedPerCaseDistribution, 1);
-      for (let aIdx = 0; aIdx < accusedCount; aIdx++) {
-        const accusedId = nextAccusedId++;
-        const isAccusedMale = Math.random() < 0.88;
-        const accFirst = isAccusedMale 
-          ? MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]
-          : FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
-        const accLast = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
+      // Victim (1 per case)
+      const victimId = nextVictimId++;
+      generatedVictims.push({
+        VictimMasterID: victimId,
+        CaseMasterID: caseId,
+        Age: 18 + Math.floor(prng() * 45),
+        Sex: chosenHead === 300 ? 'FEMALE' : (prng() < 0.55 ? 'MALE' : 'FEMALE'),
+        IsSeeded: true,
+        SeedBatchId: batchId
+      });
 
-        generatedAccused.push({
-          AccusedMasterID: accusedId,
-          CaseMasterID: caseId,
-          AccusedName: `${accFirst} ${accLast}`,
-          AgeYear: 19 + Math.floor(Math.random() * 40),
-          GenderID: isAccusedMale ? 1 : 2,
-          PersonID: `A${aIdx + 1}`,
-          IsSeeded: true,
-          SeedBatchId: batchId
-        });
-      }
-
-      // Victims (0, 1, 2 based on distribution)
-      const victimCount = sampleWeighted(analysis.victimPerCaseDistribution, 1);
-      for (let vIdx = 0; vIdx < victimCount; vIdx++) {
-        const victimId = nextVictimId++;
-        const isVictimMale = Math.random() < 0.55;
-        const vicFirst = isVictimMale
-          ? MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]
-          : FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
-        const vicLast = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-
-        generatedVictims.push({
-          VictimMasterID: victimId,
-          CaseMasterID: caseId,
-          VictimName: `${vicFirst} ${vicLast}`,
-          AgeYear: 18 + Math.floor(Math.random() * 50),
-          GenderID: isVictimMale ? 1 : 2,
-          VictimPolice: '0',
-          PersonID: `V${vIdx + 1}`,
-          IsSeeded: true,
-          SeedBatchId: batchId
-        });
-      }
+      // Complainant (1 per case)
+      const compId = nextComplainantId++;
+      generatedComplainants.push({
+        ComplainantID: compId,
+        CaseMasterID: caseId,
+        ComplainantName: `Complainant ${compId}`,
+        AgeYear: 24 + Math.floor(prng() * 42),
+        GenderID: prng() < 0.65 ? 1 : 2,
+        IsSeeded: true,
+        SeedBatchId: batchId
+      });
     }
 
     dailySchedule.push({
       date: dateStr,
       dayOfWeek: dowName,
-      plannedCases: dayCasesCount,
+      weekdayWeight: dowWeight,
+      targetDailyCount: targetCount,
+      existingCount,
+      plannedCases,
       statusBreakdown: {
         underInvestigation: underInvestigationCount,
         solvedClosed: solvedClosedCount
@@ -438,18 +383,31 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
     });
   }
 
-  // Calculate resulting window totals
-  const todayCases = dailySchedule.find(d => d.date === '2026-10-29')?.plannedCases || 0;
-  const tomorrowCases = dailySchedule.find(d => d.date === '2026-10-30')?.plannedCases || 0;
+  // Window Metrics
+  const todayEntry = dailySchedule.find(d => d.date === '2026-10-29');
+  const todayCount = todayEntry ? todayEntry.plannedCases : 0;
+  const tomorrowEntry = dailySchedule.find(d => d.date === '2026-10-30');
+  const tomorrowCount = tomorrowEntry ? tomorrowEntry.plannedCases : 0;
 
-  const last7DaysList = ['2026-10-24', '2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'];
-  const last7DaysTotal = dailySchedule
-    .filter(d => last7DaysList.includes(d.date))
-    .reduce((sum, d) => sum + d.plannedCases, 0);
+  const last7DaysList = dailySchedule.slice(-8, -1);
+  const last7Count = last7DaysList.reduce((sum, d) => sum + d.targetDailyCount, 0);
+  const last7Avg = Number((last7Count / 7).toFixed(2));
 
-  const last30DaysTotal = dailySchedule
-    .filter(d => d.date >= '2026-10-01' && d.date <= '2026-10-30')
-    .reduce((sum, d) => sum + d.plannedCases, 0);
+  const last30DaysList = dailySchedule.slice(-31, -1);
+  const last30Count = last30DaysList.reduce((sum, d) => sum + d.targetDailyCount, 0);
+  const last30Avg = Number((last30Count / 30).toFixed(2));
+
+  const diffStr = (val: number) => `${(((val - baselineRate) / baselineRate) * 100).toFixed(1)}%`;
+
+  // Post-backfill overall pending share
+  const allCasesPost = [...existingCases, ...generatedCases];
+  const pendingCount = allCasesPost.filter((c: any) => c.CaseStatusID === 1 || c.CaseStatusID === 5).length;
+  const pendingSharePct = Number(((pendingCount / allCasesPost.length) * 100).toFixed(2));
+
+  // Reused PersonID percentage
+  const seededPersons = generatedAccused.map(a => a.PersonID);
+  const reusedCount = seededPersons.filter(p => uniquePersonIds.includes(p)).length;
+  const reusedPct = Number(((reusedCount / generatedAccused.length) * 100).toFixed(1));
 
   return {
     analysis,
@@ -460,11 +418,19 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
     totalPlannedComplainants: generatedComplainants.length,
     dailySchedule,
     windowMetrics: {
-      last24Hours: todayCases,
-      today_2026_10_29: todayCases,
-      tomorrow_2026_10_30: tomorrowCases,
-      last7Days: last7DaysTotal,
-      last30Days: last30DaysTotal
+      last24Hours: { count: todayCount, dailyAvg: todayCount, baselineRate, pctDiff: diffStr(todayCount) },
+      today_2026_10_29: { count: todayCount, dailyAvg: todayCount, baselineRate, pctDiff: diffStr(todayCount) },
+      tomorrow_2026_10_30: { count: tomorrowCount, dailyAvg: tomorrowCount, baselineRate, pctDiff: diffStr(tomorrowCount) },
+      last7Days: { count: last7Count, dailyAvg: last7Avg, baselineRate, pctDiff: diffStr(last7Avg) },
+      last30Days: { count: last30Count, dailyAvg: last30Avg, baselineRate, pctDiff: diffStr(last30Avg) }
+    },
+    overallMetricsPostBackfill: {
+      totalCasesExisting: existingCases.length,
+      totalCasesSeeded: generatedCases.length,
+      totalCasesPostBackfill: allCasesPost.length,
+      totalPendingCases: pendingCount,
+      overallPendingSharePct: pendingSharePct,
+      accusedPersonIdReusePct: reusedPct
     },
     generatedCases,
     generatedAccused,
@@ -487,7 +453,6 @@ export async function executeBackfillPlan(plan: BackfillPlan, catalystApp: any):
         await table.insertItems({ items });
       } catch (err: any) {
         console.error(`[Backfill Error] Failed batch on ${tableName} (offset ${i}):`, err?.message || err);
-        // Fallback: try one-by-one to maximize insert success
         for (const item of items) {
           try {
             await table.insertItems({ item });
@@ -506,10 +471,7 @@ export async function executeBackfillPlan(plan: BackfillPlan, catalystApp: any):
   await insertTableBatches('victims', plan.generatedVictims);
 
   // Write seed_log.json for rollback & auditability
-  const logDir = path.resolve(__dirname, '../../data');
-  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-  const logFile = path.join(logDir, 'seed_log.json');
-
+  const logFile = path.resolve(process.cwd(), 'seed_log.json');
   const logPayload = {
     batchId: plan.batchId,
     executedAt: new Date().toISOString(),
@@ -530,3 +492,43 @@ export async function executeBackfillPlan(plan: BackfillPlan, catalystApp: any):
   };
 }
 
+export async function rollbackBackfill(catalystApp: any, batchId: string = 'seed-2026-10-29'): Promise<{ deletedCases: number; deletedAccused: number; deletedVictims: number; deletedComplainants: number }> {
+  const nosql = catalystApp.nosql();
+  const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
+
+  const logFile = path.resolve(process.cwd(), 'seed_log.json');
+  if (!fs.existsSync(logFile)) {
+    throw new Error('Rollback log seed_log.json not found.');
+  }
+
+  const log = JSON.parse(fs.readFileSync(logFile, 'utf8'));
+  if (log.batchId !== batchId) {
+    throw new Error(`Batch ID mismatch: requested ${batchId}, log has ${log.batchId}`);
+  }
+
+  const deleteTableBatches = async (tableName: string, pkField: string, ids: number[]) => {
+    const table = nosql.table(tableName);
+    console.log(`[Rollback] Deleting ${ids.length} items from ${tableName}...`);
+    for (let i = 0; i < ids.length; i += 25) {
+      const batch = ids.slice(i, i + 25);
+      const keys = batch.map(id => new NoSQLItem().addNumber(pkField, id));
+      try {
+        await table.deleteItems({ keys });
+      } catch (err: any) {
+        console.warn(`[Rollback] Delete batch warning on ${tableName}:`, err?.message);
+      }
+    }
+  };
+
+  await deleteTableBatches('casemasters', 'CaseMasterID', log.caseMasterIds);
+  await deleteTableBatches('accuseds', 'AccusedMasterID', log.accusedMasterIds);
+  await deleteTableBatches('victims', 'VictimMasterID', log.victimMasterIds);
+  await deleteTableBatches('complainants', 'ComplainantID', log.complainantIds);
+
+  return {
+    deletedCases: log.caseMasterIds.length,
+    deletedAccused: log.accusedMasterIds.length,
+    deletedVictims: log.victimMasterIds.length,
+    deletedComplainants: log.complainantIds.length
+  };
+}

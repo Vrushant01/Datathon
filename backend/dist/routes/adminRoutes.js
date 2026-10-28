@@ -10,6 +10,7 @@ const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
 const backfillService_1 = require("../services/backfillService");
 const reconcileService_1 = require("../services/reconcileService");
 const CloudScaleRepository_1 = require("../repositories/CloudScaleRepository");
+const analyticsRoutes_1 = require("./analyticsRoutes");
 const router = express_1.default.Router();
 router.use(authMiddleware_1.authMiddleware);
 router.use((0, authMiddleware_1.requireRole)('Admin'));
@@ -100,6 +101,7 @@ router.get('/dashboard-stats', async (req, res) => {
  */
 router.post('/cache/clear', (req, res) => {
     (0, CloudScaleRepository_1.invalidateAllCache)();
+    (0, analyticsRoutes_1.invalidateAnalyticsCache)();
     res.json({ success: true, message: 'All in-memory table caches cleared successfully' });
 });
 /**

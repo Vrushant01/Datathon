@@ -5,6 +5,7 @@ import { RepositoryFactory } from '../repositories/RepositoryFactory';
 import { createBackfillPlan, executeBackfillPlan } from '../services/backfillService';
 import { runReconciliation } from '../services/reconcileService';
 import { getCatalystApp, invalidateAllCache } from '../repositories/CloudScaleRepository';
+import { invalidateAnalyticsCache } from './analyticsRoutes';
 
 const router = express.Router();
 
@@ -108,6 +109,7 @@ router.get('/dashboard-stats', async (req, res) => {
  */
 router.post('/cache/clear', (req, res) => {
   invalidateAllCache();
+  invalidateAnalyticsCache();
   res.json({ success: true, message: 'All in-memory table caches cleared successfully' });
 });
 
