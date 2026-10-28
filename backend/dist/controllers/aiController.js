@@ -47,8 +47,8 @@ const getDashboard = async (req, res) => {
         res.json(dashboardData);
     }
     catch (error) {
-        console.error('Error generating AI dashboard data:', error);
-        res.status(500).json({ error: 'Failed to generate AI dashboard data' });
+        console.error('[ROUTE_ERROR] /api/ai/dashboard:', error);
+        res.status(500).json({ error: 'Failed to generate AI dashboard data', details: error?.message || String(error) });
     }
 };
 exports.getDashboard = getDashboard;

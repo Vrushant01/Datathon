@@ -91,6 +91,18 @@ const corsOptions = {
 // app.options('*', cors(corsOptions));
 app.use((0, cookie_parser_1.default)()); // Required for req.cookies (refresh token httpOnly cookie)
 app.use(express_1.default.json());
+// Expose and attach X-Data-Partial header if repository scan encountered batch errors
+app.use((req, res, next) => {
+    const origJson = res.json.bind(res);
+    res.json = (body) => {
+        if (req.isDataPartial) {
+            res.setHeader('X-Data-Partial', 'true');
+            res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+        }
+        return origJson(body);
+    };
+    next();
+});
 // Mount the new dedicated routers
 app.use('/api/ai', aiRoutes_1.default);
 app.use('/api/chatbot', chatbotRoutes_1.default);
@@ -219,7 +231,7 @@ app.post('/api/zcql', express_1.default.json(), async (req, res) => {
                 return res.json({ success: true, count: raw.get ? raw.get.length : 0 });
             }
             catch (e) {
-                return res.json({ success: false, error: e.message, stack: e.stack });
+                return res.json({ success: false, error: e.message });
             }
         }
         const zcql = catalystApp.zcql();
@@ -238,7 +250,8 @@ app.get('/api/districts', async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch districts' });
+        console.error('[ROUTE_ERROR] /api/districts:', error);
+        res.status(500).json({ error: 'Failed to fetch districts', details: error?.message || String(error) });
     }
 });
 app.get('/api/units', async (req, res) => {
@@ -280,7 +293,8 @@ app.get('/api/units', async (req, res) => {
         }
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch units' });
+        console.error('[ROUTE_ERROR] /api/units:', error);
+        res.status(500).json({ error: 'Failed to fetch units', details: error?.message || String(error) });
     }
 });
 app.get('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
@@ -333,7 +347,8 @@ app.get('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch employees' });
+        console.error('[ROUTE_ERROR] /api/employees:', error);
+        res.status(500).json({ error: 'Failed to fetch employees', details: error?.message || String(error) });
     }
 });
 app.post('/api/employees', authMiddleware_1.requireAuth, async (req, res) => {
@@ -521,8 +536,8 @@ app.get('/api/cases', authMiddleware_1.requireAuth, async (req, res) => {
         }
     }
     catch (error) {
-        console.error('getCases error:', error);
-        res.status(500).json({ error: 'Failed to fetch cases', details: error?.message });
+        console.error('[ROUTE_ERROR] /api/cases:', error);
+        res.status(500).json({ error: 'Failed to fetch cases', details: error?.message || String(error) });
     }
 });
 // Backend Audit Logs API
@@ -548,7 +563,7 @@ app.get('/api/audit-logs', authMiddleware_1.requireAuth, (0, authMiddleware_1.re
     }
     catch (error) {
         console.error('Failed to fetch audit logs:', error);
-        res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message });
     }
 });
 app.get('/api/repeated-offenders', authMiddleware_1.requireAuth, async (req, res) => {
@@ -683,8 +698,8 @@ app.get('/api/acts', async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
-        res.status(500).json({ error: msg });
+        console.error('[ROUTE_ERROR] /api/acts:', error);
+        res.status(500).json({ error: 'Failed to fetch acts', details: error?.message || String(error) });
     }
 });
 app.get('/api/test-zcql', async (req, res) => {
@@ -712,8 +727,8 @@ app.get('/api/sections', async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        const msg = typeof error === 'object' ? JSON.stringify(error) : String(error);
-        res.status(500).json({ error: msg });
+        console.error('[ROUTE_ERROR] /api/sections:', error);
+        res.status(500).json({ error: 'Failed to fetch sections', details: error?.message || String(error) });
     }
 });
 app.put('/api/cases/:caseId/reassign', async (req, res) => {
@@ -894,7 +909,8 @@ app.get('/api/victims', authMiddleware_1.requireAuth, async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch victims' });
+        console.error('[ROUTE_ERROR] /api/victims:', error);
+        res.status(500).json({ error: 'Failed to fetch victims', details: error?.message || String(error) });
     }
 });
 app.get('/api/accused', authMiddleware_1.requireAuth, async (req, res) => {
@@ -904,7 +920,8 @@ app.get('/api/accused', authMiddleware_1.requireAuth, async (req, res) => {
         res.json(data);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch accused' });
+        console.error('[ROUTE_ERROR] /api/accused:', error);
+        res.status(500).json({ error: 'Failed to fetch accused', details: error?.message || String(error) });
     }
 });
 app.get('/api/cases/officer/:officerId', authMiddleware_1.requireAuth, async (req, res) => {

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CloudScaleRepository = void 0;
+exports.CloudScaleRepository = exports.STATUTORY_SECTIONS = exports.STATUTORY_ACTS = void 0;
 exports.getCatalystApp = getCatalystApp;
 const zcatalyst_sdk_node_1 = __importDefault(require("zcatalyst-sdk-node"));
 const GLOBAL_CACHE = {
@@ -27,8 +27,60 @@ const CACHE_TTL = 60 * 1000; // 60 seconds (interim scalability mitigation)
 // This avoids the "unable to find the type of initialisation" error that occurs
 // when catalyst.initialize(req) is called with a browser-originating request
 // that lacks Catalyst's internal proxy headers.
+exports.STATUTORY_ACTS = [
+    { ActCode: 'IPC', ActID: 'IPC', ShortName: 'Indian Penal Code', ActDescription: 'Indian Penal Code, 1860', Active: true },
+    { ActCode: 'IT Act', ActID: 'IT Act', ShortName: 'Information Technology Act', ActDescription: 'Information Technology Act, 2000', Active: true },
+    { ActCode: 'NDPS Act', ActID: 'NDPS Act', ShortName: 'NDPS Act', ActDescription: 'Narcotic Drugs and Psychotropic Substances Act, 1985', Active: true },
+    { ActCode: 'POCSO Act', ActID: 'POCSO Act', ShortName: 'POCSO Act', ActDescription: 'Protection of Children from Sexual Offences Act, 2012', Active: true },
+    { ActCode: 'Arms Act', ActID: 'Arms Act', ShortName: 'Arms Act', ActDescription: 'Arms Act, 1959', Active: true },
+    { ActCode: 'Motor Vehicles Act', ActID: 'Motor Vehicles Act', ShortName: 'Motor Vehicles Act', ActDescription: 'Motor Vehicles Act, 1988', Active: true },
+    { ActCode: 'Karnataka Police Act', ActID: 'Karnataka Police Act', ShortName: 'Karnataka Police Act', ActDescription: 'Karnataka Police Act, 1963', Active: true },
+    { ActCode: 'BNS', ActID: 'BNS', ShortName: 'Bharatiya Nyaya Sanhita', ActDescription: 'Bharatiya Nyaya Sanhita, 2023', Active: true }
+];
+exports.STATUTORY_SECTIONS = [
+    { ActCode: 'IPC', SectionCode: '302', SectionID: '302', SectionDescription: 'Punishment for murder', Active: true },
+    { ActCode: 'IPC', SectionCode: '307', SectionID: '307', SectionDescription: 'Attempt to murder', Active: true },
+    { ActCode: 'IPC', SectionCode: '323', SectionID: '323', SectionDescription: 'Punishment for voluntarily causing hurt', Active: true },
+    { ActCode: 'IPC', SectionCode: '324', SectionID: '324', SectionDescription: 'Voluntarily causing hurt by dangerous weapons', Active: true },
+    { ActCode: 'IPC', SectionCode: '341', SectionID: '341', SectionDescription: 'Punishment for wrongful restraint', Active: true },
+    { ActCode: 'IPC', SectionCode: '354', SectionID: '354', SectionDescription: 'Assault or criminal force to woman with intent to outrage modesty', Active: true },
+    { ActCode: 'IPC', SectionCode: '363', SectionID: '363', SectionDescription: 'Punishment for kidnapping', Active: true },
+    { ActCode: 'IPC', SectionCode: '376', SectionID: '376', SectionDescription: 'Punishment for rape', Active: true },
+    { ActCode: 'IPC', SectionCode: '379', SectionID: '379', SectionDescription: 'Punishment for theft', Active: true },
+    { ActCode: 'IPC', SectionCode: '380', SectionID: '380', SectionDescription: 'Theft in dwelling house', Active: true },
+    { ActCode: 'IPC', SectionCode: '384', SectionID: '384', SectionDescription: 'Punishment for extortion', Active: true },
+    { ActCode: 'IPC', SectionCode: '392', SectionID: '392', SectionDescription: 'Punishment for robbery', Active: true },
+    { ActCode: 'IPC', SectionCode: '395', SectionID: '395', SectionDescription: 'Punishment for dacoity', Active: true },
+    { ActCode: 'IPC', SectionCode: '406', SectionID: '406', SectionDescription: 'Punishment for criminal breach of trust', Active: true },
+    { ActCode: 'IPC', SectionCode: '420', SectionID: '420', SectionDescription: 'Cheating and dishonestly inducing delivery of property', Active: true },
+    { ActCode: 'IPC', SectionCode: '498A', SectionID: '498A', SectionDescription: 'Husband or relative of husband subjecting woman to cruelty', Active: true },
+    { ActCode: 'IPC', SectionCode: '504', SectionID: '504', SectionDescription: 'Intentional insult with intent to provoke breach of the peace', Active: true },
+    { ActCode: 'IPC', SectionCode: '506', SectionID: '506', SectionDescription: 'Punishment for criminal intimidation', Active: true },
+    { ActCode: 'IT Act', SectionCode: '66C', SectionID: '66C', SectionDescription: 'Punishment for identity theft', Active: true },
+    { ActCode: 'IT Act', SectionCode: '66D', SectionID: '66D', SectionDescription: 'Punishment for cheating by personation using computer resource', Active: true },
+    { ActCode: 'IT Act', SectionCode: '67', SectionID: '67', SectionDescription: 'Publishing or transmitting obscene material in electronic form', Active: true },
+    { ActCode: 'NDPS Act', SectionCode: '20(b)', SectionID: '20(b)', SectionDescription: 'Production, possession, transport or sale of cannabis', Active: true },
+    { ActCode: 'NDPS Act', SectionCode: '21', SectionID: '21', SectionDescription: 'Possession of manufactured drugs and preparations', Active: true },
+    { ActCode: 'POCSO Act', SectionCode: '4', SectionID: '4', SectionDescription: 'Punishment for penetrative sexual assault', Active: true },
+    { ActCode: 'POCSO Act', SectionCode: '8', SectionID: '8', SectionDescription: 'Punishment for sexual assault', Active: true },
+    { ActCode: 'Arms Act', SectionCode: '25', SectionID: '25', SectionDescription: 'Punishment for certain offences including illegal arms possession', Active: true },
+    { ActCode: 'Motor Vehicles Act', SectionCode: '184', SectionID: '184', SectionDescription: 'Driving dangerously', Active: true },
+    { ActCode: 'Karnataka Police Act', SectionCode: '92', SectionID: '92', SectionDescription: 'Punishment for street offences and public nuisance', Active: true }
+];
 let _catalystApp = null;
 function getCatalystApp(req) {
+    // 1. If req is provided, ALWAYS initialize with req.
+    // In AppSail / Catalyst reverse proxy, req.headers contains the fresh request-scoped credentials:
+    // x-zc-project-secret-key, x-zc-admin-cred-token, x-zc-user-cred-token, x-zc-projectid, x-zc-project-key.
+    if (req && (req.headers || req.url)) {
+        try {
+            return zcatalyst_sdk_node_1.default.initialize(req);
+        }
+        catch (e) {
+            console.warn('[DB] catalyst.initialize(req) failed:', e?.message || e);
+        }
+    }
+    // 2. Singleton fallback for internal/background jobs without request context
     if (_catalystApp)
         return _catalystApp;
     // Try initializeApp() — reads CATALYST_CONFIG env var set by AppSail
@@ -65,12 +117,20 @@ function getCatalystApp(req) {
             throw new Error(`Catalyst SDK init failed: ${e.message}`);
         }
     }
-    throw new Error('Cannot initialize Catalyst SDK: no CATALYST_CONFIG env var and no valid request');
+    try {
+        _catalystApp = zcatalyst_sdk_node_1.default.initialize();
+        return _catalystApp;
+    }
+    catch (e) {
+        throw new Error('Cannot initialize Catalyst SDK: no CATALYST_CONFIG env var and no valid request');
+    }
 }
 class CloudScaleRepository {
     app;
     metrics;
+    req;
     constructor(req) {
+        this.req = req;
         this.app = getCatalystApp(req);
         if (req) {
             if (!req.metrics) {
@@ -115,6 +175,13 @@ class CloudScaleRepository {
         const now = Date.now();
         if (cacheEntry.data && (now - cacheEntry.timestamp < CACHE_TTL)) {
             this.metrics.cacheHits++;
+            if (cacheEntry.isPartial && this.req) {
+                this.req.isDataPartial = true;
+                if (this.req.res && typeof this.req.res.setHeader === 'function') {
+                    this.req.res.setHeader('X-Data-Partial', 'true');
+                    this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+                }
+            }
             return cacheEntry.data;
         }
         if (cacheEntry.promise) {
@@ -167,15 +234,15 @@ class CloudScaleRepository {
                         ids.push(i);
                     break;
                 case 'acts':
-                    pkField = 'ActID';
-                    for (let i = 1; i <= 500; i++)
-                        ids.push(i);
-                    break;
+                    cacheEntry.data = exports.STATUTORY_ACTS;
+                    cacheEntry.timestamp = Date.now();
+                    cacheEntry.promise = null;
+                    return exports.STATUTORY_ACTS;
                 case 'sections':
-                    pkField = 'SectionID';
-                    for (let i = 1; i <= 3000; i++)
-                        ids.push(i);
-                    break;
+                    cacheEntry.data = exports.STATUTORY_SECTIONS;
+                    cacheEntry.timestamp = Date.now();
+                    cacheEntry.promise = null;
+                    return exports.STATUTORY_SECTIONS;
                 case 'actsections':
                     // ActSectionAssociation is stored in Catalyst Datastore (SQL), not NoSQL.
                     // Return empty array gracefully — the Datastore query path is in a separate method.
@@ -234,9 +301,16 @@ class CloudScaleRepository {
                 }
             }
             if (batchErrors > 0) {
-                console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed silently. Data may be partial.`);
-                if (allItems.length === 0) {
-                    throw new Error(`CloudScale fetch failure: ${actualTableName} returned no data and had batch errors.`);
+                console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed. Data may be partial. Found ${allItems.length} records.`);
+                if (cacheEntry) {
+                    cacheEntry.isPartial = true;
+                }
+                if (this.req) {
+                    this.req.isDataPartial = true;
+                    if (this.req.res && typeof this.req.res.setHeader === 'function') {
+                        this.req.res.setHeader('X-Data-Partial', 'true');
+                        this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+                    }
                 }
             }
             // Fetch dynamically created records sequentially since NoSQL ZCQL is unreliable for NoSQL tables
@@ -771,10 +845,10 @@ class CloudScaleRepository {
         }
     }
     async getActs() {
-        return this.scanAll('Act');
+        return exports.STATUTORY_ACTS;
     }
     async getSections() {
-        return this.scanAll('Section');
+        return exports.STATUTORY_SECTIONS;
     }
     async getRepeatOffenders() {
         const allAccused = await this.scanAll('Accused');

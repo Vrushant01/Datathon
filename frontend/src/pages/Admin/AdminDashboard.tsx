@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { mockDb, syncData } from '../../../data/mockDb';
 import { useDbConnection } from '../../hooks/useDbConnection';
+import { SyncStatusBanner } from '../../components/SyncStatusBanner';
 import { useMockDb } from '../../hooks/useMockDb';
 import { useLanguage } from '../../context/LanguageContext';
 import { getAIDashboard } from '../../services/aiService';
@@ -26,7 +27,7 @@ export const AdminDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<'24H' | '7D' | '30D' | 'ALL'>('ALL');
   
-  const { dataLoaded } = useDbConnection();
+  const { dataLoaded, syncReport } = useDbConnection();
 
   const isFetchingRef = useRef(false);
 
@@ -106,11 +107,20 @@ export const AdminDashboard: React.FC = () => {
   }, [stats?.casesLight, timeFilter]);
 
   // Use null check — NOT || 0 — to preserve genuine 0 vs "not yet loaded"
-  const totalFIR = stats != null ? stats.totalFirs : null;
-  const underInvestigation = stats != null ? stats.pendingCases : null;
-  const solved = stats != null ? stats.solvedClosed : null;
-  const activeOfficersCount = stats != null ? stats.activeOfficers : null;
-  const totalStations = stats != null ? stats.policeStations : null;
+  const fallbackCases = useMemo(() => mockDb.getCases(), [dataLoaded]);
+  const fallbackUnits = useMemo(() => mockDb.getUnits(), [dataLoaded]);
+  const fallbackOfficers = useMemo(() => mockDb.getEmployees(), [dataLoaded]);
+
+  // STRICT REQUIREMENT: KPI fallback ONLY uses rows actually loaded from the live backend, never mock or seed data
+  const casesLoadedFromBackend = syncReport.tables['cases']?.status === 'success' && fallbackCases.length > 0;
+  const unitsLoadedFromBackend = syncReport.tables['units']?.status === 'success' && fallbackUnits.length > 0;
+  const officersLoadedFromBackend = syncReport.tables['employees']?.status === 'success' && fallbackOfficers.length > 0;
+
+  const totalFIR = stats != null ? stats.totalFirs : (casesLoadedFromBackend ? fallbackCases.length : null);
+  const underInvestigation = stats != null ? stats.pendingCases : (casesLoadedFromBackend ? fallbackCases.filter(c => c.CaseStatusID === 1).length : null);
+  const solved = stats != null ? stats.solvedClosed : (casesLoadedFromBackend ? fallbackCases.filter(c => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length : null);
+  const activeOfficersCount = stats != null ? stats.activeOfficers : (officersLoadedFromBackend ? fallbackOfficers.filter(e => e.status === 'Active').length : null);
+  const totalStations = stats != null ? stats.policeStations : (unitsLoadedFromBackend ? fallbackUnits.length : null);
 
   // Chart 1: Dynamic Trends
   const trendData = useMemo(() => {
@@ -182,6 +192,7 @@ export const AdminDashboard: React.FC = () => {
   if (error) {
     return (
       <div className="space-y-6 select-none">
+        <SyncStatusBanner />
         <div className="bg-red-50/50 border border-red-100 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
           <div className="bg-white p-4 rounded-full shadow-sm mb-4">
             <AlertTriangle className="text-red-500" size={32} />
@@ -198,6 +209,7 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 select-none">
+      <SyncStatusBanner />
       
       {/* Header bar */}
       <div className="flex justify-between items-center border-b pb-4">

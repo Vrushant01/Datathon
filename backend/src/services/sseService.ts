@@ -45,11 +45,12 @@ class SSEService {
         // Send initial connection success event
         this.sendEventToClient(client, 'CONNECTED', { message: 'SSE Connection Established', time: new Date().toISOString() });
 
-        // Keep-alive heartbeat (every 25s) — must be shorter than any proxy idle timeout.
-        // Uses a named HEARTBEAT event so it is a real HTTP data chunk (not just a comment)
-        // ensuring the proxy does not close an "idle" connection.
+        // Keep-alive heartbeat (every 10s) — must be shorter than any proxy idle timeout.
+        // Catalyst AppSail / ZGS proxy drops idle connections after ~20-25 seconds.
+        // Writing both raw comment bytes and an event ensures the reverse proxy never times out.
         const heartbeat = setInterval(() => {
             try {
+                res.write(': keepalive\n\n');
                 this.sendEventToClient(client, 'HEARTBEAT', { time: Date.now() });
                 if (typeof (client.res as any).flush === 'function') {
                     (client.res as any).flush();
@@ -59,7 +60,7 @@ class SSEService {
                 clearInterval(heartbeat);
                 this.clients = this.clients.filter(c => c.id !== clientId);
             }
-        }, 25000);
+        }, 10000);
 
         // Handle client disconnect
         req.on('close', () => {

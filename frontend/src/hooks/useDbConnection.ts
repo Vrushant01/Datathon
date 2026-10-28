@@ -1,29 +1,48 @@
 import { useState, useEffect } from 'react';
-import { dbConnectionStatus, dbDataLoaded, subscribeToDbStatus } from '../../data/mockDb';
+import { 
+  dbConnectionStatus, 
+  dbDataLoaded, 
+  subscribeToDbStatus,
+  getSyncReport,
+  subscribeToSyncReport,
+  retrySync,
+  SyncReport
+} from '../../data/mockDb';
 
 export const useDbConnection = () => {
   const [state, setState] = useState({
     status: dbConnectionStatus,
     dataLoaded: dbDataLoaded
   });
+  const [syncReport, setSyncReport] = useState<SyncReport>(getSyncReport());
 
   useEffect(() => {
     setState({
       status: dbConnectionStatus,
       dataLoaded: dbDataLoaded
     });
+    setSyncReport(getSyncReport());
     
-    const unsubscribe = subscribeToDbStatus((newStatus) => {
-      // Because dbDataLoaded is exported and updated before subscribeToDbStatus is called in setDbStatus,
-      // it is safe to read its fresh value here.
+    const unsubscribeStatus = subscribeToDbStatus((newStatus) => {
       setState({
         status: newStatus,
         dataLoaded: dbDataLoaded
       });
     });
+
+    const unsubscribeSync = subscribeToSyncReport((report) => {
+      setSyncReport(report);
+    });
     
-    return () => unsubscribe();
+    return () => {
+      unsubscribeStatus();
+      unsubscribeSync();
+    };
   }, []);
 
-  return state;
+  return {
+    ...state,
+    syncReport,
+    retrySync
+  };
 };

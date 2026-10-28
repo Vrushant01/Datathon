@@ -499,6 +499,81 @@ const setDbStatus = (status: ConnectionStatus, error: string | null = null, data
   dbListeners.forEach(l => l(status));
 };
 
+export interface TableSyncStatus {
+  table: string;
+  endpoint: string;
+  status: 'idle' | 'syncing' | 'success' | 'failed';
+  recordCount: number;
+  httpStatus?: number;
+  isPartial?: boolean;
+  error?: string;
+  lastAttempt?: number;
+}
+
+export interface SyncReport {
+  isSyncing: boolean;
+  lastSyncTime: number | null;
+  totalTables: number;
+  loadedTables: number;
+  failedTables: number;
+  partialTables: number;
+  tables: Record<string, TableSyncStatus>;
+}
+
+const DEFAULT_SYNC_TABLES = [
+  'districts', 'units', 'employees', 'cases', 'victims',
+  'accused', 'customedges', 'complainants', 'actsections',
+  'acts', 'sections'
+];
+
+const initialTableStatuses: Record<string, TableSyncStatus> = {};
+DEFAULT_SYNC_TABLES.forEach(tbl => {
+  initialTableStatuses[tbl] = {
+    table: tbl,
+    endpoint: `/api/${tbl}`,
+    status: 'idle',
+    recordCount: 0
+  };
+});
+
+let currentSyncReport: SyncReport = {
+  isSyncing: false,
+  lastSyncTime: null,
+  totalTables: DEFAULT_SYNC_TABLES.length,
+  loadedTables: 0,
+  failedTables: 0,
+  partialTables: 0,
+  tables: initialTableStatuses
+};
+
+type SyncReportListener = (report: SyncReport) => void;
+const syncReportListeners: SyncReportListener[] = [];
+
+export const subscribeToSyncReport = (listener: SyncReportListener) => {
+  syncReportListeners.push(listener);
+  return () => {
+    const idx = syncReportListeners.indexOf(listener);
+    if (idx > -1) syncReportListeners.splice(idx, 1);
+  };
+};
+
+const notifySyncReport = () => {
+  const reportCopy = getSyncReport();
+  syncReportListeners.forEach(l => l(reportCopy));
+};
+
+export const getSyncReport = (): SyncReport => ({
+  ...currentSyncReport,
+  tables: { ...currentSyncReport.tables }
+});
+
+export const retrySync = async (): Promise<SyncReport> => {
+  if (isSyncing) return getSyncReport();
+  await syncData();
+  return getSyncReport();
+};
+
+
 const ALL_CAMEL_KEYS = [
   'StateID', 'StateName', 'NationalityID', 'Active',
   'DistrictID', 'DistrictName',
@@ -573,6 +648,8 @@ let pollingInterval: any = null;
 export const syncData = async (): Promise<void> => {
   if (isSyncing) return;
   isSyncing = true;
+  currentSyncReport.isSyncing = true;
+  notifySyncReport();
   
   if (pollingInterval) {
     clearInterval(pollingInterval);
@@ -635,25 +712,64 @@ export const syncData = async (): Promise<void> => {
     // A 401 on any endpoint still propagates as a hard auth error.
     console.log('[Dashboard] stats request started');
     const fetchTableSettled = async (route: string): Promise<any[] | null> => {
+      currentSyncReport.tables[route] = {
+        table: route,
+        endpoint: `/api/${route}`,
+        status: 'syncing',
+        recordCount: currentSyncReport.tables[route]?.recordCount || 0,
+        lastAttempt: Date.now()
+      };
+      notifySyncReport();
+
       try {
         const res = await fetchWithTimeout(`${API_BASE_URL}/api/${route}`, {}, 120000);
         if (!res.ok) {
           if (res.status === 401) throw new Error('Authentication required');
-          if (res.status === 403) {
-            console.warn(`[CloudScale Sync] ${route}: 403 Permission denied — skipping.`);
-            return null;
-          }
-          if (res.status === 500) {
-            console.warn(`[CloudScale Sync] ${route}: HTTP 500 (Table likely missing or DB error) - skipping.`);
-            return null;
-          }
-          console.warn(`[CloudScale Sync] ${route}: HTTP ${res.status} - skipping.`);
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const errBody = await res.json();
+            errMsg = errBody.details || errBody.error || errMsg;
+          } catch (_) {}
+
+          currentSyncReport.tables[route] = {
+            table: route,
+            endpoint: `/api/${route}`,
+            status: 'failed',
+            recordCount: 0,
+            httpStatus: res.status,
+            error: errMsg,
+            lastAttempt: Date.now()
+          };
+          notifySyncReport();
+          console.warn(`[CloudScale Sync] ${route}: HTTP ${res.status} (${errMsg}) - skipping.`);
           return null;
         }
+        const isPartial = res.headers.get('x-data-partial') === 'true' || res.headers.get('X-Data-Partial') === 'true';
         const data = await res.json();
-        return Array.isArray(data) ? data : null;
+        const records = Array.isArray(data) ? data : [];
+        currentSyncReport.tables[route] = {
+          table: route,
+          endpoint: `/api/${route}`,
+          status: 'success',
+          recordCount: records.length,
+          httpStatus: res.status,
+          isPartial,
+          lastAttempt: Date.now()
+        };
+        notifySyncReport();
+        return records;
       } catch (e: any) {
         if (e.message === 'Authentication required') throw e; // re-throw auth errors
+        currentSyncReport.tables[route] = {
+          table: route,
+          endpoint: `/api/${route}`,
+          status: 'failed',
+          recordCount: 0,
+          httpStatus: 0,
+          error: e.message || 'Network request failed',
+          lastAttempt: Date.now()
+        };
+        notifySyncReport();
         console.warn(`[CloudScale Sync] ${route} failed: ${e.message} — skipping.`);
         return null;
       }
@@ -714,6 +830,13 @@ export const syncData = async (): Promise<void> => {
       .filter(r => r !== null).length;
     const totalSkipped = 11 - totalLoaded;
 
+    currentSyncReport.isSyncing = false;
+    currentSyncReport.lastSyncTime = Date.now();
+    currentSyncReport.loadedTables = totalLoaded;
+    currentSyncReport.failedTables = totalSkipped;
+    currentSyncReport.partialTables = Object.values(currentSyncReport.tables).filter(t => t.isPartial).length;
+    notifySyncReport();
+
     saveDbState(state);
 
     // Status was already set to true after health check, just update status
@@ -721,6 +844,8 @@ export const syncData = async (): Promise<void> => {
     console.log(`[CloudScale Sync] Complete. ${totalLoaded} tables loaded, ${totalSkipped} skipped.`);
   } catch (err: any) {
     const errorMsg = err.message || 'Sync failed';
+    currentSyncReport.isSyncing = false;
+    notifySyncReport();
     setDbStatus('error', errorMsg, false);
     if (errorMsg === 'Authentication required') {
       console.log('[CloudScale Sync] Authentication required or expired.');
@@ -729,6 +854,8 @@ export const syncData = async (): Promise<void> => {
     }
   } finally {
     isSyncing = false;
+    currentSyncReport.isSyncing = false;
+    notifySyncReport();
   }
 };
 

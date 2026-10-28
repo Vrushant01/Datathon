@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -6,13 +6,15 @@ import { Shield, LogOut, Bell, User, MapPin } from 'lucide-react';
 import { mockDb, dbConnectionError } from '../../data/mockDb';
 import { useDbConnection } from '../hooks/useDbConnection';
 import { TransparentLogo } from './TransparentLogo';
+import { SyncDiagnosticsModal } from './SyncDiagnosticsModal';
 
 export const Navbar: React.FC = () => {
   const { user, role, isAuthenticated, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { status: dbConnectionStatus } = useDbConnection();
+  const { status: dbConnectionStatus, syncReport } = useDbConnection();
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
   const handleLangChange = (newLang: 'en' | 'kn') => {
     setLanguage(newLang);
@@ -46,10 +48,7 @@ export const Navbar: React.FC = () => {
   };
 
   const showDbDetails = () => {
-    alert(`Database Connection:
-Status: ${dbConnectionStatus.toUpperCase()}
-Gateway: Zoho Catalyst CloudScale
-Data Source: Live CloudScale Database`);
+    setIsDiagnosticsOpen(true);
   };
 
   const normPath = location.pathname.replace(/\/$/, '') || '/';
@@ -207,6 +206,10 @@ Data Source: Live CloudScale Database`);
           ) : null}
         </div>
       </div>
+      <SyncDiagnosticsModal 
+        isOpen={isDiagnosticsOpen} 
+        onClose={() => setIsDiagnosticsOpen(false)} 
+      />
     </header>
   );
 };

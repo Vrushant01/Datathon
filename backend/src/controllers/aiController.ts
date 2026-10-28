@@ -9,9 +9,9 @@ export const getDashboard = async (req: Request, res: Response) => {
     const db = RepositoryFactory.getRepository(req);
     const dashboardData = await aiService.getDashboardData(db);
     res.json(dashboardData);
-  } catch (error) {
-    console.error('Error generating AI dashboard data:', error);
-    res.status(500).json({ error: 'Failed to generate AI dashboard data' });
+  } catch (error: any) {
+    console.error('[ROUTE_ERROR] /api/ai/dashboard:', error);
+    res.status(500).json({ error: 'Failed to generate AI dashboard data', details: error?.message || String(error) });
   }
 };
 
