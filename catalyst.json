@@ -6,9 +6,8 @@
       "build_command": "npm install && npm run build",
       "run_command": "npm start",
       "ignore": [
-        "node_modules",
+        "scripts",
         "*.csv",
-        "scripts/*.csv",
         "*.log"
       ],
       "cors": {

@@ -1,7 +1,5 @@
-node_modules
-*/node_modules
+scripts
+backend/scripts
 *.csv
-scripts/*.csv
-backend/scripts/*.csv
 *.log
 .git
