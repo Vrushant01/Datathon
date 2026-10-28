@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CloudScaleRepository = exports.STATUTORY_SECTIONS = exports.STATUTORY_ACTS = void 0;
 exports.getCatalystApp = getCatalystApp;
+exports.invalidateAllCache = invalidateAllCache;
 const zcatalyst_sdk_node_1 = __importDefault(require("zcatalyst-sdk-node"));
 const GLOBAL_CACHE = {
     districts: { data: null, promise: null, timestamp: 0 },
@@ -20,7 +21,7 @@ const GLOBAL_CACHE = {
     sections: { data: null, promise: null, timestamp: 0 },
     auditlogs: { data: null, promise: null, timestamp: 0 }
 };
-const CACHE_TTL = 60 * 1000; // 60 seconds (interim scalability mitigation)
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes server-side in-memory cache
 // Singleton Catalyst app instance.
 // In AppSail, CATALYST_CONFIG env var is always set by the platform and contains
 // the project credentials. initializeApp() reads it without needing request headers.
@@ -287,19 +288,18 @@ class CloudScaleRepository {
                     }
                 });
             }
-            // Run fetchPromises in controlled concurrency batches.
-            // CONCURRENCY=4: safe against CloudScale rate limits while still being ~4x faster than sequential.
-            // 400 batches / 4 concurrent = 100 rounds * ~150ms avg = ~15 seconds for casemasters (cold start).
-            // After first load, 5-minute cache makes all subsequent calls instant.
-            const CONCURRENCY = 4;
-            for (let i = 0; i < fetchPromises.length; i += CONCURRENCY) {
-                const chunk = fetchPromises.slice(i, i + CONCURRENCY);
-                await Promise.all(chunk.map(fn => fn()));
-                // Small delay between rounds to stay well within CloudScale rate limits
-                if (i + CONCURRENCY < fetchPromises.length) {
-                    await new Promise(r => setTimeout(r, 50));
+            const scanStart = Date.now();
+            // High-performance concurrency pool (16 workers pulling from task queue)
+            const CONCURRENCY = 16;
+            let taskIdx = 0;
+            const workerCount = Math.min(CONCURRENCY, fetchPromises.length);
+            const workers = Array.from({ length: workerCount }, async () => {
+                while (taskIdx < fetchPromises.length) {
+                    const current = taskIdx++;
+                    await fetchPromises[current]();
                 }
-            }
+            });
+            await Promise.all(workers);
             if (batchErrors > 0) {
                 console.warn(`[DB] scanAll(${actualTableName}): ${batchErrors} batch(es) failed. Data may be partial. Found ${allItems.length} records.`);
                 if (cacheEntry) {
@@ -329,7 +329,7 @@ class CloudScaleRepository {
                 let currentDynamicId = dynamicStartId;
                 let foundEmpty = false;
                 let consecutiveEmptyBatches = 0;
-                while (!foundEmpty && currentDynamicId < dynamicStartId + 10000) { // Safety bound
+                while (!foundEmpty && currentDynamicId < dynamicStartId + 2500) { // Safety bound
                     const batchIds = [];
                     for (let i = 0; i < 25; i++)
                         batchIds.push(currentDynamicId + i);
@@ -391,13 +391,20 @@ class CloudScaleRepository {
                 return clean;
             }).filter(Boolean);
             cacheEntry.data = cleaned;
-            // If we got 0 records (unexpected for core tables) or had batch errors, do not cache for 5 minutes.
-            // This allows the frontend's 10s retry to actually hit the database again instead of getting stuck on a cached empty array.
-            if (cleaned.length === 0 || batchErrors > 0) {
+            // Cache valid results for 5 minutes even if some individual batch had missing keys
+            if (cleaned.length === 0) {
                 cacheEntry.timestamp = 0;
             }
             else {
                 cacheEntry.timestamp = Date.now();
+            }
+            const totalScanMs = Date.now() - scanStart;
+            console.log(`[PERF_TIMING] scanAll(${actualTableName}): ${cleaned.length} rows fetched across ${fetchPromises.length} batches in ${totalScanMs}ms (batchErrors=${batchErrors})`);
+            if (this.req?.res && typeof this.req.res.setHeader === 'function') {
+                this.req.res.setHeader('X-Timing-Table', actualTableName);
+                this.req.res.setHeader('X-Timing-Rows', String(cleaned.length));
+                this.req.res.setHeader('X-Timing-Ms', String(totalScanMs));
+                this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial, X-Timing-Table, X-Timing-Rows, X-Timing-Ms');
             }
             cacheEntry.promise = null;
             return cleaned;
@@ -1614,3 +1621,9 @@ class CloudScaleRepository {
     }
 }
 exports.CloudScaleRepository = CloudScaleRepository;
+function invalidateAllCache() {
+    for (const key of Object.keys(GLOBAL_CACHE)) {
+        GLOBAL_CACHE[key] = { data: null, promise: null, timestamp: 0 };
+    }
+    console.log('[Cache] Invalidate all cache called.');
+}
