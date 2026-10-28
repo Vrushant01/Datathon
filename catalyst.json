@@ -5,6 +5,12 @@
       "name": "backend",
       "build_command": "npm install && npm run build",
       "run_command": "npm start",
+      "ignore": [
+        "node_modules",
+        "*.csv",
+        "scripts/*.csv",
+        "*.log"
+      ],
       "cors": {
         "origins": [
           "https://datathon-vnegltof.onslate.in"

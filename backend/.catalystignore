@@ -1,7 +1,5 @@
-src/
-.env
-.env.*
-
-.DS_Store
+node_modules
+*.csv
+scripts/*.csv
 *.log
-.git/
+.git
