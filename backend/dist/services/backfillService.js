@@ -108,7 +108,7 @@ async function analyzeExistingData(db) {
         }
     };
 }
-async function createBackfillPlan(db, batchId = 'seed-2026-10-29') {
+async function createBackfillPlan(db, batchId = 'seed-2026-10-29', singleDay) {
     seed = 424242;
     const [existingCases, units, employees, existingAccused] = await Promise.all([
         db.getAllCases(),
@@ -124,7 +124,7 @@ async function createBackfillPlan(db, batchId = 'seed-2026-10-29') {
         if (dStr)
             existingDayCounts[dStr] = (existingDayCounts[dStr] || 0) + 1;
     });
-    const gapDates = getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
+    const gapDates = singleDay ? [singleDay] : getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
     const existingPersonIds = existingAccused.map((a) => a.PersonID).filter(Boolean);
     const uniquePersonIds = Array.from(new Set(existingPersonIds));
     const personCountMap = {};

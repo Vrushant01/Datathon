@@ -180,21 +180,7 @@ router.post('/backfill/execute', async (req, res) => {
     const db = RepositoryFactory.getRepository(req);
 
     console.log(`[Backfill Execute] Starting execution for batch: ${batchId} (singleDay: ${singleDay || 'all'})...`);
-    let plan = await createBackfillPlan(db, batchId);
-
-    if (singleDay) {
-      plan.dailySchedule = plan.dailySchedule.filter(d => d.date === singleDay);
-      plan.generatedCases = plan.generatedCases.filter(c => c.CrimeRegisteredDate.startsWith(singleDay));
-      const caseIdSet = new Set(plan.generatedCases.map(c => c.CaseMasterID));
-      plan.generatedAccused = plan.generatedAccused.filter(a => caseIdSet.has(a.CaseMasterID));
-      plan.generatedVictims = plan.generatedVictims.filter(v => caseIdSet.has(v.CaseMasterID));
-      plan.generatedComplainants = plan.generatedComplainants.filter(comp => caseIdSet.has(comp.CaseMasterID));
-      plan.totalPlannedCases = plan.generatedCases.length;
-      plan.totalPlannedAccused = plan.generatedAccused.length;
-      plan.totalPlannedVictims = plan.generatedVictims.length;
-      plan.totalPlannedComplainants = plan.generatedComplainants.length;
-      plan.batchId = batchId;
-    }
+    let plan = await createBackfillPlan(db, batchId, singleDay);
 
     const result = await executeBackfillPlan(plan, catalystApp);
 

@@ -177,7 +177,7 @@ export async function analyzeExistingData(db: IDataRepository): Promise<Backfill
   };
 }
 
-export async function createBackfillPlan(db: IDataRepository, batchId: string = 'seed-2026-10-29'): Promise<BackfillPlan> {
+export async function createBackfillPlan(db: IDataRepository, batchId: string = 'seed-2026-10-29', singleDay?: string): Promise<BackfillPlan> {
   seed = 424242;
 
   const [existingCases, units, employees, existingAccused] = await Promise.all([
@@ -196,7 +196,7 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
     if (dStr) existingDayCounts[dStr] = (existingDayCounts[dStr] || 0) + 1;
   });
 
-  const gapDates = getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
+  const gapDates = singleDay ? [singleDay] : getDaysBetween(analysis.gapStartDate, analysis.targetEndDate);
 
   const existingPersonIds = existingAccused.map((a: any) => a.PersonID).filter(Boolean);
   const uniquePersonIds = Array.from(new Set(existingPersonIds));
