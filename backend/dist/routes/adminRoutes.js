@@ -8,6 +8,7 @@ const authMiddleware_1 = require("../middleware/authMiddleware");
 const adminController_1 = require("../controllers/adminController");
 const RepositoryFactory_1 = require("../repositories/RepositoryFactory");
 const backfillService_1 = require("../services/backfillService");
+const reconcileService_1 = require("../services/reconcileService");
 const CloudScaleRepository_1 = require("../repositories/CloudScaleRepository");
 const router = express_1.default.Router();
 router.use(authMiddleware_1.authMiddleware);
@@ -92,6 +93,34 @@ router.get('/dashboard-stats', async (req, res) => {
                 _meta: { elapsed_ms: elapsed, error: error?.message }
             }
         });
+    }
+});
+/**
+ * Clear in-memory table cache on demand
+ */
+router.post('/cache/clear', (req, res) => {
+    (0, CloudScaleRepository_1.invalidateAllCache)();
+    res.json({ success: true, message: 'All in-memory table caches cleared successfully' });
+});
+/**
+ * Read-only Data Reconciliation & Audit Endpoint
+ * Implements 3 independent counting methods, 18-month historical trends, real max IDs, and exact gap analysis.
+ */
+router.get('/reconcile', async (req, res) => {
+    const startTime = Date.now();
+    try {
+        console.log('[Reconcile] Starting comprehensive data reconciliation...');
+        const report = await (0, reconcileService_1.runReconciliation)(req);
+        const elapsed = Date.now() - startTime;
+        res.json({
+            success: true,
+            elapsed_ms: elapsed,
+            report
+        });
+    }
+    catch (err) {
+        console.error('[Reconcile Error]:', err);
+        res.status(500).json({ success: false, error: err.message, details: err.message });
     }
 });
 /**

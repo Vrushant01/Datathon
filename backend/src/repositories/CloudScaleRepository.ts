@@ -236,33 +236,45 @@ export class CloudScaleRepository implements IDataRepository {
         const keys = batch.map(v => new NoSQLItem().addNumber(pkField, v));
 
         fetchPromises.push(async () => {
-          try {
-            this.metrics.nosqlCalls++;
-            const resp = await table.fetchItem({ keys });
-            const raw = resp as any;
-            const items = (raw.get || []).map((d: any) => {
-              const item = d.item;
-              if (!item) return null;
-              return typeof item.toJSON === 'function' ? item.toJSON() : item;
-            }).filter(Boolean);
-            allItems.push(...items);
-          } catch (e: any) {
-            if (e && e.message && e.message.includes('No such Item')) {
-              // Genuninely no records found for these keys, ignore
-            } else if (e && e.message && e.message.includes('No such resource')) {
-              // Table does not exist - throw to abort
-              throw e;
-            } else {
-              batchErrors++;
-              console.error(`[DB] fetchItem batch failed for ${actualTableName}:`, e?.message || e);
+          let attempts = 0;
+          let success = false;
+          while (!success && attempts < 4) {
+            attempts++;
+            try {
+              this.metrics.nosqlCalls++;
+              const resp = await table.fetchItem({ keys });
+              const raw = resp as any;
+              const items = (raw.get || []).map((d: any) => {
+                const item = d.item;
+                if (!item) return null;
+                return typeof item.toJSON === 'function' ? item.toJSON() : item;
+              }).filter(Boolean);
+              allItems.push(...items);
+              success = true;
+            } catch (e: any) {
+              if (e && e.message && e.message.includes('No such Item')) {
+                // Genuninely no records found for these keys, ignore
+                success = true;
+              } else if (e && e.message && e.message.includes('No such resource')) {
+                // Table does not exist - throw to abort
+                throw e;
+              } else {
+                if (attempts < 4) {
+                  await new Promise(r => setTimeout(r, 100 * Math.pow(2, attempts - 1)));
+                } else {
+                  batchErrors++;
+                  console.error(`[DB] fetchItem batch failed for ${actualTableName} after ${attempts} attempts:`, e?.message || e);
+                }
+              }
             }
           }
         });
       }
 
       const scanStart = Date.now();
-      // High-performance concurrency pool (16 workers pulling from task queue)
-      const CONCURRENCY = 16;
+      // High-performance concurrency pool (6 workers pulling from task queue)
+      // Concurrency of 6 avoids Catalyst API rate-limiting while keeping total scan under 5s
+      const CONCURRENCY = 6;
       let taskIdx = 0;
       const workerCount = Math.min(CONCURRENCY, fetchPromises.length);
       const workers = Array.from({ length: workerCount }, async () => {
