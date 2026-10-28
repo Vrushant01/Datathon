@@ -1,3 +1,22 @@
 node_modules/
 *.zip
 *.log
+
+# Backups and dumps
+backups/
+*_dump.json
+seed_log*.json
+*_output.json
+*_response.json
+*_result.json
+dashboard_analytics.json
+
+# Scratch directories
+scratch/
+backend/scratch/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!backend/.env.example

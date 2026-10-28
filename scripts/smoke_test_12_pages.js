@@ -1,7 +1,24 @@
 const fs = require('fs');
 
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGtzcC5nb3YuaW4iLCJyb2xlIjoiQWRtaW4iLCJmaXJzdE5hbWUiOiJBZG1pbmlzdHJhdG9yIEtTUCIsImlhdCI6MTc5MzIyMzk0OSwiZXhwIjoxNzkzMjI3NTQ5fQ.ctE2VMfJ_mTN8CCLiAYyDddq-u1AZIPMcczf17czR9A";
-const BASE_URL = "https://backend-50044295489.development.catalystappsail.in";
+const BASE_URL = process.env.BACKEND_URL || "https://backend-50044295489.development.catalystappsail.in";
+
+async function getAuthToken() {
+  if (process.env.ADMIN_TOKEN) {
+    return process.env.ADMIN_TOKEN;
+  }
+  const email = process.env.ADMIN_EMAIL || 'admin';
+  const passcode = process.env.ADMIN_PASSWORD || 'admin123';
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idOrEmail: email, passcode, loginType: 'admin' })
+  });
+  const data = await res.json();
+  if (!data.token) {
+    throw new Error(`Auth failed: ${JSON.stringify(data)}`);
+  }
+  return data.token;
+}
 
 const pagesToTest = [
   { page: '1. Dashboard', endpoint: '/api/admin/dashboard-stats', method: 'GET' },
@@ -20,6 +37,7 @@ const pagesToTest = [
 
 async function runSmokeTests() {
   console.log(`Starting Smoke Tests against ${BASE_URL}...\n`);
+  const token = await getAuthToken();
   const results = [];
 
   for (const item of pagesToTest) {
@@ -28,7 +46,7 @@ async function runSmokeTests() {
       const res = await fetch(`${BASE_URL}${item.endpoint}`, {
         method: item.method,
         headers: {
-          'Authorization': `Bearer ${TOKEN}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });

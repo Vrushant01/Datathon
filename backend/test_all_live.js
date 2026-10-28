@@ -2,10 +2,14 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 
 async function testAllLive() {
-  const baseURL = 'https://backend-50044295489.development.catalystappsail.in';
+  const baseURL = process.env.BACKEND_URL || 'https://backend-50044295489.development.catalystappsail.in';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required to run testAllLive');
+  }
   const token = jwt.sign(
-    { email: 'admin@ksp.gov.in', role: 'Admin', officerId: 9001 },
-    'ksp_access_jwt_s3cr3t_2026_xJ9mPqR7wLnK4vZt',
+    { email: process.env.ADMIN_EMAIL || 'admin@ksp.gov.in', role: 'Admin', officerId: 9001 },
+    secret,
     { expiresIn: '1h' }
   );
   const headers = { 'Authorization': `Bearer ${token}` };
