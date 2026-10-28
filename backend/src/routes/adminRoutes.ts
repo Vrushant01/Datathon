@@ -3,7 +3,7 @@ import { authMiddleware, requireRole } from '../middleware/authMiddleware';
 import { startMigration, getMigrationStatus } from '../controllers/adminController';
 import { RepositoryFactory } from '../repositories/RepositoryFactory';
 import { createBackfillPlan, executeBackfillPlan } from '../services/backfillService';
-import { invalidateAllCache } from '../repositories/CloudScaleRepository';
+import { getCatalystApp, invalidateAllCache } from '../repositories/CloudScaleRepository';
 
 const router = express.Router();
 
@@ -144,8 +144,7 @@ router.post('/backfill/execute', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
     }
 
-    const catalyst = require('zcatalyst-sdk-node');
-    const catalystApp = catalyst.initialize(req);
+    const catalystApp = getCatalystApp(req);
     const db = RepositoryFactory.getRepository(req);
 
     console.log(`[Backfill Execute] Starting execution for batch: ${batchId}...`);

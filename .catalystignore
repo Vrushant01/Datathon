@@ -3,3 +3,6 @@ backend/scripts
 *.csv
 *.log
 .git
+node_modules/typescript
+node_modules/@esbuild
+node_modules/@types

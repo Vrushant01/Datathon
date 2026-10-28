@@ -132,8 +132,7 @@ router.post('/backfill/execute', async (req, res) => {
         if (!confirmed) {
             return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
         }
-        const catalyst = require('zcatalyst-sdk-node');
-        const catalystApp = catalyst.initialize(req);
+        const catalystApp = (0, CloudScaleRepository_1.getCatalystApp)(req);
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         console.log(`[Backfill Execute] Starting execution for batch: ${batchId}...`);
         const plan = await (0, backfillService_1.createBackfillPlan)(db, batchId);

@@ -72,9 +72,11 @@ app.use(express.json());
 app.use((req, res, next) => {
   const origJson = res.json.bind(res);
   res.json = (body: any) => {
-    if ((req as any).isDataPartial) {
-      res.setHeader('X-Data-Partial', 'true');
-      res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+    if ((req as any).isDataPartial && !res.headersSent) {
+      try {
+        res.setHeader('X-Data-Partial', 'true');
+        res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+      } catch (_) {}
     }
     return origJson(body);
   };

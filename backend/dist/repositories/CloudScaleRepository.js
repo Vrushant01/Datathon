@@ -178,9 +178,12 @@ class CloudScaleRepository {
             this.metrics.cacheHits++;
             if (cacheEntry.isPartial && this.req) {
                 this.req.isDataPartial = true;
-                if (this.req.res && typeof this.req.res.setHeader === 'function') {
-                    this.req.res.setHeader('X-Data-Partial', 'true');
-                    this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+                if (this.req.res && typeof this.req.res.setHeader === 'function' && !this.req.res.headersSent) {
+                    try {
+                        this.req.res.setHeader('X-Data-Partial', 'true');
+                        this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+                    }
+                    catch (_) { }
                 }
             }
             return cacheEntry.data;
@@ -307,9 +310,12 @@ class CloudScaleRepository {
                 }
                 if (this.req) {
                     this.req.isDataPartial = true;
-                    if (this.req.res && typeof this.req.res.setHeader === 'function') {
-                        this.req.res.setHeader('X-Data-Partial', 'true');
-                        this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+                    if (this.req.res && typeof this.req.res.setHeader === 'function' && !this.req.res.headersSent) {
+                        try {
+                            this.req.res.setHeader('X-Data-Partial', 'true');
+                            this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial');
+                        }
+                        catch (_) { }
                     }
                 }
             }
@@ -400,11 +406,14 @@ class CloudScaleRepository {
             }
             const totalScanMs = Date.now() - scanStart;
             console.log(`[PERF_TIMING] scanAll(${actualTableName}): ${cleaned.length} rows fetched across ${fetchPromises.length} batches in ${totalScanMs}ms (batchErrors=${batchErrors})`);
-            if (this.req?.res && typeof this.req.res.setHeader === 'function') {
-                this.req.res.setHeader('X-Timing-Table', actualTableName);
-                this.req.res.setHeader('X-Timing-Rows', String(cleaned.length));
-                this.req.res.setHeader('X-Timing-Ms', String(totalScanMs));
-                this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial, X-Timing-Table, X-Timing-Rows, X-Timing-Ms');
+            if (this.req?.res && typeof this.req.res.setHeader === 'function' && !this.req.res.headersSent) {
+                try {
+                    this.req.res.setHeader('X-Timing-Table', actualTableName);
+                    this.req.res.setHeader('X-Timing-Rows', String(cleaned.length));
+                    this.req.res.setHeader('X-Timing-Ms', String(totalScanMs));
+                    this.req.res.setHeader('Access-Control-Expose-Headers', 'X-Data-Partial, X-Timing-Table, X-Timing-Rows, X-Timing-Ms');
+                }
+                catch (_) { }
             }
             cacheEntry.promise = null;
             return cleaned;
