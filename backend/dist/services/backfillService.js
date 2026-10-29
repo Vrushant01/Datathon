@@ -110,11 +110,13 @@ async function analyzeExistingData(db) {
 }
 async function createBackfillPlan(db, batchId = 'seed-2026-10-29', singleDay, dateFilter) {
     seed = 424242;
-    const [existingCases, units, employees, existingAccused] = await Promise.all([
+    const [existingCases, units, employees, existingAccused, existingVictims, existingComplainants] = await Promise.all([
         db.getAllCases(),
         db.getUnits(),
         db.getEmployees(),
-        db.getAllAccused().catch(() => [])
+        db.getAllAccused().catch(() => []),
+        db.getAllVictims().catch(() => []),
+        db.getComplainants().catch(() => [])
     ]);
     const analysis = await analyzeExistingData(db);
     const baselineRate = analysis.preGap3MonthsDailyRate; // ~20.53
@@ -139,10 +141,19 @@ async function createBackfillPlan(db, batchId = 'seed-2026-10-29', singleDay, da
     });
     const allEmpIds = employees.map((e) => Number(e.EmployeeID)).filter(Boolean);
     const validUnits = units.filter((u) => u.Active !== false);
-    let nextCaseId = 300501;
-    let nextAccusedId = 300501;
-    let nextVictimId = 300501;
-    let nextComplainantId = 70001;
+    const caseIds = existingCases.map((c) => Number(c.CaseMasterID)).filter((n) => !isNaN(n));
+    const accusedIds = existingAccused.map((a) => Number(a.AccusedMasterID)).filter((n) => !isNaN(n));
+    const victimIds = existingVictims.map((v) => Number(v.VictimMasterID)).filter((n) => !isNaN(n));
+    const compIds = existingComplainants.map((c) => Number(c.ComplainantID)).filter((n) => !isNaN(n));
+    const maxCaseId = caseIds.length ? Math.max(...caseIds) : 300166;
+    const maxAccId = accusedIds.length ? Math.max(...accusedIds) : 300230;
+    const maxVicId = victimIds.length ? Math.max(...victimIds) : 300225;
+    const maxCompId = compIds.length ? Math.max(...compIds) : 69675;
+    let nextCaseId = Math.max(300500, maxCaseId) + 1;
+    let nextAccusedId = Math.max(300500, maxAccId) + 1;
+    let nextVictimId = Math.max(300500, maxVicId) + 1;
+    let nextComplainantId = Math.max(70000, maxCompId) + 1;
+    console.log(`[Backfill Plan] Dynamic Next IDs: Case=${nextCaseId}, Accused=${nextAccusedId}, Victim=${nextVictimId}, Complainant=${nextComplainantId}`);
     const dailySchedule = [];
     const generatedCases = [];
     const generatedAccused = [];
@@ -368,7 +379,7 @@ async function executeBackfillPlan(plan, catalystApp) {
     const nosql = catalystApp.nosql();
     const { NoSQLItem } = require('zcatalyst-sdk-node/lib/no-sql');
     // Insert concurrency <= 4 as requested
-    const CONCURRENCY = 3;
+    const CONCURRENCY = 4;
     const insertTableBatches = async (tableName, pkField, records) => {
         if (!records || records.length === 0)
             return;

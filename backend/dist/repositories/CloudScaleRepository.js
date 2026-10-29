@@ -222,28 +222,28 @@ class CloudScaleRepository {
                     pkField = 'CaseMasterID';
                     for (let i = 100001; i <= 110500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 301500; i++)
+                    for (let i = 300001; i <= 302000; i++)
                         ids.push(i);
                     break;
                 case 'accuseds':
                     pkField = 'AccusedMasterID';
                     for (let i = 80001; i <= 90500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 301500; i++)
+                    for (let i = 300001; i <= 302000; i++)
                         ids.push(i);
                     break;
                 case 'victims':
                     pkField = 'VictimMasterID';
                     for (let i = 70001; i <= 80500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 301500; i++)
+                    for (let i = 300001; i <= 302000; i++)
                         ids.push(i);
                     break;
                 case 'complainants':
                     pkField = 'ComplainantID';
                     for (let i = 10001; i <= 15000; i++)
                         ids.push(i);
-                    for (let i = 60001; i <= 72000; i++)
+                    for (let i = 60001; i <= 75000; i++)
                         ids.push(i);
                     break;
                 case 'acts':
@@ -344,17 +344,17 @@ class CloudScaleRepository {
             // Fetch dynamically created records sequentially since NoSQL ZCQL is unreliable for NoSQL tables
             let dynamicStartId = 0;
             if (actualTableName === 'casemasters')
-                dynamicStartId = 301501;
+                dynamicStartId = 302001;
             else if (actualTableName === 'employees')
                 dynamicStartId = 30961;
             else if (actualTableName === 'units')
                 dynamicStartId = 2961;
             else if (actualTableName === 'accuseds')
-                dynamicStartId = 301501;
+                dynamicStartId = 302001;
             else if (actualTableName === 'victims')
-                dynamicStartId = 301501;
+                dynamicStartId = 302001;
             else if (actualTableName === 'complainants')
-                dynamicStartId = 72001;
+                dynamicStartId = 75001;
             if (dynamicStartId > 0) {
                 let currentDynamicId = dynamicStartId;
                 let foundEmpty = false;
