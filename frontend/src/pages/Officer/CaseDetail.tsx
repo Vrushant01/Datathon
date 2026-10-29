@@ -3,6 +3,7 @@ import { authFetch } from '../../utils/authFetch';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useDbConnection } from '../../hooks/useDbConnection';
 import { mockDb, CaseMasterRow, ComplainantRow, VictimRow, AccusedRow, ActSectionAssociationRow, ChargesheetRow, EvidenceFileRow, TimelineNoteRow } from '../../../data/mockDb';
 import { 
   ArrowLeft, FileText, MessageSquare, Paperclip, ShieldAlert, 
@@ -43,15 +44,26 @@ export const CaseDetail: React.FC = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const { syncReport, dataLoaded } = useDbConnection();
+  const isCasesLoading = syncReport.tables['cases']?.status !== 'success' && syncReport.tables['cases']?.status !== 'failed';
+
   useEffect(() => {
     const data = mockDb.getCaseDetails(caseId);
     if (data) {
       setCDetails(data);
       setStatusVal(data.CaseStatusID);
     }
-  }, [caseId]);
+  }, [caseId, dataLoaded, syncReport.tables['cases']?.status]);
 
   if (!cDetails) {
+    if (isCasesLoading) {
+      return (
+        <div className="p-12 text-center bg-white rounded-xl border flex flex-col items-center justify-center space-y-3">
+          <div className="w-8 h-8 border-3 border-ksp-gold border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Loading Case File from CloudScale...</p>
+        </div>
+      );
+    }
     return (
       <div className="p-8 text-center bg-white rounded-xl border font-bold text-slate-400">
         Case File not found in registry.

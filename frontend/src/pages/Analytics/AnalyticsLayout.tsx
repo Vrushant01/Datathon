@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Navbar } from '../../components/Navbar';
+import { SyncStatusBanner } from '../../components/SyncStatusBanner';
 import { 
   LayoutDashboard, Users, MapPin, FileText, Network, BarChart3
 } from 'lucide-react';
@@ -114,7 +115,10 @@ export const AnalyticsLayout: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <Outlet />
+              <>
+                {!location.pathname.includes('/network') && <SyncStatusBanner />}
+                <Outlet />
+              </>
             )}
           </div>
         </main>

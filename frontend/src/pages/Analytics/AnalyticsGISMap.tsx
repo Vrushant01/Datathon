@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { mockDb } from '../../../data/mockDb';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { useDbConnection } from '../../hooks/useDbConnection';
 import { MapPin, Filter } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -15,6 +16,11 @@ import karnatakaGeoJsonUrl from '../../assets/karnataka_districts.geojson?url';
 export const AnalyticsGISMap: React.FC = () => {
   const { user } = useAuth();
   const unitId = user?.unitId;
+  const { syncReport, dataLoaded } = useDbConnection();
+
+  const casesStatus = syncReport.tables['cases']?.status;
+  const isCasesLoading = !casesStatus || casesStatus === 'idle' || casesStatus === 'syncing';
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   
@@ -34,7 +40,7 @@ export const AnalyticsGISMap: React.FC = () => {
   // 0. Base Valid Cases (Single Source of Truth for valid coordinates)
   const validBaseCases = React.useMemo(() => {
     return mockDb.getCases().filter(c => typeof c.latitude === 'number' && typeof c.longitude === 'number' && !isNaN(c.latitude) && !isNaN(c.longitude));
-  }, []);
+  }, [dataLoaded, syncReport.tables['cases']?.recordCount]);
 
   const baseFilteredCases = React.useMemo(() => {
     return validBaseCases.filter(c => {
@@ -577,6 +583,14 @@ export const AnalyticsGISMap: React.FC = () => {
         {/* Map Container */}
         <div className="flex-1 bg-slate-200 rounded-xl overflow-hidden shadow-inner border min-h-[400px] lg:min-h-0 relative z-0 min-w-0">
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full focus:outline-none outline-none" style={{ outline: 'none' }} />
+          {isCasesLoading && (
+            <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-xs flex items-center justify-center z-10">
+              <div className="bg-white/95 px-4 py-3 rounded-xl shadow-lg border border-slate-200 flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-ksp-gold border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Syncing Geospatial Records...</span>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>

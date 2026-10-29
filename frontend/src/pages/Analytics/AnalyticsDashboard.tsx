@@ -1,26 +1,47 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useDbConnection } from '../../hooks/useDbConnection';
 import { mockDb } from '../../../data/mockDb';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { FileText, Users, AlertTriangle, CheckCircle } from 'lucide-react';
+import { FileText, Users, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { predictStationRisk } from '../../services/aiService';
 
 export const AnalyticsDashboard: React.FC = () => {
   const { user } = useAuth();
   const unitId = user?.unitId;
 
-  const [riskLoading, setRiskLoading] = React.useState(false);
-  const [riskError, setRiskError] = React.useState<string | null>(null);
-  const [riskPrediction, setRiskPrediction] = React.useState<any | null>(null);
+  const { syncReport, retrySync, dataLoaded } = useDbConnection();
 
-  if (!unitId) return <div>No Station Assigned</div>;
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
+  const [riskPrediction, setRiskPrediction] = useState<any | null>(null);
 
-  const allFirs = mockDb.getCases().filter(c => c.PoliceStationID === unitId);
-  const officers = mockDb.getEmployees().filter(e => e.UnitID === unitId);
-  const statuses = mockDb.getCaseStatuses();
+  if (!unitId) return <div className="p-8 text-center text-red-500 font-bold">No Station Assigned to this Profile</div>;
+
+  const casesStatus = syncReport.tables['cases']?.status;
+  const officersStatus = syncReport.tables['employees']?.status;
+
+  const isCasesLoading = !casesStatus || casesStatus === 'idle' || casesStatus === 'syncing';
+  const isOfficersLoading = !officersStatus || officersStatus === 'idle' || officersStatus === 'syncing';
+  const isPageLoading = isCasesLoading || isOfficersLoading;
+
+  const casesFailed = casesStatus === 'failed';
+  const officersFailed = officersStatus === 'failed';
+
+  const allFirs = useMemo(() => {
+    return mockDb.getCases().filter(c => c.PoliceStationID === unitId);
+  }, [unitId, dataLoaded, syncReport.tables['cases']?.recordCount]);
+
+  const officers = useMemo(() => {
+    return mockDb.getEmployees().filter(e => e.UnitID === unitId);
+  }, [unitId, dataLoaded, syncReport.tables['employees']?.recordCount]);
+
+  const statuses = useMemo(() => {
+    return mockDb.getCaseStatuses();
+  }, [dataLoaded]);
 
   const runPrediction = async () => {
     setRiskLoading(true);
@@ -42,17 +63,42 @@ export const AnalyticsDashboard: React.FC = () => {
   const totalOfficers = officers.length;
 
   // Chart Data: FIRs by Status
-  const statusData = statuses.map(st => ({
-    name: st.CaseStatusName,
-    count: allFirs.filter(c => c.CaseStatusID === st.CaseStatusID).length
-  })).filter(d => d.count > 0);
+  const statusData = useMemo(() => {
+    return statuses.map(st => ({
+      name: st.CaseStatusName,
+      count: allFirs.filter(c => c.CaseStatusID === st.CaseStatusID).length
+    })).filter(d => d.count > 0);
+  }, [statuses, allFirs]);
 
-  const COLORS = ['#0B2240', '#D4AF37', '#64748b', '#ef4444', '#10b981'];
+  const COLORS = ['#0B2240', '#D4AF37', '#00529B', '#EF4444', '#10B981'];
 
+  const hasFatalError = (casesFailed || officersFailed) && allFirs.length === 0 && officers.length === 0 && !isPageLoading;
 
+  if (hasFatalError) {
+    return (
+      <div className="space-y-6 select-none">
+        <div className="bg-red-50/50 border border-red-100 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+          <div className="bg-white p-4 rounded-full shadow-sm mb-4">
+            <AlertTriangle className="text-red-500" size={32} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to load Station Analytics</h3>
+          <p className="text-sm text-slate-500 max-w-md mb-4">
+            {syncReport.tables['cases']?.error || syncReport.tables['employees']?.error || 'Database connection error'}
+          </p>
+          <button 
+            onClick={retrySync} 
+            className="bg-ksp-navy hover:bg-ksp-navy-light text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition flex items-center gap-1.5"
+          >
+            <RefreshCw size={13} />
+            Retry Sync
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
       <div>
         <h2 className="text-2xl font-extrabold text-ksp-navy tracking-tight uppercase">Station Analytics</h2>
         <p className="text-sm font-semibold text-slate-500 uppercase tracking-widest mt-1">
@@ -69,10 +115,13 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total FIRs</p>
-              <h3 className="text-2xl font-black text-slate-800">{totalFirs}</h3>
+              <h3 className="text-2xl font-black text-slate-800">
+                {isCasesLoading ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalFirs}
+              </h3>
             </div>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-xl border shadow-sm">
           <div className="flex items-center gap-4">
             <div className="bg-amber-100 p-3 rounded-lg text-amber-600">
@@ -80,10 +129,13 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Under Investigation</p>
-              <h3 className="text-2xl font-black text-slate-800">{underInvestigation}</h3>
+              <h3 className="text-2xl font-black text-slate-800">
+                {isCasesLoading ? <span className="text-sm font-normal text-slate-400">Loading...</span> : underInvestigation}
+              </h3>
             </div>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-xl border shadow-sm">
           <div className="flex items-center gap-4">
             <div className="bg-emerald-100 p-3 rounded-lg text-emerald-600">
@@ -91,10 +143,13 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Charge Sheeted</p>
-              <h3 className="text-2xl font-black text-slate-800">{chargeSheeted}</h3>
+              <h3 className="text-2xl font-black text-slate-800">
+                {isCasesLoading ? <span className="text-sm font-normal text-slate-400">Loading...</span> : chargeSheeted}
+              </h3>
             </div>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-xl border shadow-sm">
           <div className="flex items-center gap-4">
             <div className="bg-ksp-gold-light/30 p-3 rounded-lg text-ksp-navy">
@@ -102,7 +157,9 @@ export const AnalyticsDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Officers</p>
-              <h3 className="text-2xl font-black text-slate-800">{totalOfficers}</h3>
+              <h3 className="text-2xl font-black text-slate-800">
+                {isOfficersLoading ? <span className="text-sm font-normal text-slate-400">Loading...</span> : totalOfficers}
+              </h3>
             </div>
           </div>
         </div>
@@ -110,27 +167,38 @@ export const AnalyticsDashboard: React.FC = () => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border shadow-sm">
+        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col justify-between">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-6">FIR Distribution by Status</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <RechartsTooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="h-64 flex items-center justify-center">
+            {isCasesLoading ? (
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <div className="w-8 h-8 border-3 border-ksp-gold border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading FIR distribution...</span>
+              </div>
+            ) : statusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-slate-400 text-xs font-semibold">
+                No FIR records for this station
+              </div>
+            )}
           </div>
         </div>
 
@@ -142,7 +210,12 @@ export const AnalyticsDashboard: React.FC = () => {
             </p>
           </div>
           
-          {riskLoading ? (
+          {isPageLoading ? (
+            <div className="flex flex-col items-center justify-center h-full space-y-2 py-8">
+              <div className="w-6 h-6 border-2 border-ksp-navy border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Waiting for station records...</span>
+            </div>
+          ) : riskLoading ? (
             <div className="flex flex-col items-center justify-center h-full space-y-2 py-4">
               <div className="w-6 h-6 border-2 border-ksp-gold border-t-transparent rounded-full animate-spin"></div>
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Querying QuickML XGBoost...</span>
@@ -178,8 +251,6 @@ export const AnalyticsDashboard: React.FC = () => {
           )}
         </div>
       </div>
-
-
     </div>
   );
 };

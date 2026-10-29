@@ -2,19 +2,43 @@ import React, { useState } from 'react';
 import { useDbConnection } from '../hooks/useDbConnection';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronUp, XCircle, CheckCircle2, Database, AlertCircle } from 'lucide-react';
 
-export const SyncStatusBanner: React.FC = () => {
+export interface SyncStatusBannerProps {
+  requiredTables?: string[];
+  className?: string;
+}
+
+export const SyncStatusBanner: React.FC<SyncStatusBannerProps> = ({ requiredTables, className = '' }) => {
   const { syncReport, retrySync } = useDbConnection();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  // If sync is healthy (no failures, no partial data) and not currently syncing, hide banner
-  if (syncReport.failedTables === 0 && syncReport.partialTables === 0 && !syncReport.isSyncing) {
+  // Filter tables if requiredTables specified, else all
+  const tableEntries = Object.entries(syncReport.tables).filter(([name]) => 
+    !requiredTables || requiredTables.includes(name)
+  );
+
+  const totalTables = requiredTables ? requiredTables.length : syncReport.totalTables;
+  const loadedTables = tableEntries.filter(([_, t]) => t.status === 'success').length;
+  const failedTableList = tableEntries.map(([_, t]) => t).filter(t => t.status === 'failed');
+  const partialTableList = tableEntries.map(([_, t]) => t).filter(t => t.isPartial);
+  const failedTables = failedTableList.length;
+  const partialTables = partialTableList.length;
+
+  // Determine if required tables are still syncing:
+  // Either syncReport is syncing and not all required tables finished,
+  // or no required table has loaded or failed yet (initial startup)
+  const isSyncing = syncReport.isSyncing
+    ? (loadedTables + failedTables < totalTables)
+    : (loadedTables === 0 && failedTables === 0);
+
+  const isComplete = (loadedTables === totalTables) && failedTables === 0 && partialTables === 0;
+
+  // If sync is healthy (all required tables loaded, no failures, no partial data) and not currently syncing, hide banner
+  if (isComplete && !isSyncing) {
     return null;
   }
 
-  const failedTableList = Object.values(syncReport.tables).filter(t => t.status === 'failed');
-  const partialTableList = Object.values(syncReport.tables).filter(t => t.isPartial);
-  const hasIssues = failedTableList.length > 0 || partialTableList.length > 0;
+  const hasIssues = failedTables > 0 || partialTables > 0;
 
   const handleRetry = async () => {
     try {
@@ -26,11 +50,11 @@ export const SyncStatusBanner: React.FC = () => {
   };
 
   return (
-    <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50/90 p-4 shadow-sm text-slate-800 transition-all duration-200">
+    <div className={`mb-6 rounded-xl border border-amber-300 bg-amber-50/90 p-4 shadow-sm text-slate-800 transition-all duration-200 select-none ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2 bg-amber-100 text-amber-700 rounded-lg shrink-0">
-            {syncReport.isSyncing ? (
+            {isSyncing ? (
               <RefreshCw size={18} className="animate-spin text-amber-600" />
             ) : (
               <AlertTriangle size={18} className="text-amber-600" />
@@ -39,22 +63,22 @@ export const SyncStatusBanner: React.FC = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-sm text-amber-900">
-                {syncReport.isSyncing ? 'Syncing Database Tables...' : 'CloudScale Sync Notice'}
+                {isSyncing ? 'Syncing Database Tables...' : 'CloudScale Sync Notice'}
               </span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-800 font-semibold">
-                {syncReport.loadedTables} / {syncReport.totalTables} Loaded
-                {syncReport.failedTables > 0 ? ` (${syncReport.failedTables} Skipped)` : ''}
+                {loadedTables} / {totalTables} Loaded
+                {failedTables > 0 ? ` (${failedTables} Skipped)` : ''}
               </span>
-              {syncReport.partialTables > 0 && (
+              {partialTables > 0 && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-orange-200 text-orange-800 font-bold flex items-center gap-1">
-                  <AlertCircle size={12} /> Data may be incomplete (${syncReport.partialTables} partial)
+                  <AlertCircle size={12} /> Data may be incomplete (${partialTables} partial)
                 </span>
               )}
             </div>
             <p className="text-xs text-amber-700 mt-0.5 truncate max-w-2xl">
-              {syncReport.isSyncing 
+              {isSyncing 
                 ? 'Fetching latest records from Zoho Catalyst CloudScale...' 
-                : syncReport.partialTables > 0 && failedTableList.length === 0
+                : partialTables > 0 && failedTables === 0
                 ? `Data may be incomplete: some database batches failed for ${partialTableList.map(p => p.table).join(', ')}. Numbers shown reflect successfully fetched records.`
                 : `Some tables could not be synced: ${failedTableList.map(f => f.table).join(', ')}. Cached or fallback data is being used.`}
             </p>
@@ -70,18 +94,18 @@ export const SyncStatusBanner: React.FC = () => {
               {isExpanded ? (
                 <>Hide Details <ChevronUp size={14} /></>
               ) : (
-                <>View Diagnostics ({failedTableList.length + partialTableList.length}) <ChevronDown size={14} /></>
+                <>View Diagnostics ({failedTables + partialTables}) <ChevronDown size={14} /></>
               )}
             </button>
           )}
 
           <button
             onClick={handleRetry}
-            disabled={syncReport.isSyncing || isRetrying}
+            disabled={isSyncing || isRetrying}
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw size={13} className={syncReport.isSyncing || isRetrying ? 'animate-spin' : ''} />
-            {syncReport.isSyncing || isRetrying ? 'Retrying...' : 'Retry Sync'}
+            <RefreshCw size={13} className={isSyncing || isRetrying ? 'animate-spin' : ''} />
+            {isSyncing || isRetrying ? 'Retrying...' : 'Retry Sync'}
           </button>
         </div>
       </div>
