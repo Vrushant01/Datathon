@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ShieldAlert, Lock, ShieldCheck, Loader2, Key } from 'lucide-react';
 import { TransparentLogo } from '../../components/TransparentLogo';
+import { DemoCredentialsBox } from '../../components/DemoCredentialsBox';
+import { DEMO_MODE, DEMO_CREDENTIALS } from '../../config/demoCredentials';
 
 export const AdminLogin: React.FC = () => {
   const { login, role, isAuthenticated } = useAuth();
@@ -46,6 +48,12 @@ export const AdminLogin: React.FC = () => {
     }
   };
 
+  const fillDemo = () => {
+    setEmail(DEMO_CREDENTIALS.admin.field1Value);
+    setPassword(DEMO_CREDENTIALS.admin.field2Value);
+    setError(null);
+  };
+
   return (
     <div className="flex-grow flex items-center justify-center py-12 px-4 bg-slate-100 select-none">
       <div className="bg-white p-8 rounded-2xl border shadow-xl w-full max-w-md relative overflow-hidden">
@@ -62,17 +70,23 @@ export const AdminLogin: React.FC = () => {
             Platform Admin Console
           </h2>
           <p className="text-xs text-ksp-gold font-bold uppercase tracking-wider mt-1">
-            ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್ • KSP LAW & ORDER
+            ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್ • KSP LAW &amp; ORDER
           </p>
           <span className="text-[10px] text-slate-400 block mt-0.5 font-bold uppercase tracking-widest text-red-600">
             SYSTEM CONTROL ACCESS
           </span>
         </div>
 
-        {/* Informative message box */}
-        <div className="bg-slate-50 border border-slate-200 text-[12px] text-slate-600 p-3 rounded-lg mb-6 leading-relaxed select-text text-center">
-          🔒 <strong>Username:</strong> admin@ksp.gov.in &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Password:</strong> admin123
-        </div>
+        {/* Demo credentials box — shown only in demo mode */}
+        {DEMO_MODE && (
+          <DemoCredentialsBox
+            credentials={[
+              { label: DEMO_CREDENTIALS.admin.field1Label, value: DEMO_CREDENTIALS.admin.field1Value },
+              { label: DEMO_CREDENTIALS.admin.field2Label, value: DEMO_CREDENTIALS.admin.field2Value },
+            ]}
+            onFill={fillDemo}
+          />
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3.5 rounded-lg mb-5 flex items-start gap-2">
@@ -96,7 +110,8 @@ export const AdminLogin: React.FC = () => {
                 <Key size={16} />
               </span>
               <input 
-                type="text" 
+                type="text"
+                autoComplete="username"
                 placeholder="e.g. admin@ksp.gov.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -113,7 +128,8 @@ export const AdminLogin: React.FC = () => {
                 <Lock size={16} />
               </span>
               <input 
-                type="password" 
+                type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

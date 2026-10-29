@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { BarChart3, Lock, Loader2, ShieldCheck } from 'lucide-react';
 import { TransparentLogo } from '../../components/TransparentLogo';
+import { DemoCredentialsBox } from '../../components/DemoCredentialsBox';
+import { DEMO_MODE, DEMO_CREDENTIALS } from '../../config/demoCredentials';
 
 export const AnalyticsLogin: React.FC = () => {
   const { login, role, isAuthenticated } = useAuth();
@@ -48,6 +50,12 @@ export const AnalyticsLogin: React.FC = () => {
     }
   };
 
+  const fillDemo = () => {
+    setStationId(DEMO_CREDENTIALS.analytics.field1Value);
+    setPassword(DEMO_CREDENTIALS.analytics.field2Value);
+    setError(null);
+  };
+
   return (
     <div className="flex-grow flex items-center justify-center py-12 px-4 bg-slate-100 select-none">
       <div className="bg-white p-8 rounded-2xl border shadow-xl w-full max-w-md relative overflow-hidden">
@@ -68,7 +76,16 @@ export const AnalyticsLogin: React.FC = () => {
           </p>
         </div>
 
-
+        {/* Demo credentials box — shown only in demo mode */}
+        {DEMO_MODE && (
+          <DemoCredentialsBox
+            credentials={[
+              { label: DEMO_CREDENTIALS.analytics.field1Label, value: DEMO_CREDENTIALS.analytics.field1Value },
+              { label: DEMO_CREDENTIALS.analytics.field2Label, value: DEMO_CREDENTIALS.analytics.field2Value },
+            ]}
+            onFill={fillDemo}
+          />
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-6 flex gap-2 items-center border border-red-200">
@@ -97,10 +114,11 @@ export const AnalyticsLogin: React.FC = () => {
                 </span>
                 <input
                   type="text"
+                  autoComplete="username"
                   value={stationId}
                   onChange={(e) => setStationId(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-ksp-blue transition focus:bg-white focus:ring-2 focus:ring-ksp-blue/20"
-                  placeholder="e.g. 2001 or Koramangala"
+                  placeholder="e.g. 2000 or Koramangala"
                   disabled={isLoading}
                 />
               </div>
@@ -116,6 +134,7 @@ export const AnalyticsLogin: React.FC = () => {
                 </span>
                 <input
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-ksp-blue transition focus:bg-white focus:ring-2 focus:ring-ksp-blue/20"

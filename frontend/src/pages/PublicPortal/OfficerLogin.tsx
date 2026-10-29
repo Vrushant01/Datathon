@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ShieldAlert, User, Lock, Loader2, ShieldCheck } from 'lucide-react';
 import { TransparentLogo } from '../../components/TransparentLogo';
+import { DemoCredentialsBox } from '../../components/DemoCredentialsBox';
+import { DEMO_MODE, DEMO_CREDENTIALS } from '../../config/demoCredentials';
 
 export const OfficerLogin: React.FC = () => {
   const { login, role, isAuthenticated } = useAuth();
@@ -49,6 +51,12 @@ export const OfficerLogin: React.FC = () => {
     }
   };
 
+  const fillDemo = () => {
+    setEmployeeId(DEMO_CREDENTIALS.officer.field1Value);
+    setPassword(DEMO_CREDENTIALS.officer.field2Value);
+    setError(null);
+  };
+
   return (
     <div className="flex-grow flex items-center justify-center py-12 px-4 bg-slate-100 select-none">
       <div className="bg-white p-8 rounded-2xl border shadow-xl w-full max-w-md relative overflow-hidden">
@@ -65,17 +73,23 @@ export const OfficerLogin: React.FC = () => {
             Police Officer Portal
           </h2>
           <p className="text-xs text-ksp-gold font-bold uppercase tracking-wider mt-1">
-            ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್ • KSP LAW & ORDER
+            ಕರ್ನಾಟಕ ರಾಜ್ಯ ಪೊಲೀಸ್ • KSP LAW &amp; ORDER
           </p>
           <span className="text-[10px] text-slate-400 block mt-0.5 italic">
             "ಸದಾ ತತ್ಪರ" (Always Alert)
           </span>
         </div>
 
-        <div className="bg-slate-50 border border-slate-200 text-[12px] text-slate-600 p-3 rounded-lg mb-6 leading-relaxed select-text text-center">
-          <div>🔒 <strong>Officer ID:</strong> 10001 &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Password:</strong> password</div>
-          <div className="text-[10px] text-slate-400 mt-1 italic">Note: This is a demo for a single officer. You can view all others in the Admin Panel.</div>
-        </div>
+        {/* Demo credentials box — shown only in demo mode */}
+        {DEMO_MODE && (
+          <DemoCredentialsBox
+            credentials={[
+              { label: DEMO_CREDENTIALS.officer.field1Label, value: DEMO_CREDENTIALS.officer.field1Value },
+              { label: DEMO_CREDENTIALS.officer.field2Label, value: DEMO_CREDENTIALS.officer.field2Value },
+            ]}
+            onFill={fillDemo}
+          />
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3.5 rounded-lg mb-5 flex items-start gap-2">
@@ -99,7 +113,8 @@ export const OfficerLogin: React.FC = () => {
                 <User size={16} />
               </span>
               <input 
-                type="text" 
+                type="text"
+                autoComplete="username"
                 placeholder="e.g. 9002 or KGID901234"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
@@ -116,7 +131,8 @@ export const OfficerLogin: React.FC = () => {
                 <Lock size={16} />
               </span>
               <input 
-                type="password" 
+                type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
