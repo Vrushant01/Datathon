@@ -177,7 +177,12 @@ export async function analyzeExistingData(db: IDataRepository): Promise<Backfill
   };
 }
 
-export async function createBackfillPlan(db: IDataRepository, batchId: string = 'seed-2026-10-29', singleDay?: string): Promise<BackfillPlan> {
+export async function createBackfillPlan(
+  db: IDataRepository,
+  batchId: string = 'seed-2026-10-29',
+  singleDay?: string,
+  dateFilter?: { startDate?: string; endDate?: string }
+): Promise<BackfillPlan> {
   seed = 424242;
 
   const [existingCases, units, employees, existingAccused] = await Promise.all([
@@ -236,7 +241,9 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
     if (targetCount < 14) targetCount = 14 + (targetCount % 4);
 
     if (dateStr === '2026-10-29') {
-      targetCount = Math.round(baselineRate * dowWeight); // 21
+      const hoursElapsed = 5.5; // Up to 05:30 AM local time
+      const fullDayTarget = Math.round(baselineRate * dowWeight);
+      targetCount = Math.max(1, Math.round(fullDayTarget * (hoursElapsed / 24))); // ~5 cases
     } else if (dateStr === '2026-10-30') {
       targetCount = Math.round(baselineRate * dowWeight); // 20
     }
@@ -285,8 +292,8 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
       let sec = Math.floor(prng() * 60);
 
       if (dateStr === '2026-10-29') {
-        const curHour = 3;
-        const curMin = 50;
+        const curHour = 5;
+        const curMin = 25;
         hour = Math.floor(prng() * (curHour + 1));
         if (hour === curHour) {
           min = Math.floor(prng() * curMin);
@@ -390,6 +397,11 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
   const tomorrowEntry = dailySchedule.find(d => d.date === '2026-10-30');
   const tomorrowCount = tomorrowEntry ? tomorrowEntry.plannedCases : 0;
 
+  // Last 24 hours window: includes today's elapsed hours + yesterday's portion inside 24h
+  const yesterdayEntry = dailySchedule.find(d => d.date === '2026-10-28');
+  const yesterdayPlanned = yesterdayEntry ? yesterdayEntry.plannedCases : 21;
+  const last24hCount = Math.round(yesterdayPlanned * ((24 - 5.5) / 24)) + todayCount; // ~16 + 5 = 21
+
   const last7DaysList = dailySchedule.slice(-8, -1);
   const last7Count = last7DaysList.reduce((sum, d) => sum + d.targetDailyCount, 0);
   const last7Avg = Number((last7Count / 7).toFixed(2));
@@ -409,16 +421,33 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
   const reusedCount = seededPersons.filter(p => uniquePersonIds.includes(p)).length;
   const reusedPct = Number(((reusedCount / generatedAccused.length) * 100).toFixed(1));
 
+  // Apply dateFilter if provided (for Part 1 vs Part 2 execution)
+  let finalCases = generatedCases;
+  let finalAccused = generatedAccused;
+  let finalVictims = generatedVictims;
+  let finalComplainants = generatedComplainants;
+
+  if (dateFilter) {
+    finalCases = generatedCases.filter(c => {
+      const d = (c.CrimeRegisteredDate || '').slice(0, 10);
+      return (!dateFilter.startDate || d >= dateFilter.startDate) && (!dateFilter.endDate || d <= dateFilter.endDate);
+    });
+    const allowedIds = new Set(finalCases.map(c => c.CaseMasterID));
+    finalAccused = generatedAccused.filter(a => allowedIds.has(a.CaseMasterID));
+    finalVictims = generatedVictims.filter(v => allowedIds.has(v.CaseMasterID));
+    finalComplainants = generatedComplainants.filter(comp => allowedIds.has(comp.CaseMasterID));
+  }
+
   return {
     analysis,
     batchId,
-    totalPlannedCases: generatedCases.length,
-    totalPlannedAccused: generatedAccused.length,
-    totalPlannedVictims: generatedVictims.length,
-    totalPlannedComplainants: generatedComplainants.length,
+    totalPlannedCases: finalCases.length,
+    totalPlannedAccused: finalAccused.length,
+    totalPlannedVictims: finalVictims.length,
+    totalPlannedComplainants: finalComplainants.length,
     dailySchedule,
     windowMetrics: {
-      last24Hours: { count: todayCount, dailyAvg: todayCount, baselineRate, pctDiff: diffStr(todayCount) },
+      last24Hours: { count: last24hCount, dailyAvg: last24hCount, baselineRate, pctDiff: diffStr(last24hCount) },
       today_2026_10_29: { count: todayCount, dailyAvg: todayCount, baselineRate, pctDiff: diffStr(todayCount) },
       tomorrow_2026_10_30: { count: tomorrowCount, dailyAvg: tomorrowCount, baselineRate, pctDiff: diffStr(tomorrowCount) },
       last7Days: { count: last7Count, dailyAvg: last7Avg, baselineRate, pctDiff: diffStr(last7Avg) },
@@ -426,16 +455,16 @@ export async function createBackfillPlan(db: IDataRepository, batchId: string = 
     },
     overallMetricsPostBackfill: {
       totalCasesExisting: existingCases.length,
-      totalCasesSeeded: generatedCases.length,
-      totalCasesPostBackfill: allCasesPost.length,
+      totalCasesSeeded: finalCases.length,
+      totalCasesPostBackfill: existingCases.length + finalCases.length,
       totalPendingCases: pendingCount,
       overallPendingSharePct: pendingSharePct,
       accusedPersonIdReusePct: reusedPct
     },
-    generatedCases,
-    generatedAccused,
-    generatedVictims,
-    generatedComplainants
+    generatedCases: finalCases,
+    generatedAccused: finalAccused,
+    generatedVictims: finalVictims,
+    generatedComplainants: finalComplainants
   };
 }
 

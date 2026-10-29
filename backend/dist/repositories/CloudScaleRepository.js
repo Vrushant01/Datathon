@@ -157,6 +157,8 @@ class CloudScaleRepository {
             actualTableName = 'accuseds';
         if (tableName === 'Victim')
             actualTableName = 'victims';
+        if (tableName === 'Complainant')
+            actualTableName = 'complainants';
         if (tableName === 'CaseEntity')
             actualTableName = 'case_entities';
         if (tableName === 'Act')
@@ -220,21 +222,28 @@ class CloudScaleRepository {
                     pkField = 'CaseMasterID';
                     for (let i = 100001; i <= 110500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 300500; i++)
+                    for (let i = 300001; i <= 301500; i++)
                         ids.push(i);
                     break;
                 case 'accuseds':
                     pkField = 'AccusedMasterID';
                     for (let i = 80001; i <= 90500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 300500; i++)
+                    for (let i = 300001; i <= 301500; i++)
                         ids.push(i);
                     break;
                 case 'victims':
                     pkField = 'VictimMasterID';
                     for (let i = 70001; i <= 80500; i++)
                         ids.push(i);
-                    for (let i = 300001; i <= 300500; i++)
+                    for (let i = 300001; i <= 301500; i++)
+                        ids.push(i);
+                    break;
+                case 'complainants':
+                    pkField = 'ComplainantID';
+                    for (let i = 10001; i <= 15000; i++)
+                        ids.push(i);
+                    for (let i = 60001; i <= 72000; i++)
                         ids.push(i);
                     break;
                 case 'acts':
@@ -335,15 +344,17 @@ class CloudScaleRepository {
             // Fetch dynamically created records sequentially since NoSQL ZCQL is unreliable for NoSQL tables
             let dynamicStartId = 0;
             if (actualTableName === 'casemasters')
-                dynamicStartId = 300501;
+                dynamicStartId = 301501;
             else if (actualTableName === 'employees')
                 dynamicStartId = 30961;
             else if (actualTableName === 'units')
                 dynamicStartId = 2961;
             else if (actualTableName === 'accuseds')
-                dynamicStartId = 300501;
+                dynamicStartId = 301501;
             else if (actualTableName === 'victims')
-                dynamicStartId = 300501;
+                dynamicStartId = 301501;
+            else if (actualTableName === 'complainants')
+                dynamicStartId = 72001;
             if (dynamicStartId > 0) {
                 let currentDynamicId = dynamicStartId;
                 let foundEmpty = false;
@@ -850,15 +861,7 @@ class CloudScaleRepository {
         }
     }
     async getComplainants() {
-        try {
-            const zcql = this.app.zcql();
-            const res = await zcql.executeZCQLQuery("SELECT * FROM complainants LIMIT 200");
-            return res.map((r) => r.complainants);
-        }
-        catch (e) {
-            console.error('getComplainants ZCQL error:', e.message);
-            return [];
-        }
+        return await this.scanAll('complainants');
     }
     async getActSections() {
         // ActSectionAssociation lives in Catalyst Datastore (SQL), not NoSQL.

@@ -133,8 +133,11 @@ router.get('/backfill/plan', async (req, res) => {
     try {
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
         const batchId = req.query.batchId || 'seed-2026-10-29';
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const dateFilter = (startDate || endDate) ? { startDate, endDate } : undefined;
         console.log(`[Backfill Plan] Generating plan with batchId: ${batchId}...`);
-        const plan = await (0, backfillService_1.createBackfillPlan)(db, batchId);
+        const plan = await (0, backfillService_1.createBackfillPlan)(db, batchId, undefined, dateFilter);
         const elapsed = Date.now() - startTime;
         // Remove raw generated records from preview response to keep JSON light
         const { generatedCases, generatedAccused, generatedVictims, generatedComplainants, ...preview } = plan;
@@ -159,14 +162,15 @@ router.get('/backfill/plan', async (req, res) => {
 router.post('/backfill/execute', async (req, res) => {
     const startTime = Date.now();
     try {
-        const { batchId = 'seed-2026-10-29', confirmed, singleDay } = req.body;
+        const { batchId = 'seed-2026-10-29', confirmed, singleDay, startDate, endDate } = req.body;
         if (!confirmed) {
             return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
         }
         const catalystApp = (0, CloudScaleRepository_1.getCatalystApp)(req);
         const db = RepositoryFactory_1.RepositoryFactory.getRepository(req);
-        console.log(`[Backfill Execute] Starting execution for batch: ${batchId} (singleDay: ${singleDay || 'all'})...`);
-        let plan = await (0, backfillService_1.createBackfillPlan)(db, batchId, singleDay);
+        const dateFilter = (startDate || endDate) ? { startDate, endDate } : undefined;
+        console.log(`[Backfill Execute] Starting execution for batch: ${batchId} (range: ${startDate || 'all'} to ${endDate || 'all'})...`);
+        let plan = await (0, backfillService_1.createBackfillPlan)(db, batchId, singleDay, dateFilter);
         const result = await (0, backfillService_1.executeBackfillPlan)(plan, catalystApp);
         // Invalidate caches so the new cases immediately reflect in queries and dashboard stats
         (0, CloudScaleRepository_1.invalidateAllCache)();

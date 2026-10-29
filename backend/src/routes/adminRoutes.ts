@@ -142,9 +142,12 @@ router.get('/backfill/plan', async (req, res) => {
   try {
     const db = RepositoryFactory.getRepository(req);
     const batchId = (req.query.batchId as string) || 'seed-2026-10-29';
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+    const dateFilter = (startDate || endDate) ? { startDate, endDate } : undefined;
     console.log(`[Backfill Plan] Generating plan with batchId: ${batchId}...`);
 
-    const plan = await createBackfillPlan(db, batchId);
+    const plan = await createBackfillPlan(db, batchId, undefined, dateFilter);
     const elapsed = Date.now() - startTime;
 
     // Remove raw generated records from preview response to keep JSON light
@@ -171,7 +174,7 @@ router.get('/backfill/plan', async (req, res) => {
 router.post('/backfill/execute', async (req, res) => {
   const startTime = Date.now();
   try {
-    const { batchId = 'seed-2026-10-29', confirmed, singleDay } = req.body;
+    const { batchId = 'seed-2026-10-29', confirmed, singleDay, startDate, endDate } = req.body;
     if (!confirmed) {
       return res.status(400).json({ success: false, error: 'Explicit confirmation required. Send confirmed: true.' });
     }
@@ -179,8 +182,9 @@ router.post('/backfill/execute', async (req, res) => {
     const catalystApp = getCatalystApp(req);
     const db = RepositoryFactory.getRepository(req);
 
-    console.log(`[Backfill Execute] Starting execution for batch: ${batchId} (singleDay: ${singleDay || 'all'})...`);
-    let plan = await createBackfillPlan(db, batchId, singleDay);
+    const dateFilter = (startDate || endDate) ? { startDate, endDate } : undefined;
+    console.log(`[Backfill Execute] Starting execution for batch: ${batchId} (range: ${startDate || 'all'} to ${endDate || 'all'})...`);
+    let plan = await createBackfillPlan(db, batchId, singleDay, dateFilter);
 
     const result = await executeBackfillPlan(plan, catalystApp);
 
