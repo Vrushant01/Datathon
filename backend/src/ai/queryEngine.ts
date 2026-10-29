@@ -43,7 +43,21 @@ export const matchesFilter = (doc: any, filter: Record<string, any> = {}): boole
         }
       }
     } else {
-      if (value !== cond) return false;
+      // Date-prefix matching: if condition is a YYYY-MM-DD string (10 chars) and
+      // the stored value is a longer ISO datetime (e.g. "2026-10-29T02:15:30Z"),
+      // compare only the date portion so "today" queries work correctly.
+      if (
+        typeof cond === 'string' &&
+        typeof value === 'string' &&
+        cond.length === 10 &&
+        /^\d{4}-\d{2}-\d{2}$/.test(cond) &&
+        value.length > 10 &&
+        value.startsWith(cond)
+      ) {
+        // match — date prefix matches
+      } else if (value !== cond) {
+        return false;
+      }
     }
   }
   return true;

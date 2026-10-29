@@ -45,10 +45,16 @@ const retrieveContext = async (plan, req) => {
                 else
                     allData = await repo.getAllCases();
                 if (plan.dateRange?.start && plan.collection === 'casemasters') {
-                    allData = allData.filter(c => c.CrimeRegisteredDate >= plan.dateRange.start);
+                    allData = allData.filter(c => {
+                        const d = (c.CrimeRegisteredDateTime || c.CrimeRegisteredDate || '').substring(0, 10);
+                        return d >= plan.dateRange.start;
+                    });
                 }
                 if (plan.dateRange?.end && plan.collection === 'casemasters') {
-                    allData = allData.filter(c => c.CrimeRegisteredDate <= plan.dateRange.end);
+                    allData = allData.filter(c => {
+                        const d = (c.CrimeRegisteredDateTime || c.CrimeRegisteredDate || '').substring(0, 10);
+                        return d <= plan.dateRange.end;
+                    });
                 }
                 // Enrich casemasters with DistrictID from units if needed
                 if (plan.collection === 'casemasters' || !plan.collection) {
@@ -89,14 +95,17 @@ const retrieveContext = async (plan, req) => {
                     const counts = {};
                     filtered.forEach(d => {
                         let key = "Unknown";
-                        if (plan.groupBy === 'month' && d.CrimeRegisteredDate) {
-                            key = d.CrimeRegisteredDate.substring(0, 7);
+                        // Normalise the date field — handle both "YYYY-MM-DD" and full ISO strings
+                        const rawDate = (d.CrimeRegisteredDateTime || d.CrimeRegisteredDate || '');
+                        const dateStr = rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
+                        if (plan.groupBy === 'month' && dateStr) {
+                            key = dateStr.substring(0, 7);
                         }
-                        else if (plan.groupBy === 'year' && d.CrimeRegisteredDate) {
-                            key = d.CrimeRegisteredDate.substring(0, 4);
+                        else if (plan.groupBy === 'year' && dateStr) {
+                            key = dateStr.substring(0, 4);
                         }
-                        else if (plan.groupBy === 'day' && d.CrimeRegisteredDate) {
-                            key = d.CrimeRegisteredDate.substring(0, 10);
+                        else if (plan.groupBy === 'day' && dateStr) {
+                            key = dateStr.substring(0, 10);
                         }
                         else if (plan.groupBy.toLowerCase().includes('district')) {
                             key = d.DistrictName || d.DistrictID || 'Unknown';
