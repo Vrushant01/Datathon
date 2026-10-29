@@ -15,12 +15,37 @@ router.use(requireRole('Admin'));
 router.post('/migrate-to-nosql', startMigration);
 router.get('/migration-status', getMigrationStatus);
 
+// In-memory cache for dashboard-stats with TTL
+const STATS_CACHE_TTL = 30 * 1000; // 30 seconds
+const DASHBOARD_STATS_CACHE: Record<string, { data: any; timestamp: number }> = {};
+
+export const invalidateDashboardStatsCache = () => {
+  for (const k of Object.keys(DASHBOARD_STATS_CACHE)) {
+    delete DASHBOARD_STATS_CACHE[k];
+  }
+};
+
 /**
  * Non-blocking Dashboard Stats endpoint
+ * Accepts optional ?range=24h|7d|30d|all (default: 'all')
  * Returns ready components immediately (officers, stations) without blocking if cases is scanning.
  */
 router.get('/dashboard-stats', async (req, res) => {
   const startTime = Date.now();
+  const rawRange = String(req.query.range || 'all').toLowerCase();
+  const range = ['24h', '7d', '30d', 'all'].includes(rawRange) ? rawRange : 'all';
+  const cacheKey = `stats_${range}`;
+
+  const cached = DASHBOARD_STATS_CACHE[cacheKey];
+  if (cached && (startTime - cached.timestamp < STATS_CACHE_TTL)) {
+    return res.json({
+      success: true,
+      status: 'ready',
+      casesLoading: false,
+      data: cached.data
+    });
+  }
+
   try {
     const db = RepositoryFactory.getRepository(req);
 
@@ -52,38 +77,65 @@ router.get('/dashboard-stats', async (req, res) => {
     const elapsed = Date.now() - startTime;
     const isCasesLoading = cases === null;
 
-    const totalFirs = cases ? cases.length : null;
-    const solvedClosed = cases ? cases.filter((c: any) => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length : null;
-    const pendingCases = (totalFirs !== null && solvedClosed !== null) ? totalFirs - solvedClosed : null;
+    // Filter cases based on the requested date-window ending at current time
+    const now = Date.now();
+    const windowMs = range === '24h' ? 24 * 3600000 : range === '7d' ? 7 * 86400000 : range === '30d' ? 30 * 86400000 : 0;
+    const startBoundary = windowMs > 0 ? now - windowMs : 0;
 
+    const isCaseInRange = (c: any) => {
+      if (startBoundary === 0) return true;
+      const dt = c.CrimeRegisteredDateTime || c.CrimeRegisteredDate;
+      if (!dt) return false;
+      const ts = new Date(dt).getTime();
+      if (isNaN(ts)) return false;
+      return ts >= startBoundary && ts <= now;
+    };
+
+    const filteredCases = cases ? (startBoundary > 0 ? cases.filter(isCaseInRange) : cases) : null;
+
+    const totalFirs = filteredCases ? filteredCases.length : null;
+    const pendingCases = filteredCases ? filteredCases.filter((c: any) => c.CaseStatusID === 1 || c.CaseStatusID === 5).length : null;
+    const solvedClosed = filteredCases ? filteredCases.filter((c: any) => c.CaseStatusID === 2 || c.CaseStatusID === 3 || c.CaseStatusID === 4).length : null;
+
+    // Keep Police Stations and Active Officers as current totals
     const activeOfficers = officers.length;
     const policeStations = units.filter((u: any) => u.TypeID === 1).length;
 
-    const casesLight = cases ? cases.map((c: any) => ({
-      d: c.CrimeRegisteredDate,
+    const casesLight = filteredCases ? filteredCases.map((c: any) => ({
+      d: c.CrimeRegisteredDateTime || c.CrimeRegisteredDate,
       h: c.CrimeMajorHeadID,
       s: c.CaseStatusID
     })).filter((c: any) => c.d) : [];
 
-    console.log(`[Dashboard Stats] officers=${activeOfficers}, units=${units.length}, cases=${totalFirs !== null ? totalFirs : 'LOADING'} (${elapsed}ms)`);
+    console.log(`[Dashboard Stats] range=${range}, officers=${activeOfficers}, units=${units.length}, cases=${totalFirs !== null ? totalFirs : 'LOADING'} (${elapsed}ms)`);
+
+    const responseData = {
+      range,
+      totalFirs,
+      pendingCases,
+      solvedClosed,
+      activeOfficers,
+      policeStations,
+      casesLight,
+      _meta: {
+        elapsed_ms: elapsed,
+        cacheState: isCasesLoading ? 'scanning' : 'warm',
+        tablesLoading: isCasesLoading ? ['casemasters'] : []
+      }
+    };
+
+    if (!isCasesLoading) {
+      DASHBOARD_STATS_CACHE[cacheKey] = {
+        data: responseData,
+        timestamp: Date.now()
+      };
+    }
 
     res.json({
       success: true,
       status: isCasesLoading ? 'warming_up' : 'ready',
       casesLoading: isCasesLoading,
-      data: {
-        totalFirs,
-        pendingCases,
-        solvedClosed,
-        activeOfficers,
-        policeStations,
-        casesLight,
-        _meta: {
-          elapsed_ms: elapsed,
-          cacheState: isCasesLoading ? 'scanning' : 'warm',
-          tablesLoading: isCasesLoading ? ['casemasters'] : []
-        }
-      }
+      data: responseData
     });
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
@@ -92,6 +144,7 @@ router.get('/dashboard-stats', async (req, res) => {
       success: true,
       status: 'error_fallback',
       data: {
+        range,
         totalFirs: null,
         pendingCases: null,
         solvedClosed: null,
@@ -110,6 +163,7 @@ router.get('/dashboard-stats', async (req, res) => {
 router.post('/cache/clear', (req, res) => {
   invalidateAllCache();
   invalidateAnalyticsCache();
+  invalidateDashboardStatsCache();
   res.json({ success: true, message: 'All in-memory table caches cleared successfully' });
 });
 
@@ -191,6 +245,8 @@ router.post('/backfill/execute', async (req, res) => {
     // Invalidate caches so the new cases immediately reflect in queries and dashboard stats
     invalidateAllCache();
     invalidateAnalyticsCache();
+    invalidateDashboardStatsCache();
+    invalidateDashboardStatsCache();
 
     const elapsed = Date.now() - startTime;
     res.json({
@@ -223,6 +279,7 @@ router.post('/backfill/rollback', async (req, res) => {
 
     invalidateAllCache();
     invalidateAnalyticsCache();
+    invalidateDashboardStatsCache();
 
     const elapsed = Date.now() - startTime;
     res.json({
