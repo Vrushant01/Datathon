@@ -120,6 +120,15 @@ export const AdminDashboard: React.FC = () => {
 
   const crimeHeads = useMemo(() => mockDb.getCrimeHeads(), []);
 
+  // Fallbacks using local mockDb if stats endpoint is not yet loaded
+  const fallbackCases = useMemo(() => mockDb.getCases(), [dataLoaded]);
+  const fallbackUnits = useMemo(() => mockDb.getUnits(), [dataLoaded]);
+  const fallbackOfficers = useMemo(() => mockDb.getEmployees(), [dataLoaded]);
+
+  const casesLoadedFromBackend = syncReport.tables['cases']?.status === 'success' && fallbackCases.length > 0;
+  const unitsLoadedFromBackend = syncReport.tables['units']?.status === 'success' && fallbackUnits.length > 0;
+  const officersLoadedFromBackend = syncReport.tables['employees']?.status === 'success' && fallbackOfficers.length > 0;
+
   // Shared date-window filtered cases
   const filteredCasesLight = useMemo(() => {
     if (stats?.casesLight && stats.range && stats.range.toLowerCase() === timeFilter.toLowerCase()) {
@@ -141,13 +150,6 @@ export const AdminDashboard: React.FC = () => {
     }
     return [];
   }, [stats?.casesLight, stats?.range, timeFilter, casesLoadedFromBackend, fallbackCases]);
-
-  // Fallbacks using local mockDb if stats endpoint is not yet loaded
-  const fallbackUnits = useMemo(() => mockDb.getUnits(), [dataLoaded]);
-  const fallbackOfficers = useMemo(() => mockDb.getEmployees(), [dataLoaded]);
-
-  const unitsLoadedFromBackend = syncReport.tables['units']?.status === 'success' && fallbackUnits.length > 0;
-  const officersLoadedFromBackend = syncReport.tables['employees']?.status === 'success' && fallbackOfficers.length > 0;
 
   // Total FIRs, Pending (status 1 & 5), Solved (status 2, 3, 4) follow the selected range
   const totalFIR = stats != null
